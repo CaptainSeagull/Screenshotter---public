@@ -1,5 +1,6 @@
 @echo off
 
+
 set RELEASE_FLAG=false
 set INTERNAL_FLAG=true
 set ALLOW_ASSERTS_FLAG=true

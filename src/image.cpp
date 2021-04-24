@@ -34,15 +34,7 @@ struct Bitmap_Header {
     U32 colours_important;
 };
 #pragma pack(pop)
-
-internal U32
-safe_truncate_size_64(U64 v) {
-    ASSERT(v <= 0xFFFFFFFF);
-    U32 res = (U32)v;
-
-    return(res);
-}
-
+#if 0
 internal Bool
 write_file(String fname, U8 *data, U64 size) {
     // TODO: Win32 only
@@ -50,7 +42,7 @@ write_file(String fname, U8 *data, U64 size) {
 
     ASSERT(fname.len < 1024);
     Char buf[1024] = {};
-    memcpy(buf, fname.e, fname.len);
+    copy(buf, fname.e, fname.len);
 
     HANDLE fhandle = CreateFileA(buf, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, 0, CREATE_ALWAYS, 0, 0);
     if(fhandle != INVALID_HANDLE_VALUE) {
@@ -75,9 +67,9 @@ write_file(String fname, U8 *data, U64 size) {
 
     return(res);
 }
-
+#endif
 internal Void
-write_image_to_disk(Memory *memory, Image *image, String file_name) {
+write_image_to_disk(API *api, Memory *memory, Image *image, String file_name) {
     U64 output_pixel_size = image->width * image->height * sizeof(U32); // TODO: Should this not be sizeof U32...?
 
     Bitmap_Header header = {};
@@ -94,10 +86,10 @@ write_image_to_disk(Memory *memory, Image *image, String file_name) {
 
     U64 to_write_size = sizeof(Bitmap_Header) + output_pixel_size;
     U8 *to_write = (U8 *)memory_push(memory, Memory_Index_temp, to_write_size);
-    memcpy(to_write, &header, sizeof(header));
-    memcpy(to_write + sizeof(header), image->pixels, output_pixel_size);
+    copy(to_write, &header, sizeof(header));
+    copy(to_write + sizeof(header), image->pixels, output_pixel_size);
 
-    Bool success = write_file(file_name, to_write, to_write_size);
+    Bool success = api->cb.write_file(file_name, to_write, to_write_size);
     ASSERT(success);
 
     memory_pop(memory, to_write);

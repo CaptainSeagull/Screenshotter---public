@@ -30,10 +30,13 @@ enum sglg_Type {
     sglg_Type_String_To_Int_Result,
     sglg_Type_String_To_Float_Result,
     sglg_Type_Memory_Index,
+    sglg_Type_Config,
+    sglg_Type_File,
+    sglg_Type_Key,
+    sglg_Type_Platform_Callbacks,
+    sglg_Type_API,
     sglg_Type_Image,
     sglg_Type_Bitmap_Header,
-    sglg_Type_Config,
-    sglg_Type_Thread_Parameters,
 };
 
 // Utils
@@ -59,6 +62,8 @@ typedef int8_t S8 ;
 typedef int16_t S16 ;
 typedef int32_t S32 ;
 typedef int64_t S64 ;
+typedef float F32 ;
+typedef double F64 ;
 
 // Forward declared structs
 
@@ -70,10 +75,14 @@ struct String_To_Int_Result;
 struct String_To_Float_Result;
 enum Memory_Index : Int;
 
+struct Config;
+struct File;
+enum Key : Int;
+
+struct Platform_Callbacks;
+struct API;
 struct Image;
 struct Bitmap_Header;
-struct Config;
-struct Thread_Parameters;
 
 // Forward declaration of functions
  static uint64_t get_memory_base_size(void );
@@ -126,14 +135,20 @@ struct Thread_Parameters;
  static int string_copy(char const * dst , char * src );
  static int string_copy(char * dst , char * src , int len );
  static U32 safe_truncate_size_64(U64 v );
- static Bool write_file(String fname , U8 * data , U64 size );
- static Void write_image_to_disk(Memory * memory , Image * image , String file_name );
-int main(int argc , char * * argv );
+ static Void zero(Void * m , U64 s );
+ static Void copy(Void * dst , Void * src , U64 size );
+ static Void set(Void * dst , U8 v , U64 size );
+ static F32 clamp01(F32 a );
+ static Void write_image_to_disk(API * api , Memory * memory , Image * image , String file_name );
+Void handle_input_and_render(API * api );
 static char const *sglg_Memory_Arena_Error_to_string(Memory_Arena_Error e);
 static int sglg_Memory_Arena_Error_count(Memory_Arena_Error e);
 static char const *sglg_Memory_Index_to_string(Memory_Index e);
 static Int sglg_Memory_Index_count(Memory_Index e);
+static char const *sglg_Key_to_string(Key e);
+static Int sglg_Key_count(Key e);
 
 // Helpers
 #define sglg_internal_enum_Memory_Arena_Error (7)
-#define sglg_internal_enum_Memory_Index (2)
+#define sglg_internal_enum_Memory_Index (3)
+#define sglg_internal_enum_Key (58)

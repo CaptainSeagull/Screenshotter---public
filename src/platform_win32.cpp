@@ -8,85 +8,88 @@
 #define MAX_SCREEN_BITMAP_SIZE (1920 * 1080 * 4) // TODO: Change to 4k
 
 // TODO: Go through this file and tidy it up.
-// TODO: Controller support would be fun!
-// TODO: Add the platform code as callbacks on the API struct?
-// TODO: Maybe initially try to render with OpenGL and, if that fails, default to the GDI version
 
 // TODO: Globals... :-(
-internal_global BITMAPINFO global_bitmap_info;
+internal_global BITMAPINFO global_bmp_info;
 internal_global API *global_api;
 internal_global GLuint global_gl_blit_texture_handle;
 
-#if DEBUG_WINDOW
-    internal_global Win32_Debug_Window *global_debug_window;
-#endif
-
-internal File win32_read_file(Memory *memory, U32 memory_index_to_use, String fname, Bool null_terminate) {
+internal File
+win32_read_file(Memory *memory, U32 memory_index_to_use, String fname, Bool null_terminate) {
     File res = {};
 
-    // TODO: Use temp buffer here!
-    ASSERT(fname.len < 1024);
-    Char buf[1024] = {};
-    memcpy(buf, fname.e, fname.len);
+    Char *fname_copy = (Char *)memory_push(memory, Memory_Index_temp, fname.len + 1);
+    ASSERT(fname_copy);
+    if(fname_copy) {
+        memcpy(fname_copy, fname.e, fname.len);
 
-    HANDLE fhandle = CreateFileA(buf, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);
-    if(fhandle != INVALID_HANDLE_VALUE) {
-        LARGE_INTEGER fsize;
-        if(GetFileSizeEx(fhandle, &fsize)) {
-            DWORD fsize32 = safe_truncate_size_64(fsize.QuadPart);
-            Void *file_memory = memory_push(memory, memory_index_to_use, (null_terminate) ? fsize32 + 1 : fsize32);
+        HANDLE fhandle = CreateFileA(fname_copy, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);
+        if(fhandle != INVALID_HANDLE_VALUE) {
+            LARGE_INTEGER fsize;
+            if(GetFileSizeEx(fhandle, &fsize)) {
+                DWORD fsize32 = safe_truncate_size_64(fsize.QuadPart);
+                Void *file_memory = memory_push(memory, memory_index_to_use, (null_terminate) ? fsize32 + 1 : fsize32);
 
-            DWORD bytes_read = 0;
-            if(ReadFile(fhandle, file_memory, fsize32, &bytes_read, 0)) {
-                if(bytes_read != fsize32) {
-                    ASSERT(0);
-                } else {
-                    res.fname = fname; // TODO: Change to full path not relative.
-                    res.size = fsize32;
-                    res.e = (Char *)file_memory;
-                    res.e[res.size] = 0;
+                DWORD bytes_read = 0;
+                if(ReadFile(fhandle, file_memory, fsize32, &bytes_read, 0)) {
+                    if(bytes_read != fsize32) {
+                        ASSERT(0);
+                    } else {
+                        res.fname = fname; // TODO: Change to full path not relative.
+                        res.size = fsize32;
+                        res.e = (Char *)file_memory;
+                        res.e[res.size] = 0;
+                    }
                 }
             }
+
+            CloseHandle(fhandle);
         }
 
-        CloseHandle(fhandle);
+        memory_pop(memory, fname_copy);
     }
 
     return(res);
 }
 
-internal Bool win32_write_file(String fname, U8 *data, U64 size) {
+internal Bool
+win32_write_file(Memory *memory, String fname, U8 *data, U64 size) {
     Bool res = false;
 
-    ASSERT(fname.len < 1024);
-    Char buf[1024] = {};
-    memcpy(buf, fname.e, fname.len);
+    Char *fname_copy = (Char *)memory_push(memory, Memory_Index_temp, fname.len + 1);
+    ASSERT(fname_copy);
+    if(fname_copy) {
+        memcpy(fname_copy, fname.e, fname.len);
 
-    HANDLE fhandle = CreateFileA(buf, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, 0, CREATE_ALWAYS, 0, 0);
-    if(fhandle != INVALID_HANDLE_VALUE) {
+        HANDLE fhandle = CreateFileA(fname_copy, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, 0, CREATE_ALWAYS, 0, 0);
+        if(fhandle != INVALID_HANDLE_VALUE) {
 
-        DWORD fsize32;
+            DWORD fsize32;
 #if ENVIRONMENT32
-        fsize32 = file.size;
+            fsize32 = file.size;
 #else
-        fsize32 = safe_truncate_size_64(size);
+            fsize32 = safe_truncate_size_64(size);
 #endif
-        DWORD bytes_written = 0;
-        if(WriteFile(fhandle, data, fsize32, &bytes_written, 0)) {
-            if(bytes_written != fsize32) {
-                ASSERT(0);
-            } else {
-                res = true;
+            DWORD bytes_written = 0;
+            if(WriteFile(fhandle, data, fsize32, &bytes_written, 0)) {
+                if(bytes_written != fsize32) {
+                    ASSERT(0);
+                } else {
+                    res = true;
+                }
             }
+
+            CloseHandle(fhandle);
         }
 
-        CloseHandle(fhandle);
+        memory_pop(memory, fname_copy);
     }
 
     return(res);
 }
 
-internal Int win32_get_processor_count(Void) {
+internal Int
+win32_get_processor_count(Void) {
     SYSTEM_INFO info;
     GetSystemInfo(&info);
     U32 res = info.dwNumberOfProcessors;
@@ -94,13 +97,25 @@ internal Int win32_get_processor_count(Void) {
     return(res);
 }
 
-internal U64 win32_locked_add(U64 volatile *a, U64 b) {
+internal U64
+win32_locked_add(U64 volatile *a, U64 b) {
     U64 r = InterlockedExchangeAdd64((S64 volatile *)a, b);
     return(r);
 }
 
-internal Void win32_update_window(HDC dc, RECT  *wnd_rect, Void *bitmap_memory, BITMAPINFO *bitmap_info,
-                                  Int bitmap_width, Int bitmap_height) {
+internal F32
+win32_safe_div(F32 a, F32 b) {
+    F32 r = a;
+    if(b != 0) {
+        r = a / b;
+    }
+
+    return(r);
+}
+
+internal Void
+win32_update_window(HDC dc, RECT  *wnd_rect, Void *bitmap_memory, BITMAPINFO *bitmap_info,
+                    Int bitmap_width, Int bitmap_height) {
     Int wnd_w = wnd_rect->right - wnd_rect->left;
     Int wnd_h = wnd_rect->bottom - wnd_rect->top;
 
@@ -132,32 +147,35 @@ internal Void win32_update_window(HDC dc, RECT  *wnd_rect, Void *bitmap_memory, 
         glMatrixMode(GL_MODELVIEW); glLoadIdentity();
 
         glMatrixMode(GL_PROJECTION);
-        M4x4 proj = m4x4(safe_div(2.0f, bitmap_width), 0,                             0, -1,
-                         0,                            safe_div(2.0f, bitmap_height), 0, -1,
-                         0,                            0,                             1,  0,
-                         0,                            0,                             0,  1);
-        glLoadMatrixf(transpose(proj).f);
 
+        // This is pre-transposted
+        F32 proj[16] = {win32_safe_div(2.0f, bitmap_width), 0,                                   0, 0,
+                        0,                                  win32_safe_div(2.0f, bitmap_height), 0, 0,
+                        0,                                  0,                                   1, 0,
+                        -1,                                 -1,                                  0, 1
+                       };
+        glLoadMatrixf(proj);
         glMatrixMode(GL_TEXTURE); glLoadIdentity();
-
 
         glBegin(GL_TRIANGLES);
 
         // TODO: How to handle aspect ratio - black bars or crop?
 
-        V2 min = v2(0, 0);
-        V2 max = v2(bitmap_width, bitmap_height);
+        F32 min_x = 0;
+        F32 min_y = 0;
+        F32 max_x = bitmap_width;
+        F32 max_y = bitmap_height;
 
-        V4 colour = v4(1, 1, 1, 1);
-        glColor4f(colour.r, colour.g, colour.g, colour.a);
+        F32 colour[4] = { 1, 1, 1, 1 };
+        glColor4f(colour[0], colour[1], colour[2], colour[3]);
 
-        glTexCoord2f(0, 0); glVertex2f(min.x, min.y);
-        glTexCoord2f(1, 0); glVertex2f(max.x, min.y);
-        glTexCoord2f(1, 1); glVertex2f(max.x, max.y);
+        glTexCoord2f(0, 0); glVertex2f(min_x, min_y);
+        glTexCoord2f(1, 0); glVertex2f(max_x, min_y);
+        glTexCoord2f(1, 1); glVertex2f(max_x, max_y);
 
-        glTexCoord2f(0, 0); glVertex2f(min.x, min.y);
-        glTexCoord2f(1, 1); glVertex2f(max.x, max.y);
-        glTexCoord2f(0, 1); glVertex2f(min.x, max.y);
+        glTexCoord2f(0, 0); glVertex2f(min_x, min_y);
+        glTexCoord2f(1, 1); glVertex2f(max_x, max_y);
+        glTexCoord2f(0, 1); glVertex2f(min_x, max_y);
         glEnd();
     }
 
@@ -171,7 +189,8 @@ internal Void win32_update_window(HDC dc, RECT  *wnd_rect, Void *bitmap_memory, 
 #endif
 }
 
-internal LRESULT CALLBACK win32_window_proc(HWND wnd, UINT msg, WPARAM w_param, LPARAM l_param) {
+internal LRESULT CALLBACK
+win32_window_proc(HWND wnd, UINT msg, WPARAM w_param, LPARAM l_param) {
     LRESULT res = 0;
     switch(msg) {
         case WM_QUIT: case WM_CLOSE: { global_api->running = false; } break;
@@ -187,17 +206,17 @@ internal LRESULT CALLBACK win32_window_proc(HWND wnd, UINT msg, WPARAM w_param, 
                 zero(global_api->bitmap_memory, MAX_SCREEN_BITMAP_SIZE);
             }
 
-            global_bitmap_info.bmiHeader.biSize = sizeof(global_bitmap_info.bmiHeader);
-            global_bitmap_info.bmiHeader.biWidth = w;
-            global_bitmap_info.bmiHeader.biHeight = h;
-            global_bitmap_info.bmiHeader.biPlanes = 1;
-            global_bitmap_info.bmiHeader.biBitCount = 32;
-            global_bitmap_info.bmiHeader.biCompression = BI_RGB;
-            global_bitmap_info.bmiHeader.biSizeImage = 0;
-            global_bitmap_info.bmiHeader.biXPelsPerMeter = 0;
-            global_bitmap_info.bmiHeader.biYPelsPerMeter = 0;
-            global_bitmap_info.bmiHeader.biClrUsed = 0;
-            global_bitmap_info.bmiHeader.biClrImportant = 0;
+            global_bmp_info.bmiHeader.biSize = sizeof(global_bmp_info.bmiHeader);
+            global_bmp_info.bmiHeader.biWidth = w;
+            global_bmp_info.bmiHeader.biHeight = h;
+            global_bmp_info.bmiHeader.biPlanes = 1;
+            global_bmp_info.bmiHeader.biBitCount = 32;
+            global_bmp_info.bmiHeader.biCompression = BI_RGB;
+            global_bmp_info.bmiHeader.biSizeImage = 0;
+            global_bmp_info.bmiHeader.biXPelsPerMeter = 0;
+            global_bmp_info.bmiHeader.biYPelsPerMeter = 0;
+            global_bmp_info.bmiHeader.biClrUsed = 0;
+            global_bmp_info.bmiHeader.biClrImportant = 0;
 
             global_api->bitmap_width = w;
             global_api->bitmap_height = h;
@@ -210,7 +229,7 @@ internal LRESULT CALLBACK win32_window_proc(HWND wnd, UINT msg, WPARAM w_param, 
             HDC dc = BeginPaint(wnd, &ps);
             RECT cr;
             GetClientRect(wnd, &cr);
-            win32_update_window(dc, &cr, global_api->bitmap_memory, &global_bitmap_info, global_api->bitmap_width, global_api->bitmap_height);
+            win32_update_window(dc, &cr, global_api->bitmap_memory, &global_bmp_info, global_api->bitmap_width, global_api->bitmap_height);
             EndPaint(wnd, &ps);
         } break;
 
@@ -221,59 +240,6 @@ internal LRESULT CALLBACK win32_window_proc(HWND wnd, UINT msg, WPARAM w_param, 
 
     return(res);
 };
-
-#if DEBUG_WINDOW
-internal LRESULT CALLBACK win32_debug_window_proc(HWND wnd, UINT msg, WPARAM w_param, LPARAM l_param) {
-    LRESULT res = 0;
-    switch(msg) {
-        case WM_QUIT: case WM_CLOSE: { global_api->running = false; } break;
-
-        case WM_SIZE: {
-            RECT cr;
-            GetClientRect(wnd, &cr);
-            Int w = cr.right - cr.left;
-            Int h = cr.bottom - cr.top;
-
-            // May be faster to allocate new memory / free old memory. But works for now.
-            if(global_debug_window->bitmap_memory) {
-                zero(global_debug_window->bitmap_memory, MAX_SCREEN_BITMAP_SIZE);
-            }
-
-            global_debug_window->bitmap_info.bmiHeader.biSize = sizeof(global_debug_window->bitmap_info.bmiHeader);
-            global_debug_window->bitmap_info.bmiHeader.biWidth = w;
-            global_debug_window->bitmap_info.bmiHeader.biHeight = h;
-            global_debug_window->bitmap_info.bmiHeader.biPlanes = 1;
-            global_debug_window->bitmap_info.bmiHeader.biBitCount = 32;
-            global_debug_window->bitmap_info.bmiHeader.biCompression = BI_RGB;
-            global_debug_window->bitmap_info.bmiHeader.biSizeImage = 0;
-            global_debug_window->bitmap_info.bmiHeader.biXPelsPerMeter = 0;
-            global_debug_window->bitmap_info.bmiHeader.biYPelsPerMeter = 0;
-            global_debug_window->bitmap_info.bmiHeader.biClrUsed = 0;
-            global_debug_window->bitmap_info.bmiHeader.biClrImportant = 0;
-
-            global_debug_window->bitmap_width = w;
-            global_debug_window->bitmap_height = h;
-
-            global_debug_window->image_size_change = true;
-        } break;
-
-        case WM_PAINT: {
-            PAINTSTRUCT ps;
-            HDC dc = BeginPaint(wnd, &ps);
-            RECT cr;
-            GetClientRect(wnd, &cr);
-            //win32_update_window(dc, &cr);
-            EndPaint(wnd, &ps);
-        } break;
-
-        default: {
-            res = DefWindowProcA(wnd, msg, w_param, l_param);
-        }
-    }
-
-    return(res);
-};
-#endif
 
 internal Key win32_key_to_our_key(WPARAM k) {
     Key res = key_unknown;
@@ -329,30 +295,6 @@ internal Void win32_get_window_dimension(HWND wnd, Int *w, Int *h) {
     *h = (cr.bottom - cr.top);
 }
 
-#if DEBUG_WINDOW
-internal Void win32_create_debug_window(Win32_Debug_Window *debug_window, HINSTANCE instance, Memory *memory) {
-    global_debug_window = debug_window;
-
-    WNDCLASS wnd_class = {};
-    wnd_class.style = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
-    wnd_class.hInstance = instance;
-    wnd_class.lpszClassName = TEXT("class2");
-    wnd_class.lpfnWndProc = win32_debug_window_proc;
-
-    if(RegisterClassA(&wnd_class)) {
-        debug_window->width = 800;
-        debug_window->height = 480;
-        debug_window->hwnd = CreateWindowExA(0, wnd_class.lpszClassName, "Debug!",
-                                             WS_OVERLAPPEDWINDOW | WS_VISIBLE | WS_POPUP, 900, 0,
-                                             debug_window->width, debug_window->height, 0, 0, 0, 0);
-        if(debug_window->hwnd && debug_window->hwnd != INVALID_HANDLE_VALUE) {
-            debug_window->bitmap_memory = memory_push(memory, Memory_Index_debug_bitmap, MAX_SCREEN_BITMAP_SIZE);
-            debug_window->success = true;
-        }
-    }
-}
-#endif
-
 internal Void win32_init_opengl(HWND window) {
     HDC dc = GetDC(window);
 
@@ -374,7 +316,7 @@ internal Void win32_init_opengl(HWND window) {
     if(wglMakeCurrent(dc, rc)) {
         glGenTextures(1, &global_gl_blit_texture_handle);
     } else {
-        ASSERT(0); // TODO: Something went wrong.
+        ASSERT(0); // TODO: Something went wrong. Not sure how to handle this error...
     }
 
     ReleaseDC(window, dc);
@@ -382,7 +324,8 @@ internal Void win32_init_opengl(HWND window) {
 
 //
 // Threading
-internal Bool win32_add_work_queue_entry(API *api, Void *data, Void (*cb)(Void *data)) {
+internal Bool
+win32_add_work_queue_entry(API *api, Void *data, Void (*cb)(Void *data)) {
     Bool res = false;
 
     Win32_API *win32_api = (Win32_API *)api->platform_specific;
@@ -411,7 +354,8 @@ internal Bool win32_add_work_queue_entry(API *api, Void *data, Void (*cb)(Void *
 }
 
 // Returns true if we actually did any work.
-internal Bool win32_do_next_work_queue_entry(Win32_Work_Queue *queue) {
+internal Bool
+win32_do_next_work_queue_entry(Win32_Work_Queue *queue) {
     Bool res = false;
 
     // Store next_entry_to_read and DON'T read it again in case the value's changed by other threads. We do a InterlockedCompareExchange
@@ -436,7 +380,8 @@ internal Bool win32_do_next_work_queue_entry(Win32_Work_Queue *queue) {
     return(res);
 }
 
-internal Void win32_complete_all_work(API *api) {
+internal Void
+win32_complete_all_work(API *api) {
     Win32_API *win32_api = (Win32_API *)api->platform_specific;
     Win32_Work_Queue *queue = &win32_api->queue;
 
@@ -448,7 +393,8 @@ internal Void win32_complete_all_work(API *api) {
     queue->completion_count = 0;
 }
 
-internal DWORD WINAPI win32_thread_proc(Void *p) {
+internal DWORD WINAPI
+win32_thread_proc(Void *p) {
     Win32_Work_Queue *queue = (Win32_Work_Queue *)p;
     for(;;) {
         if(!win32_do_next_work_queue_entry(queue)) {
@@ -460,8 +406,9 @@ internal DWORD WINAPI win32_thread_proc(Void *p) {
 }
 
 //
-// Code for reloading Screenshotter dll
-internal FILETIME win32_get_last_write_time(Char *fname) {
+// Code for reloading DLL
+internal FILETIME
+win32_get_last_write_time(Char *fname) {
     FILETIME res = {};
     WIN32_FIND_DATA find_data = {};
     HANDLE find_handle = FindFirstFileA(fname, &find_data);
@@ -511,11 +458,7 @@ win32_find_window_from_name(Memory *memory, String window_title) {
 }
 
 // Done on a separate thread so when we have a UI and Window it can handle window-messages without interuption.
-struct Win32_Screen_Capture_Thread_Parameters {
-    Config *config;
-    Memory *memory;
-    API *api;
-};
+// TODO: May be better to do just have one thread so this app takes up the least system resources possible.
 internal DWORD
 win32_screen_capture_thread(void *data) {
     Win32_Screen_Capture_Thread_Parameters *tp = (Win32_Screen_Capture_Thread_Parameters *)data;
@@ -595,9 +538,10 @@ int CALLBACK
 WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd) {
     int res = 0xFF;
 
+    // TODO: Think about these sizes more. Because this app is meant to run in the background it should be as resource-light as possible.
     Uintptr permanent_size = MEGABYTES(128);
     Uintptr temp_size = MEGABYTES(128);
-    Uintptr bitmap_size = MAX_SCREEN_BITMAP_SIZE + 1; // Padding
+    Uintptr bitmap_size = MAX_SCREEN_BITMAP_SIZE;
 
     Void *all_memory = VirtualAlloc(0, get_memory_base_size() + permanent_size + temp_size + bitmap_size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
     if(all_memory) {
@@ -729,12 +673,6 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
                     win32_init_opengl(wnd);
 #endif
 
-#if DEBUG_WINDOW
-                    Win32_Debug_Window debug_window = {};
-                    win32_create_debug_window(&debug_window, hInstance, &memory);
-                    ASSERT(debug_window.success);
-#endif
-
                     Int wnd_width = 0, wnd_height = 0;
                     win32_get_window_dimension(wnd, &wnd_width, &wnd_height);
 
@@ -857,16 +795,6 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
                                         } break;
                                     }
                                 }
-
-#if DEBUG_WINDOW
-                                {
-                                    MSG _msg;
-                                    while(PeekMessageA(&_msg, debug_window.hwnd, 0, 0, PM_REMOVE)) {
-                                        TranslateMessage(&_msg);
-                                        DispatchMessageA(&_msg);
-                                    }
-                                }
-#endif
                             }
 
                             // Actual rendering
@@ -901,7 +829,7 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
                                 if(!api.init) { api.image_size_change = false; }
                                 api.init = false;
 
-                                win32_update_window(dc, &cr, api.bitmap_memory, &global_bitmap_info, api.bitmap_width, api.bitmap_height);
+                                win32_update_window(dc, &cr, api.bitmap_memory, &global_bmp_info, api.bitmap_width, api.bitmap_height);
 
                                 ReleaseDC(wnd, dc);
                             }

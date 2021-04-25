@@ -89,7 +89,7 @@ write_image_to_disk(API *api, Memory *memory, Image *image, String file_name) {
     copy(to_write, &header, sizeof(header));
     copy(to_write + sizeof(header), image->pixels, output_pixel_size);
 
-    Bool success = api->cb.write_file(file_name, to_write, to_write_size);
+    Bool success = api->cb.write_file(memory, file_name, to_write, to_write_size);
     ASSERT(success);
 
     memory_pop(memory, to_write);

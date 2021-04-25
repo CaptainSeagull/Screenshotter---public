@@ -41,3 +41,9 @@ struct Win32_Debug_Window {
 struct Win32_API {
     Win32_Work_Queue queue;
 };
+
+struct Win32_Screen_Capture_Thread_Parameters {
+    Config *config;
+    Memory *memory;
+    API *api;
+};

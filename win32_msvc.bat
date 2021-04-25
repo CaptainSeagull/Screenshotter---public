@@ -3,6 +3,7 @@
 set RELEASE_FLAG=false
 set INTERNAL_FLAG=true
 set ALLOW_ASSERTS_FLAG=true
+set USE_OPENGL_WINDOW_FLAG=true
 
 cd %~dp0
 
@@ -34,14 +35,18 @@ if "%ALLOW_TESTS_FLAG%"=="true" (
     set ALLOW_TESTS=-DALLOW_TESTS=0
 )
 
-set COMPILER_FLAGS=-nologo -Gm- -GR- %WARNINGS% -FC -Zi -Oi -GS- -Gs9999999 -Wall %INTERNAL% %ALLOW_ASSERTS% %ALLOW_TESTS%
+if "%USE_OPENGL_WINDOW_FLAG%"=="true" (
+    set USE_OPENGL_WINDOW=-DUSE_OPENGL_WINDOW=1
+) else (
+    set USE_OPENGL_WINDOW=-DUSE_OPENGL_WINDOW=0
+)
+
+set COMPILER_FLAGS=-nologo -Gm- -GR- %WARNINGS% -FC -Zi -Oi -GS- -Gs9999999 -Wall %INTERNAL% %ALLOW_ASSERTS% %ALLOW_TESTS% %USE_OPENGL_WINDOW%
 if "%RELEASE_FLAG%"=="true" (
     set COMPILER_FLAGS=%COMPILER_FLAGS% -MT -fp:fast -EHa- -O2
 ) else (
     set COMPILER_FLAGS=%COMPILER_FLAGS% -MTd -EHa- -Od
 )
-
-rem set LINKER_FLAGS=-link kernel32.lib -stack:0x100000,0x100000
 
 IF NOT EXIST "build" mkdir "build"
 

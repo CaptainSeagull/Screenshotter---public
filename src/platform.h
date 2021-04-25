@@ -80,7 +80,7 @@ enum Key : Int {
 
 struct Platform_Callbacks {
     File (*read_file)(Memory *memory, U32 memory_index_to_use, String fname, Bool null_terminate);
-    Bool (*write_file)(String fname, U8 *data, U64 size);
+    Bool (*write_file)(Memory *memory, String fname, U8 *data, U64 size);
 
     U64 (*locked_add)(U64 volatile *a, U64 b);
 

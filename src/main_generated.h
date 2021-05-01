@@ -141,7 +141,7 @@ struct Bitmap_Header;
  static F32 clamp01(F32 a );
  static Void write_image_to_disk(API * api , Memory * memory , Image * image , String file_name );
 extern "C" Void handle_input_and_render(API * api );
-void __stdcall();
+void  __stdcall _DllMainCRTStartup();
 static char const *sglg_Memory_Arena_Error_to_string(Memory_Arena_Error e);
 static int sglg_Memory_Arena_Error_count(Memory_Arena_Error e);
 static char const *sglg_Memory_Index_to_string(Memory_Index e);

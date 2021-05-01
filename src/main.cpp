@@ -1,7 +1,7 @@
 
 #include "common_includes.cpp"
 
-//#include "main_generated.h"
+#include "main_generated.h"
 
 extern "C" {
     int _fltused = 0;
@@ -17,4 +17,4 @@ void __stdcall _DllMainCRTStartup() {
     // TODO: Doesn't this need to do anything?
 }
 
-//#include "main_generated.cpp"
+#include "main_generated.cpp"

@@ -61,8 +61,8 @@ pushd "build"
 del *_screenshotter.pdb > NUL > NUL
 
 rem TODO: Remove standard lib
-cl -LD -FeScreenshotter %COMPILER_FLAGS% "../src/main.cpp" -FmScreenshotter.map -link kernel32.lib -stack:0x100000,0x100000 -EXPORT:handle_input_and_render -PDB:%random%_screenshotter.pdb -stack:0x100000,0x100000 -subsystem:windows,5.2
-cl -FeWin32 %COMPILER_FLAGS% "../src/platform_win32.cpp" -FmWin32.map -link %LIBS% -stack:0x100000,0x100000 -subsystem:windows,5.2
+cl -LD -FeScreenshotter %COMPILER_FLAGS% "../src/main.cpp" -FmScreenshotter.map -link -nodefaultlib kernel32.lib -stack:0x100000,0x100000 -EXPORT:handle_input_and_render -PDB:%random%_screenshotter.pdb -stack:0x100000,0x100000 -subsystem:windows,5.2
+cl -FeWin32 %COMPILER_FLAGS% "../src/platform_win32.cpp" -FmWin32.map -link -nodefaultlib %LIBS% -stack:0x100000,0x100000 -subsystem:windows,5.2
 popd
 
 :skipEverything

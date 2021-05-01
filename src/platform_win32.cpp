@@ -533,7 +533,6 @@ win32_screen_capture_thread(void *data) {
     }
 }
 
-
 int CALLBACK
 WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd) {
     int res = 0xFF;
@@ -541,7 +540,7 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
     // TODO: Think about these sizes more. Because this app is meant to run in the background it should be as resource-light as possible.
     Uintptr permanent_size = MEGABYTES(128);
     Uintptr temp_size = MEGABYTES(128);
-    Uintptr bitmap_size = MAX_SCREEN_BITMAP_SIZE;
+    Uintptr bitmap_size = MAX_SCREEN_BITMAP_SIZE + 1;
 
     Void *all_memory = VirtualAlloc(0, get_memory_base_size() + permanent_size + temp_size + bitmap_size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
     if(all_memory) {
@@ -882,3 +881,13 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
 
     return(res);
 }
+
+extern "C" {
+    int _fltused = 0;
+}
+
+void __stdcall WinMainCRTStartup() {
+    int Result = WinMain(GetModuleHandle(0), 0, 0, 0);
+    ExitProcess(Result);
+}
+

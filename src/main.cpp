@@ -12,7 +12,7 @@ extern "C" Void handle_input_and_render(API *api) {
     set(api->bitmap_memory, 255, 1920 * 1080 * 4);
 }
 
-// TODO: Mirror doesn't like this...
+// TODO: Windows only...
 void __stdcall _DllMainCRTStartup() {
     // TODO: Doesn't this need to do anything?
 }

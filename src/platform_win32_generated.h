@@ -40,6 +40,13 @@ enum sglg_Type {
     sglg_Type_API,
     sglg_Type_Image,
     sglg_Type_Bitmap_Header,
+    sglg_Type_Win32_Work_Queue_Entry,
+    sglg_Type_Win32_Work_Queue,
+    sglg_Type_Void,
+    sglg_Type_Win32_Loaded_Code,
+    sglg_Type_Win32_Debug_Window,
+    sglg_Type_Win32_API,
+    sglg_Type_Win32_Screen_Capture_Thread_Parameters,
 };
 
 // Utils
@@ -67,6 +74,7 @@ typedef int32_t S32 ;
 typedef int64_t S64 ;
 typedef float F32 ;
 typedef double F64 ;
+typedef Void Handle_Input_And_Render ( API * ) ;
 
 // Forward declared structs
 
@@ -89,6 +97,12 @@ struct Bitmap;
 struct API;
 struct Image;
 struct Bitmap_Header;
+struct Win32_Work_Queue_Entry;
+struct Win32_Work_Queue;
+struct Win32_Loaded_Code;
+struct Win32_Debug_Window;
+struct Win32_API;
+struct Win32_Screen_Capture_Thread_Parameters;
 
 // Forward declaration of functions
  static uint64_t get_memory_base_size(void );
@@ -146,13 +160,22 @@ struct Bitmap_Header;
  static Void set(Void * dst , U8 v , U64 size );
  static F32 clamp01(F32 a );
  static Void write_image_to_disk(API * api , Memory * memory , Image * image , String file_name );
- static U32 round_f32_to_u32(F32 f );
- static Rectangle create_rectangle(Int x , Int y , Int width , Int height , U8 r , U8 g , U8 b , U8 a );
- static Rectangle* push_rectangle(Renderer * renderer , Int start_x , Int start_y , Int width , Int height , U8 r , U8 g , U8 b , U8 a );
- static Void render(Renderer * renderer , Bitmap * bitmap );
- static Void draw_solid_rectangle(Bitmap * bitmap , Int start_x , Int start_y , Int width , Int height , U8 r , U8 g , U8 b , U8 a );
-extern "C" Void handle_input_and_render(API * api );
-void  __stdcall _DllMainCRTStartup(Void );
+ static File win32_read_file(Memory * memory , U32 memory_index_to_use , String fname , Bool null_terminate );
+ static Bool win32_write_file(Memory * memory , String fname , U8 * data , U64 size );
+ static Int win32_get_processor_count(Void );
+ static U64 win32_locked_add(U64 volatile * a , U64 b );
+ static F32 win32_safe_div(F32 a , F32 b );
+ static Void win32_update_window(HDC dc , RECT * wnd_rect , Void * bitmap_memory , BITMAPINFO * bitmap_info , Int bitmap_width , Int bitmap_height );
+ static Key win32_key_to_our_key(WPARAM k );
+ static F32 win32_get_seconds_elapsed(LARGE_INTEGER start , LARGE_INTEGER end , int64_t perf_cnt_freq );
+ static Void win32_get_window_dimension(HWND wnd , Int * w , Int * h );
+ static Void win32_init_opengl(HWND window );
+ static Bool win32_add_work_queue_entry(API * api , Void * data , Void * cb );
+ static Bool win32_do_next_work_queue_entry(Win32_Work_Queue * queue );
+ static Void win32_complete_all_work(API * api );
+ static Win32_Loaded_Code win32_load_code(Char * source_fname , Char * temp_fname );
+int CALLBACK(HINSTANCE hInstance , HINSTANCE hPrevInstance , LPSTR lpCmdLine , int nShowCmd );
+void  __stdcall WinMainCRTStartup();
 static char const *sglg_Memory_Arena_Error_to_string(Memory_Arena_Error e);
 static int sglg_Memory_Arena_Error_count(Memory_Arena_Error e);
 static char const *sglg_Memory_Index_to_string(Memory_Index e);

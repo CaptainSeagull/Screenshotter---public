@@ -110,6 +110,6 @@ struct Config {
 
 
 
+#include "renderer.h"
 #include "platform.h"
 #include "image.cpp"
-

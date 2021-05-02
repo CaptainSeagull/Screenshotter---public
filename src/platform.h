@@ -88,6 +88,12 @@ struct Platform_Callbacks {
     Void (*complete_all_work)(struct API *api);
 };
 
+struct Bitmap {
+    Void *memory;
+    Int width;
+    Int height;
+};
+
 // TODO: Tidy API struct
 struct API {
     F32 previous_key[256];
@@ -108,9 +114,8 @@ struct API {
     Int window_height;
     Int core_count;
 
-    Int bitmap_width;
-    Int bitmap_height;
-    Void *bitmap_memory;
+    Bitmap screen_bitmap;
+    Renderer *renderer;
 
     Bool image_size_change;
 

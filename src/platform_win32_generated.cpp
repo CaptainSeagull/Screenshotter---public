@@ -203,6 +203,12 @@ static uint64_t sglg_type_to_size(sglg_Type type) {
         case sglg_Type_API: { return(sizeof(API)); } break;
         case sglg_Type_Image: { return(sizeof(Image)); } break;
         case sglg_Type_Bitmap_Header: { return(sizeof(Bitmap_Header)); } break;
+        case sglg_Type_Win32_Work_Queue_Entry: { return(sizeof(Win32_Work_Queue_Entry)); } break;
+        case sglg_Type_Win32_Work_Queue: { return(sizeof(Win32_Work_Queue)); } break;
+        case sglg_Type_Win32_Loaded_Code: { return(sizeof(Win32_Loaded_Code)); } break;
+        case sglg_Type_Win32_Debug_Window: { return(sizeof(Win32_Debug_Window)); } break;
+        case sglg_Type_Win32_API: { return(sizeof(Win32_API)); } break;
+        case sglg_Type_Win32_Screen_Capture_Thread_Parameters: { return(sizeof(Win32_Screen_Capture_Thread_Parameters)); } break;
     }
     return(0);
 }
@@ -226,5 +232,11 @@ static sglg_Type sglg_string_to_type(char const *s, uint64_t l) {
     else if(sgl_generated_string_compare("API", 3, s, l)) { return(sglg_Type_API); }
     else if(sgl_generated_string_compare("Image", 5, s, l)) { return(sglg_Type_Image); }
     else if(sgl_generated_string_compare("Bitmap_Header", 13, s, l)) { return(sglg_Type_Bitmap_Header); }
+    else if(sgl_generated_string_compare("Win32_Work_Queue_Entry", 22, s, l)) { return(sglg_Type_Win32_Work_Queue_Entry); }
+    else if(sgl_generated_string_compare("Win32_Work_Queue", 16, s, l)) { return(sglg_Type_Win32_Work_Queue); }
+    else if(sgl_generated_string_compare("Win32_Loaded_Code", 17, s, l)) { return(sglg_Type_Win32_Loaded_Code); }
+    else if(sgl_generated_string_compare("Win32_Debug_Window", 18, s, l)) { return(sglg_Type_Win32_Debug_Window); }
+    else if(sgl_generated_string_compare("Win32_API", 9, s, l)) { return(sglg_Type_Win32_API); }
+    else if(sgl_generated_string_compare("Win32_Screen_Capture_Thread_Parameters", 38, s, l)) { return(sglg_Type_Win32_Screen_Capture_Thread_Parameters); }
     return(sglg_Type_unknown);
 }

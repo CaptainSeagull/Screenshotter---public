@@ -5,7 +5,9 @@
 #include <intrin.h>
 #include "platform_win32.h"
 
-#define MAX_SCREEN_BITMAP_SIZE (1920 * 1080 * 4) // TODO: Change to 4k
+//#include "platform_win32_generated.h"
+
+#define MAX_SCREEN_BITMAP_SIZE (1920 * 1080 * 4) // TODO: Change to 4k?
 
 // TODO: Go through this file and tidy it up.
 
@@ -29,16 +31,18 @@ win32_read_file(Memory *memory, U32 memory_index_to_use, String fname, Bool null
             if(GetFileSizeEx(fhandle, &fsize)) {
                 DWORD fsize32 = safe_truncate_size_64(fsize.QuadPart);
                 Void *file_memory = memory_push(memory, memory_index_to_use, (null_terminate) ? fsize32 + 1 : fsize32);
-
-                DWORD bytes_read = 0;
-                if(ReadFile(fhandle, file_memory, fsize32, &bytes_read, 0)) {
-                    if(bytes_read != fsize32) {
-                        ASSERT(0);
-                    } else {
-                        res.fname = fname; // TODO: Change to full path not relative.
-                        res.size = fsize32;
-                        res.e = (Char *)file_memory;
-                        res.e[res.size] = 0;
+                ASSERT(file_memory);
+                if(file_memory) {
+                    DWORD bytes_read = 0;
+                    if(ReadFile(fhandle, file_memory, fsize32, &bytes_read, 0)) {
+                        if(bytes_read != fsize32) {
+                            ASSERT(0);
+                        } else {
+                            res.fname = fname; // TODO: Change to full path not relative.
+                            res.size = fsize32;
+                            res.e = (Char *)file_memory;
+                            res.e[res.size] = 0;
+                        }
                     }
                 }
             }
@@ -189,6 +193,7 @@ win32_update_window(HDC dc, RECT  *wnd_rect, Void *bitmap_memory, BITMAPINFO *bi
 #endif
 }
 
+// TODO: Mirror doesn't like CALLACK
 internal LRESULT CALLBACK
 win32_window_proc(HWND wnd, UINT msg, WPARAM w_param, LPARAM l_param) {
     LRESULT res = 0;
@@ -202,8 +207,8 @@ win32_window_proc(HWND wnd, UINT msg, WPARAM w_param, LPARAM l_param) {
             Int h = cr.bottom - cr.top;
 
             // May be faster to allocate new memory / free old memory. But works for now.
-            if(global_api->bitmap_memory) {
-                zero(global_api->bitmap_memory, MAX_SCREEN_BITMAP_SIZE);
+            if(global_api->screen_bitmap.memory) {
+                zero(global_api->screen_bitmap.memory, MAX_SCREEN_BITMAP_SIZE);
             }
 
             global_bmp_info.bmiHeader.biSize = sizeof(global_bmp_info.bmiHeader);
@@ -218,8 +223,8 @@ win32_window_proc(HWND wnd, UINT msg, WPARAM w_param, LPARAM l_param) {
             global_bmp_info.bmiHeader.biClrUsed = 0;
             global_bmp_info.bmiHeader.biClrImportant = 0;
 
-            global_api->bitmap_width = w;
-            global_api->bitmap_height = h;
+            global_api->screen_bitmap.width = w;
+            global_api->screen_bitmap.height = h;
 
             global_api->image_size_change = true;
         } break;
@@ -229,7 +234,8 @@ win32_window_proc(HWND wnd, UINT msg, WPARAM w_param, LPARAM l_param) {
             HDC dc = BeginPaint(wnd, &ps);
             RECT cr;
             GetClientRect(wnd, &cr);
-            win32_update_window(dc, &cr, global_api->bitmap_memory, &global_bmp_info, global_api->bitmap_width, global_api->bitmap_height);
+            win32_update_window(dc, &cr, global_api->screen_bitmap.memory, &global_bmp_info,
+                                global_api->screen_bitmap.width, global_api->screen_bitmap.height);
             EndPaint(wnd, &ps);
         } break;
 
@@ -626,9 +632,9 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
         // _Real_ entry point for program...
         if(successfully_parsed_command_line) {
             API api = {};
-            api.bitmap_memory = memory_push(&memory, Memory_Index_bitmap, MAX_SCREEN_BITMAP_SIZE);
-            ASSERT(api.bitmap_memory);
-            if(api.bitmap_memory) {
+            api.screen_bitmap.memory = memory_push(&memory, Memory_Index_bitmap, MAX_SCREEN_BITMAP_SIZE);
+            ASSERT(api.screen_bitmap.memory);
+            if(api.screen_bitmap.memory) {
                 global_api = &api;
 
                 LARGE_INTEGER perf_cnt_freq_res;
@@ -705,6 +711,8 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
                         win32_api.queue.entries = (Win32_Work_Queue_Entry *)memory_push(&memory, Memory_Index_permanent,
                                                                                         sizeof(Win32_Work_Queue_Entry) * win32_api.queue.entry_count);
                         ASSERT(win32_api.queue.entries);
+                        api.renderer = (Renderer *)memory_push(&memory, Memory_Index_permanent, sizeof(Renderer));
+                        ASSERT(api.renderer); // TODO: Error handling.
                         api.platform_specific = (Void *)&win32_api;
 
                         api.max_work_queue_count = win32_api.queue.entry_count;
@@ -828,7 +836,8 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
                                 if(!api.init) { api.image_size_change = false; }
                                 api.init = false;
 
-                                win32_update_window(dc, &cr, api.bitmap_memory, &global_bmp_info, api.bitmap_width, api.bitmap_height);
+                                win32_update_window(dc, &cr, api.screen_bitmap.memory, &global_bmp_info,
+                                                    api.screen_bitmap.width, api.screen_bitmap.height);
 
                                 ReleaseDC(wnd, dc);
                             }
@@ -882,12 +891,12 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
     return(res);
 }
 
-extern "C" {
-    int _fltused = 0;
-}
-
+// TODO: Putting methods in extern "C" ruins mirror. Mirror forward declares them without the extern "C" so the linkage is different.
+extern "C" {int _fltused = 0; }
 void __stdcall WinMainCRTStartup() {
     int Result = WinMain(GetModuleHandle(0), 0, 0, 0);
     ExitProcess(Result);
 }
+
+//#include "platform_win32_generated.cpp"
 

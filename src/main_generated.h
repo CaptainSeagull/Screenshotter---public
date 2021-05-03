@@ -31,7 +31,7 @@ enum sglg_Type {
     sglg_Type_String_To_Float_Result,
     sglg_Type_Memory_Index,
     sglg_Type_Config,
-    sglg_Type_Rectangle,
+    sglg_Type_Rect,
     sglg_Type_Renderer,
     sglg_Type_File,
     sglg_Type_Key,
@@ -79,7 +79,7 @@ struct String_To_Float_Result;
 enum Memory_Index : Int;
 
 struct Config;
-struct Rectangle;
+struct Rect;
 struct Renderer;
 struct File;
 enum Key : Int;
@@ -146,11 +146,9 @@ struct Bitmap_Header;
  static Void set(Void * dst , U8 v , U64 size );
  static F32 clamp01(F32 a );
  static Void write_image_to_disk(API * api , Memory * memory , Image * image , String file_name );
- static U32 round_f32_to_u32(F32 f );
- static Rectangle create_rectangle(Int x , Int y , Int width , Int height , U8 r , U8 g , U8 b , U8 a );
- static Rectangle* push_rectangle(Renderer * renderer , Int start_x , Int start_y , Int width , Int height , U8 r , U8 g , U8 b , U8 a );
+ static Rect create_rectangle(Int x , Int y , Int width , Int height , U8 r , U8 g , U8 b , U8 a );
+ static Rect* push_solid_rectangle(Renderer * renderer , Int start_x , Int start_y , Int width , Int height , U8 r , U8 g , U8 b , U8 a );
  static Void render(Renderer * renderer , Bitmap * bitmap );
- static Void draw_solid_rectangle(Bitmap * bitmap , Int start_x , Int start_y , Int width , Int height , U8 r , U8 g , U8 b , U8 a );
 extern "C" Void handle_input_and_render(API * api );
 void  __stdcall _DllMainCRTStartup(Void );
 static char const *sglg_Memory_Arena_Error_to_string(Memory_Arena_Error e);

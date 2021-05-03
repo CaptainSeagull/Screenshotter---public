@@ -194,7 +194,7 @@ static uint64_t sglg_type_to_size(sglg_Type type) {
         case sglg_Type_String_To_Float_Result: { return(sizeof(String_To_Float_Result)); } break;
         case sglg_Type_Memory_Index: { return(sizeof(Memory_Index)); } break;
         case sglg_Type_Config: { return(sizeof(Config)); } break;
-        case sglg_Type_Rectangle: { return(sizeof(Rectangle)); } break;
+        case sglg_Type_Rect: { return(sizeof(Rect)); } break;
         case sglg_Type_Renderer: { return(sizeof(Renderer)); } break;
         case sglg_Type_File: { return(sizeof(File)); } break;
         case sglg_Type_Key: { return(sizeof(Key)); } break;
@@ -217,7 +217,7 @@ static sglg_Type sglg_string_to_type(char const *s, uint64_t l) {
     else if(sgl_generated_string_compare("String_To_Float_Result", 22, s, l)) { return(sglg_Type_String_To_Float_Result); }
     else if(sgl_generated_string_compare("Memory_Index", 12, s, l)) { return(sglg_Type_Memory_Index); }
     else if(sgl_generated_string_compare("Config", 6, s, l)) { return(sglg_Type_Config); }
-    else if(sgl_generated_string_compare("Rectangle", 9, s, l)) { return(sglg_Type_Rectangle); }
+    else if(sgl_generated_string_compare("Rect", 4, s, l)) { return(sglg_Type_Rect); }
     else if(sgl_generated_string_compare("Renderer", 8, s, l)) { return(sglg_Type_Renderer); }
     else if(sgl_generated_string_compare("File", 4, s, l)) { return(sglg_Type_File); }
     else if(sgl_generated_string_compare("Key", 3, s, l)) { return(sglg_Type_Key); }

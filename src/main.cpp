@@ -4,7 +4,7 @@
 
 extern "C" Void
 handle_input_and_render(API *api) {
-    push_solid_rectangle(api->renderer, 100, 100, 100, 100, 255, 0, 0, 0);
+    push_solid_rectangle(api->renderer, 100, 100, 100, 100, 255, 0,   0, 0);
     push_solid_rectangle(api->renderer, 200, 100, 100, 100, 255, 0, 255, 0);
 
     render(api->renderer, &api->screen_bitmap);

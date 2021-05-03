@@ -5,7 +5,7 @@
 #include <intrin.h>
 #include "platform_win32.h"
 
-//#include "platform_win32_generated.h"
+#include "platform_win32_generated.h"
 
 #define MAX_SCREEN_BITMAP_SIZE (1920 * 1080 * 4) // TODO: Change to 4k?
 
@@ -648,7 +648,7 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
                 wnd_class.lpfnWndProc = win32_window_proc;
 
                 // TODO: Is this part correct?
-                Int frame_rate = 60;
+                Int frame_rate = 30; // TODO: Make configurable.
                 Int game_update_hz = frame_rate;
                 F32 target_seconds_per_frame = 1.0f / (F32)game_update_hz;
                 F32 target_ms_per_frame = 16.66f; //(1.0f / (F32)frame_rate) * 1000.0f;
@@ -842,7 +842,9 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
                                 ReleaseDC(wnd, dc);
                             }
 
-                            //SwapBuffers(GetDC(wnd)); // TODO: Is this nessessary with GDI or only OpenGL?
+                            //SwapBuffers(GetDC(wnd)); // TODO: Is this nessessary with GDI or OpenGL?
+
+                            // TODO: If the windows isn't in focus have an option to go to sleep.
 
                             // Frame rate stuff, not that we ever hit a frame...
                             {
@@ -898,5 +900,4 @@ void __stdcall WinMainCRTStartup() {
     ExitProcess(Result);
 }
 
-//#include "platform_win32_generated.cpp"
-
+#include "platform_win32_generated.cpp"

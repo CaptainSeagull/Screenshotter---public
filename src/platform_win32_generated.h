@@ -31,7 +31,7 @@ enum sglg_Type {
     sglg_Type_String_To_Float_Result,
     sglg_Type_Memory_Index,
     sglg_Type_Config,
-    sglg_Type_Rectangle,
+    sglg_Type_Rect,
     sglg_Type_Renderer,
     sglg_Type_File,
     sglg_Type_Key,
@@ -87,7 +87,7 @@ struct String_To_Float_Result;
 enum Memory_Index : Int;
 
 struct Config;
-struct Rectangle;
+struct Rect;
 struct Renderer;
 struct File;
 enum Key : Int;
@@ -174,7 +174,7 @@ struct Win32_Screen_Capture_Thread_Parameters;
  static Bool win32_do_next_work_queue_entry(Win32_Work_Queue * queue );
  static Void win32_complete_all_work(API * api );
  static Win32_Loaded_Code win32_load_code(Char * source_fname , Char * temp_fname );
-int CALLBACK(HINSTANCE hInstance , HINSTANCE hPrevInstance , LPSTR lpCmdLine , int nShowCmd );
+int  CALLBACK WinMain(HINSTANCE hInstance , HINSTANCE hPrevInstance , LPSTR lpCmdLine , int nShowCmd );
 void  __stdcall WinMainCRTStartup();
 static char const *sglg_Memory_Arena_Error_to_string(Memory_Arena_Error e);
 static int sglg_Memory_Arena_Error_count(Memory_Arena_Error e);

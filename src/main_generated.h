@@ -169,3 +169,4 @@ static Int sglg_Key_count(Key e);
 #define sglg_internal_enum_Memory_Arena_Error (7)
 #define sglg_internal_enum_Memory_Index (3)
 #define sglg_internal_enum_Key (58)
+#define SGLG_ENTITY_OUTPUT_INTERNAL_Render_Entity union { Rect _Rect; }; 

@@ -19,8 +19,10 @@ extern "C" Void
 handle_input_and_render(API *api) {
     DLL_Data *data = (DLL_Data *)api->dll_data;
 
-    push_solid_rectangle(&data->renderer, 100, 100, 100, 100, 255, 0,   0, 0);
-    push_solid_rectangle(&data->renderer, 200, 100, 100, 100, 255, 0, 255, 0);
+    if(api->init) {
+        push_solid_rectangle(&data->renderer, 100, 100, 100, 100, 255, 0,   0, 0);
+        push_solid_rectangle(&data->renderer, 200, 100, 100, 100, 255, 0, 255, 0);
+    }
 
     render(&data->renderer, &api->screen_bitmap);
 }

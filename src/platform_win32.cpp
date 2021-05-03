@@ -226,7 +226,7 @@ win32_window_proc(HWND wnd, UINT msg, WPARAM w_param, LPARAM l_param) {
             global_api->screen_bitmap.width = w;
             global_api->screen_bitmap.height = h;
 
-            global_api->image_size_change = true;
+            global_api->screen_image_size_change = true;
         } break;
 
         case WM_PAINT: {
@@ -436,8 +436,10 @@ win32_load_code(Char *source_fname, Char *temp_fname) {
     res.dll = LoadLibraryA(temp_fname);
     ASSERT(res.dll);
     if(res.dll) {
+        res.init_platform_settings  = (Init_Platform_Settings *) GetProcAddress(res.dll, "init_platform_settings"          );
         res.handle_input_and_render = (Handle_Input_And_Render *)GetProcAddress(res.dll, "handle_input_and_render");
-        ASSERT(res.handle_input_and_render);
+        res.success = (res.handle_input_and_render && res.init_platform_settings);
+        ASSERT(res.success);
     }
 
     return(res);
@@ -448,13 +450,14 @@ win32_find_window_from_name(Memory *memory, String window_title) {
     HWND window = 0;
 
     Char *window_title_raw = (Char *)memory_push(memory, Memory_Index_temp, window_title.len + 1); // Nul-terminate
-    string_copy(window_title_raw, window_title.e, window_title.len);
+    ASSERT(window_title_raw);
     if(!window_title_raw) {
-        ASSERT(0); // TODO: Error handling
+        // TODO: Error handling
     } else {
+        string_copy(window_title_raw, window_title.e, window_title.len);
         window = FindWindowA(TEXT(window_title_raw), NULL);
         if(!window) {
-            ASSERT(0); // TODO: Error handling
+            // TODO: Report error finding target window
         }
 
         memory_pop(memory, window_title_raw);
@@ -469,8 +472,6 @@ internal DWORD
 win32_screen_capture_thread(void *data) {
     Win32_Screen_Capture_Thread_Parameters *tp = (Win32_Screen_Capture_Thread_Parameters *)data;
 
-    // TODO: This won't work for minified windows. See https://www.codeproject.com/Articles/20651/Capturing-Minimized-Window-A-Kid-s-Trick
-    //       for how to handle that.
     // TODO: Should open a new directory each time screenshotter is fun.
 
     Config *config = tp->config;
@@ -484,58 +485,63 @@ win32_screen_capture_thread(void *data) {
         GetClientRect(window, &rect);
         Int width = rect.right - rect.left;
         Int height = rect.bottom - rect.top;
-        HDC dc = GetDC(0);
-        HDC capture_dc = CreateCompatibleDC(dc);
-        HBITMAP bitmap = CreateCompatibleBitmap(dc, rect.right - rect.left, rect.bottom - rect.top);
 
-        HGDIOBJ gdiObj = SelectObject(capture_dc, bitmap);
+        // TODO: If the window is minified then the width/height will be 0
+        //       See https://www.codeproject.com/Articles/20651/Capturing-Minimized-Window-A-Kid-s-Trick for how to handle.
+        if(width > 0 && height > 0) {
+            HDC dc = GetDC(0);
+            HDC capture_dc = CreateCompatibleDC(dc);
+            HBITMAP bitmap = CreateCompatibleBitmap(dc, rect.right - rect.left, rect.bottom - rect.top);
 
-        PrintWindow(window, capture_dc, (config->include_title_bar) ? 0 : PW_CLIENTONLY);
+            HGDIOBJ gdiObj = SelectObject(capture_dc, bitmap);
 
-        // TODO: This sometimes captures the current window, not the target for some reason...
-        //BitBlt(capture_dc, 0, 0, width, height, dc, 0, 0, SRCCOPY | CAPTUREBLT);
-        //SelectObject(capture_dc, gdiObj);
+            PrintWindow(window, capture_dc, (config->include_title_bar) ? 0 : PW_CLIENTONLY);
 
-        if(config->copy_to_clipboard) {
-            OpenClipboard(0);
-            EmptyClipboard();
-            SetClipboardData(CF_BITMAP, bitmap);
-            CloseClipboard();
+            // TODO: This sometimes captures the current window, not the target for some reason...
+            //BitBlt(capture_dc, 0, 0, width, height, dc, 0, 0, SRCCOPY | CAPTUREBLT);
+            //SelectObject(capture_dc, gdiObj);
+
+            if(config->copy_to_clipboard) {
+                OpenClipboard(0);
+                EmptyClipboard();
+                SetClipboardData(CF_BITMAP, bitmap);
+                CloseClipboard();
+            }
+
+            BITMAPINFO bmp_infp = {};
+            bmp_infp.bmiHeader.biSize = sizeof(bmp_infp.bmiHeader);
+
+            BITMAPINFOHEADER bmp_header = {};
+            bmp_header.biSize = sizeof(BITMAPINFOHEADER);
+            bmp_header.biWidth = width;
+            bmp_header.biHeight = height;
+            bmp_header.biPlanes = 1;
+            bmp_header.biBitCount = 32;
+
+            U32 image_size = ((width * bmp_header.biBitCount + 31) / 32) * 4 * height; // TODO: Why 31 / 32?? Why not just width * height * 4?
+            U8 *image_data = (U8 *)memory_push(memory, Memory_Index_permanent, image_size);
+            GetDIBits(dc, bitmap, 0, height, image_data, (BITMAPINFO *)&bmp_header, DIB_RGB_COLORS);
+
+            // TODO: As well as saving the file, we should create an output directory per-session.
+
+            Int output_filename_size = config->target_output_directory.len + 256; // 256 is padding
+            Char *output_filename = (Char *)memory_push(memory, Memory_Index_temp, output_filename_size);
+            Int bytes_written = stbsp_snprintf(output_filename, output_filename_size, "%.*s/file_%I64d.bmp", // TODO: %d prints S32 not U64
+                                               config->target_output_directory.len, config->target_output_directory.e,
+                                               iteration_count);
+            ASSERT(bytes_written < output_filename_size);
+
+            Image image = {};
+            image.width = width;
+            image.height = height;
+            image.pixels = (U32 * )image_data;
+            write_image_to_disk(api, memory, &image, output_filename);
+
+            memory_pop(memory, output_filename);
+
+            Sleep(config->amount_to_sleep);
+            ++iteration_count;
         }
-
-        BITMAPINFO bmp_infp = {};
-        bmp_infp.bmiHeader.biSize = sizeof(bmp_infp.bmiHeader);
-
-        BITMAPINFOHEADER bmp_header = {};
-        bmp_header.biSize = sizeof(BITMAPINFOHEADER);
-        bmp_header.biWidth = width;
-        bmp_header.biHeight = height;
-        bmp_header.biPlanes = 1;
-        bmp_header.biBitCount = 32;
-
-        U32 image_size = ((width * bmp_header.biBitCount + 31) / 32) * 4 * height; // TODO: Why 31 / 32?? Why not just width * height * 4?
-        U8 *image_data = (U8 *)memory_push(memory, Memory_Index_permanent, image_size);
-        GetDIBits(dc, bitmap, 0, height, image_data, (BITMAPINFO *)&bmp_header, DIB_RGB_COLORS);
-
-        // TODO: As well as saving the file, we should create an output directory per-session.
-
-        Int output_filename_size = config->target_output_directory.len + 256; // 256 is padding
-        Char *output_filename = (Char *)memory_push(memory, Memory_Index_temp, output_filename_size);
-        Int bytes_written = stbsp_snprintf(output_filename, output_filename_size, "%.*s/file_%I64d.bmp", // TODO: %d prints S32 not U64
-                                           config->target_output_directory.len, config->target_output_directory.e,
-                                           iteration_count);
-        ASSERT(bytes_written < output_filename_size);
-
-        Image image = {};
-        image.width = width;
-        image.height = height;
-        image.pixels = (U32 * )image_data;
-        write_image_to_disk(api, memory, &image, output_filename);
-
-        memory_pop(memory, output_filename);
-
-        Sleep(config->amount_to_sleep);
-        ++iteration_count;
     }
 }
 
@@ -631,7 +637,36 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
 
         // _Real_ entry point for program...
         if(successfully_parsed_command_line) {
+
+            Char _path[1024] = {}; // TODO: MAX_PATH?
+            GetModuleFileNameA(0, _path, ARRAY_COUNT(_path));
+            String path = create_string(_path);
+            Int last_slash = find_index(path, '\\', true);
+            ASSERT(last_slash != -1);
+            ++last_slash;
+
+            // TODO: Instead of assuming we're running from the data directory and going relative from there could I find the path
+            // to the current EXE and load the DLLs from there?
+
+            Char src_dll_path[1024] = {};
+            Char tmp_dll_path[1024] = {};
+
+            string_copy(src_dll_path, _path);
+            string_copy(&src_dll_path[last_slash], "screenshotter.dll");
+            string_copy(tmp_dll_path, _path);
+            string_copy(&tmp_dll_path[last_slash], "screenshotter_temp.dll");
+            Win32_Loaded_Code loaded_code = win32_load_code(src_dll_path, tmp_dll_path);
+
             API api = {};
+
+            SYSTEM_INFO info = {};
+            GetSystemInfo(&info);
+            api.settings.thread_count = info.dwNumberOfProcessors;
+
+            api.settings.window_width = 1920 / 2;
+            api.settings.window_width = 1080 / 2;
+
+            loaded_code.init_platform_settings(&api.settings);
             api.screen_bitmap.memory = memory_push(&memory, Memory_Index_bitmap, MAX_SCREEN_BITMAP_SIZE);
             ASSERT(api.screen_bitmap.memory);
             if(api.screen_bitmap.memory) {
@@ -668,11 +703,9 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
                 }
 
                 if(RegisterClassA(&wnd_class)) {
-                    Int target_wnd_width = 1920 / 3;
-                    Int target_wnd_height = 1080 / 3;
                     HWND wnd = CreateWindowExA(0, wnd_class.lpszClassName, "Screenshotter",
                                                WS_OVERLAPPEDWINDOW | WS_VISIBLE | WS_POPUP, CW_USEDEFAULT, CW_USEDEFAULT,
-                                               target_wnd_width, target_wnd_height, 0, 0, hInstance, 0);
+                                               api.settings.window_width, api.settings.window_height, 0, 0, hInstance, 0);
 
 #if USE_OPENGL_WINDOW
                     win32_init_opengl(wnd);
@@ -687,37 +720,20 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
 
                         float ms_per_frame = 16.6666f;
 
-                        Char _path[1024] = {}; // TODO: MAX_PATH?
-                        GetModuleFileNameA(0, _path, ARRAY_COUNT(_path));
-                        String path = create_string(_path);
-                        Int last_slash = find_index(path, '\\', true);
-                        ASSERT(last_slash != -1);
-                        ++last_slash;
-
-                        // TODO: Instead of assuming we're running from the data directory and going relative from there could I find the path
-                        // to the current EXE and load the DLLs from there?
-                        Char src_dll_path[1024] = {};
-                        Char tmp_dll_path[1024] = {};
-
-                        string_copy(src_dll_path, _path);
-                        string_copy(&src_dll_path[last_slash], "screenshotter.dll");
-                        string_copy(tmp_dll_path, _path);
-                        string_copy(&tmp_dll_path[last_slash], "screenshotter_temp.dll");
-
-                        Win32_Loaded_Code code = win32_load_code(src_dll_path, tmp_dll_path);
-
                         Win32_API win32_api = {};
                         win32_api.queue.entry_count = 2048;
                         win32_api.queue.entries = (Win32_Work_Queue_Entry *)memory_push(&memory, Memory_Index_permanent,
                                                                                         sizeof(Win32_Work_Queue_Entry) * win32_api.queue.entry_count);
                         ASSERT(win32_api.queue.entries);
-                        api.renderer = (Renderer *)memory_push(&memory, Memory_Index_permanent, sizeof(Renderer));
-                        ASSERT(api.renderer); // TODO: Error handling.
+                        if(api.settings.dll_data_struct_size) {
+                            api.dll_data = memory_push(&memory, Memory_Index_permanent, api.settings.dll_data_struct_size);
+                            ASSERT(api.dll_data); // TODO: Error handling.
+                        }
                         api.platform_specific = (Void *)&win32_api;
 
                         api.max_work_queue_count = win32_api.queue.entry_count;
                         api.init = true;
-                        api.image_size_change = true;
+                        api.screen_image_size_change = true;
                         api.running = true;
                         api.memory = &memory;
 
@@ -731,10 +747,6 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
                         api.randomish_seed = win32_get_wall_clock().QuadPart;
                         //api.randomish_seed = xorshift64(&api.randomish_seed); // TODO: Copy over xorshift64
 
-                        SYSTEM_INFO info = {};
-                        GetSystemInfo(&info);
-                        api.core_count = info.dwNumberOfProcessors;
-
                         // TODO: Load config from settings on disk.
                         Config config = {};
                         config.target_window_name = "Notepad";
@@ -742,15 +754,19 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
                         config.target_output_directory = "C:/tmp";
                         config.amount_to_sleep = 5000;
 
-                        Win32_Screen_Capture_Thread_Parameters p = {};
-                        p.memory = &memory;
-                        p.config = &config;
-                        p.api = &api;
+                        Win32_Screen_Capture_Thread_Parameters thread_params = {};
+                        thread_params.memory = &memory;
+                        thread_params.config = &config;
+                        thread_params.api = &api;
 
-                        HANDLE capture_image_thread_handle = CreateThread(0, 0, win32_screen_capture_thread, &p, 0, 0);
+                        // TODO: This part is kinda specific to the screenshotter. Maybe that's OK though, but have a think about how to
+                        //       handle platform stuff which is kinda specific to the app.
+                        HANDLE capture_image_thread_handle = CreateThread(0, 0, win32_screen_capture_thread, &thread_params, 0, 0);
                         CloseHandle(capture_image_thread_handle);
 
-                        for(Int i = 0; (i < api.core_count - 1); ++i) {
+                        // TODO: Read core_count from settings. Maybe pass in actual core_count to settings but let
+                        //       DLL overwrite it.
+                        for(Int i = 0; (i < api.settings.thread_count - 1); ++i) {
                             HANDLE h = CreateThread(0, 0, win32_thread_proc, &win32_api.queue, 0, 0);
                             ASSERT(h && h != INVALID_HANDLE_VALUE);
                             CloseHandle(h);
@@ -758,19 +774,22 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
 
                         F32 seconds_elapsed_for_last_frame = 0;
                         while(api.running) {
-                            // TODO: Do rendering in separate thread and only have main thread process window messages?
+                            // TODO: Do rendering in separate thread and only have main thread process window messages? Maybe a good option
+                            //       to have, but for Screenshotter we want the app to be as light as possible. So main
+                            //       thread + 'screenshotting' threading should be all that's used.
 
                             // Unload the screenshotter DLL then reload it in.
                             FILETIME new_write_time = win32_get_last_write_time(src_dll_path);
-                            if(CompareFileTime(&new_write_time, &code.dll_last_write_time) != 0) {
-                                if(code.dll) {
-                                    FreeLibrary(code.dll);
+                            if(CompareFileTime(&new_write_time, &loaded_code.dll_last_write_time) != 0) {
+                                if(loaded_code.dll) {
+                                    FreeLibrary(loaded_code.dll);
 
-                                    code.dll = 0;
-                                    code.handle_input_and_render = 0;
+                                    loaded_code.dll = 0;
+                                    loaded_code.handle_input_and_render = 0;
+                                    loaded_code.init_platform_settings = 0;
                                 }
 
-                                code = win32_load_code(src_dll_path, tmp_dll_path);
+                                loaded_code = win32_load_code(src_dll_path, tmp_dll_path);
                             }
 
 
@@ -832,8 +851,8 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
                                 api.window_width = cr.right - cr.left;;
                                 api.window_height = cr.bottom - cr.top;;
 
-                                code.handle_input_and_render(&api);
-                                if(!api.init) { api.image_size_change = false; }
+                                loaded_code.handle_input_and_render(&api);
+                                if(!api.init) { api.screen_image_size_change = false; }
                                 api.init = false;
 
                                 win32_update_window(dc, &cr, api.screen_bitmap.memory, &global_bmp_info,
@@ -842,9 +861,7 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
                                 ReleaseDC(wnd, dc);
                             }
 
-                            //SwapBuffers(GetDC(wnd)); // TODO: Is this nessessary with GDI or OpenGL?
-
-                            // TODO: If the windows isn't in focus have an option to go to sleep.
+                            // TODO: If the windows isn't in focus have an option to go to sleep here until it is in focus.
 
                             // Frame rate stuff, not that we ever hit a frame...
                             {

@@ -94,6 +94,13 @@ struct Bitmap {
     Int height;
 };
 
+struct Settings {
+    U64 dll_data_struct_size;
+    Int thread_count;
+    Int window_width;
+    Int window_height;
+};
+
 // TODO: Tidy API struct
 struct API {
     F32 previous_key[256];
@@ -112,12 +119,9 @@ struct API {
 
     Int window_width;
     Int window_height;
-    Int core_count;
 
     Bitmap screen_bitmap;
-    Renderer *renderer;
-
-    Bool image_size_change;
+    Bool screen_image_size_change;
 
     U64 randomish_seed;
 
@@ -125,5 +129,8 @@ struct API {
 
     Platform_Callbacks cb;
     Void *platform_specific;
+
+    Settings settings;
+    Void *dll_data;
 };
 

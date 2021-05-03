@@ -31,15 +31,18 @@ enum sglg_Type {
     sglg_Type_String_To_Float_Result,
     sglg_Type_Memory_Index,
     sglg_Type_Config,
-    sglg_Type_Rect,
-    sglg_Type_Renderer,
     sglg_Type_File,
     sglg_Type_Key,
     sglg_Type_Platform_Callbacks,
     sglg_Type_Bitmap,
+    sglg_Type_Settings,
     sglg_Type_API,
     sglg_Type_Image,
     sglg_Type_Bitmap_Header,
+    sglg_Type_Rect,
+    sglg_Type_Render_Entity,
+    sglg_Type_Renderer,
+    sglg_Type_DLL_Data,
 };
 
 // Utils
@@ -79,16 +82,19 @@ struct String_To_Float_Result;
 enum Memory_Index : Int;
 
 struct Config;
-struct Rect;
-struct Renderer;
 struct File;
 enum Key : Int;
 
 struct Platform_Callbacks;
 struct Bitmap;
+struct Settings;
 struct API;
 struct Image;
 struct Bitmap_Header;
+struct Rect;
+struct Render_Entity;
+struct Renderer;
+struct DLL_Data;
 
 // Forward declaration of functions
  static uint64_t get_memory_base_size(void );
@@ -149,6 +155,7 @@ struct Bitmap_Header;
  static Rect create_rectangle(Int x , Int y , Int width , Int height , U8 r , U8 g , U8 b , U8 a );
  static Rect* push_solid_rectangle(Renderer * renderer , Int start_x , Int start_y , Int width , Int height , U8 r , U8 g , U8 b , U8 a );
  static Void render(Renderer * renderer , Bitmap * bitmap );
+extern "C" Void init_platform_settings(Settings * settings );
 extern "C" Void handle_input_and_render(API * api );
 void  __stdcall _DllMainCRTStartup(Void );
 static char const *sglg_Memory_Arena_Error_to_string(Memory_Arena_Error e);

@@ -18,10 +18,14 @@ struct Win32_Work_Queue {
 };
 
 typedef Void Handle_Input_And_Render(API *);
+typedef Void Init_Platform_Settings(Settings *settings);
 struct Win32_Loaded_Code {
+    Bool success;
+
     HMODULE dll;
     FILETIME dll_last_write_time;
     Handle_Input_And_Render *handle_input_and_render;
+    Init_Platform_Settings *init_platform_settings;
 };
 
 struct Win32_Debug_Window {

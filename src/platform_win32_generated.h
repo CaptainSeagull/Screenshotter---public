@@ -31,12 +31,11 @@ enum sglg_Type {
     sglg_Type_String_To_Float_Result,
     sglg_Type_Memory_Index,
     sglg_Type_Config,
-    sglg_Type_Rect,
-    sglg_Type_Renderer,
     sglg_Type_File,
     sglg_Type_Key,
     sglg_Type_Platform_Callbacks,
     sglg_Type_Bitmap,
+    sglg_Type_Settings,
     sglg_Type_API,
     sglg_Type_Image,
     sglg_Type_Bitmap_Header,
@@ -75,6 +74,7 @@ typedef int64_t S64 ;
 typedef float F32 ;
 typedef double F64 ;
 typedef Void Handle_Input_And_Render ( API * ) ;
+typedef Void Init_Platform_Settings ( Settings * settings ) ;
 
 // Forward declared structs
 
@@ -87,13 +87,12 @@ struct String_To_Float_Result;
 enum Memory_Index : Int;
 
 struct Config;
-struct Rect;
-struct Renderer;
 struct File;
 enum Key : Int;
 
 struct Platform_Callbacks;
 struct Bitmap;
+struct Settings;
 struct API;
 struct Image;
 struct Bitmap_Header;

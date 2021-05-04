@@ -40,7 +40,9 @@ enum sglg_Type {
     sglg_Type_Image,
     sglg_Type_Bitmap_Header,
     sglg_Type_Rect,
+    sglg_Type_Image_Rect,
     sglg_Type_Render_Entity,
+    sglg_Type_Render_Image,
     sglg_Type_Renderer,
     sglg_Type_DLL_Data,
 };
@@ -92,7 +94,9 @@ struct API;
 struct Image;
 struct Bitmap_Header;
 struct Rect;
+struct Image_Rect;
 struct Render_Entity;
+struct Render_Image;
 struct Renderer;
 struct DLL_Data;
 
@@ -100,7 +104,7 @@ struct DLL_Data;
  static uint64_t get_memory_base_size(void );
  static Memory create_memory_base(void * base_memory , uintptr_t * inputs , uintptr_t inputs_count );
  static Memory_Group* get_memory_group(Memory * memory , uintptr_t buffer_index );
- static void* memory_push(Memory * memory , uintptr_t buffer_index , uintptr_t size , uintptr_t alignment  );
+ static void* memory_push_(Memory * memory , uintptr_t buffer_index , uintptr_t size , char * fname , int line , uintptr_t alignment  );
  static void memory_pop(Memory * memory , void * memory_buffer );
  static void memory_clear_entire_group(Memory * memory , uintptr_t buffer_index );
  static uintptr_t internal_get_alignment_offset(Memory * memory , void * memory_base , uintptr_t current_index , uintptr_t alignment );
@@ -108,7 +112,7 @@ struct DLL_Data;
  static Memory create_memory_base(void * base_memory , uintptr_t * inputs , uintptr_t inputs_count );
  static void memory_arena_zero(void * dest , uintptr_t size );
  static Memory_Group* get_memory_group(Memory * memory , uintptr_t buffer_index );
- static void* memory_push(Memory * memory , uintptr_t buffer_index , uintptr_t size , uintptr_t alignment );
+ static void* memory_push_(Memory * memory , uintptr_t buffer_index , uintptr_t size , char * file , int line , uintptr_t alignment );
  static void memory_pop(Memory * memory , void * memory_buffer );
  static void memory_clear_entire_group(Memory * memory , uintptr_t buffer_index );
  static String create_string(char * str , int len  );
@@ -152,8 +156,13 @@ struct DLL_Data;
  static Void set(Void * dst , U8 v , U64 size );
  static F32 clamp01(F32 a );
  static Void write_image_to_disk(API * api , Memory * memory , Image * image , String file_name );
+Image load_image(API * api , String file_name );
  static Rect create_rectangle(Int x , Int y , Int width , Int height , U8 r , U8 g , U8 b , U8 a );
- static Rect* push_solid_rectangle(Renderer * renderer , Int start_x , Int start_y , Int width , Int height , U8 r , U8 g , U8 b , U8 a );
+ static Image_Rect create_image_rectangle(Int x , Int y , Int width , Int height , U64 image_id );
+ static U64 push_image(Renderer * renderer , Image image );
+ static U64 push_solid_rectangle(Renderer * renderer , Int start_x , Int start_y , Int width , Int height , U8 r , U8 g , U8 b , U8 a );
+ static U64 push_image_rect(Renderer * renderer , Int start_x , Int start_y , Int width , Int height , U64 image_id );
+ static Render_Image* find_image_from_id(Renderer * renderer , U64 id );
  static Void render(Renderer * renderer , Bitmap * bitmap );
 extern "C" Void init_platform_settings(Settings * settings );
 extern "C" Void handle_input_and_render(API * api );
@@ -167,6 +176,6 @@ static Int sglg_Key_count(Key e);
 
 // Helpers
 #define sglg_internal_enum_Memory_Arena_Error (7)
-#define sglg_internal_enum_Memory_Index (3)
+#define sglg_internal_enum_Memory_Index (4)
 #define sglg_internal_enum_Key (58)
-#define SGLG_ENTITY_OUTPUT_INTERNAL_Render_Entity union { Rect _Rect; }; 
+#define SGLG_ENTITY_OUTPUT_INTERNAL_Render_Entity union { Rect _Rect; Image_Rect _Image_Rect; }; 

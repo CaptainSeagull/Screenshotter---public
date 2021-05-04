@@ -48,6 +48,5 @@ struct Win32_API {
 
 struct Win32_Screen_Capture_Thread_Parameters {
     Config *config;
-    Memory *memory;
     API *api;
 };

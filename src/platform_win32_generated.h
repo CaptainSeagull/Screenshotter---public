@@ -107,7 +107,7 @@ struct Win32_Screen_Capture_Thread_Parameters;
  static uint64_t get_memory_base_size(void );
  static Memory create_memory_base(void * base_memory , uintptr_t * inputs , uintptr_t inputs_count );
  static Memory_Group* get_memory_group(Memory * memory , uintptr_t buffer_index );
- static void* memory_push(Memory * memory , uintptr_t buffer_index , uintptr_t size , uintptr_t alignment  );
+ static void* memory_push_(Memory * memory , uintptr_t buffer_index , uintptr_t size , char * fname , int line , uintptr_t alignment  );
  static void memory_pop(Memory * memory , void * memory_buffer );
  static void memory_clear_entire_group(Memory * memory , uintptr_t buffer_index );
  static uintptr_t internal_get_alignment_offset(Memory * memory , void * memory_base , uintptr_t current_index , uintptr_t alignment );
@@ -115,7 +115,7 @@ struct Win32_Screen_Capture_Thread_Parameters;
  static Memory create_memory_base(void * base_memory , uintptr_t * inputs , uintptr_t inputs_count );
  static void memory_arena_zero(void * dest , uintptr_t size );
  static Memory_Group* get_memory_group(Memory * memory , uintptr_t buffer_index );
- static void* memory_push(Memory * memory , uintptr_t buffer_index , uintptr_t size , uintptr_t alignment );
+ static void* memory_push_(Memory * memory , uintptr_t buffer_index , uintptr_t size , char * file , int line , uintptr_t alignment );
  static void memory_pop(Memory * memory , void * memory_buffer );
  static void memory_clear_entire_group(Memory * memory , uintptr_t buffer_index );
  static String create_string(char * str , int len  );
@@ -159,6 +159,7 @@ struct Win32_Screen_Capture_Thread_Parameters;
  static Void set(Void * dst , U8 v , U64 size );
  static F32 clamp01(F32 a );
  static Void write_image_to_disk(API * api , Memory * memory , Image * image , String file_name );
+Image load_image(API * api , String file_name );
  static File win32_read_file(Memory * memory , U32 memory_index_to_use , String fname , Bool null_terminate );
  static Bool win32_write_file(Memory * memory , String fname , U8 * data , U64 size );
  static Int win32_get_processor_count(Void );
@@ -184,5 +185,5 @@ static Int sglg_Key_count(Key e);
 
 // Helpers
 #define sglg_internal_enum_Memory_Arena_Error (7)
-#define sglg_internal_enum_Memory_Index (3)
+#define sglg_internal_enum_Memory_Index (4)
 #define sglg_internal_enum_Key (58)

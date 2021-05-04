@@ -20,7 +20,7 @@ internal File
 win32_read_file(Memory *memory, U32 memory_index_to_use, String fname, Bool null_terminate) {
     File res = {};
 
-    Char *fname_copy = (Char *)memory_push(memory, Memory_Index_temp, fname.len + 1);
+    Char *fname_copy = (Char *)memory_push(memory, Memory_Index_internal_temp, fname.len + 1);
     ASSERT(fname_copy);
     if(fname_copy) {
         memcpy(fname_copy, fname.e, fname.len);
@@ -60,7 +60,7 @@ internal Bool
 win32_write_file(Memory *memory, String fname, U8 *data, U64 size) {
     Bool res = false;
 
-    Char *fname_copy = (Char *)memory_push(memory, Memory_Index_temp, fname.len + 1);
+    Char *fname_copy = (Char *)memory_push(memory, Memory_Index_internal_temp, fname.len + 1);
     ASSERT(fname_copy);
     if(fname_copy) {
         memcpy(fname_copy, fname.e, fname.len);
@@ -475,74 +475,89 @@ win32_screen_capture_thread(void *data) {
     // TODO: Should open a new directory each time screenshotter is fun.
 
     Config *config = tp->config;
-    Memory *memory = tp->memory;
     API *api = tp->api;
 
-    U64 iteration_count = 0;
-    while(true) {
-        HWND window = win32_find_window_from_name(memory, config->target_window_name);
-        RECT rect = {};
-        GetClientRect(window, &rect);
-        Int width = rect.right - rect.left;
-        Int height = rect.bottom - rect.top;
+    // TODO: Smaller sizes since these are on a thread?
+    Uintptr permanent_size = MEGABYTES(128);
+    Uintptr temp_size = MEGABYTES(128);
+    Uintptr internal_temp_size = MEGABYTES(128);
+    Uintptr bitmap_size = 0;
 
-        // TODO: If the window is minified then the width/height will be 0
-        //       See https://www.codeproject.com/Articles/20651/Capturing-Minimized-Window-A-Kid-s-Trick for how to handle.
-        if(width > 0 && height > 0) {
-            HDC dc = GetDC(0);
-            HDC capture_dc = CreateCompatibleDC(dc);
-            HBITMAP bitmap = CreateCompatibleBitmap(dc, rect.right - rect.left, rect.bottom - rect.top);
+    Void *all_memory = VirtualAlloc(0, get_memory_base_size() + permanent_size + temp_size + internal_temp_size + bitmap_size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+    ASSERT(all_memory);
+    if(all_memory) {
+        Uintptr group_inputs[] = { permanent_size, temp_size, internal_temp_size, bitmap_size};
+        //ASSERT(SGLG_ENUM_COUNT(Memory_Index) == ARRAY_COUNT(group_inputs));
+        Memory memory = create_memory_base(all_memory, group_inputs, ARRAY_COUNT(group_inputs));
 
-            HGDIOBJ gdiObj = SelectObject(capture_dc, bitmap);
+        U64 iteration_count = 0;
+        while(true) {
+            HWND window = win32_find_window_from_name(&memory, config->target_window_name);
+            RECT rect = {};
+            GetClientRect(window, &rect);
+            Int width = rect.right - rect.left;
+            Int height = rect.bottom - rect.top;
 
-            PrintWindow(window, capture_dc, (config->include_title_bar) ? 0 : PW_CLIENTONLY);
+            // TODO: If the window is minified then the width/height will be 0
+            //       See https://www.codeproject.com/Articles/20651/Capturing-Minimized-Window-A-Kid-s-Trick for how to handle.
+            if(width > 0 && height > 0) {
+                HDC dc = GetDC(0);
+                HDC capture_dc = CreateCompatibleDC(dc);
+                HBITMAP bitmap = CreateCompatibleBitmap(dc, rect.right - rect.left, rect.bottom - rect.top);
 
-            // TODO: This sometimes captures the current window, not the target for some reason...
-            //BitBlt(capture_dc, 0, 0, width, height, dc, 0, 0, SRCCOPY | CAPTUREBLT);
-            //SelectObject(capture_dc, gdiObj);
+                HGDIOBJ gdiObj = SelectObject(capture_dc, bitmap);
 
-            if(config->copy_to_clipboard) {
-                OpenClipboard(0);
-                EmptyClipboard();
-                SetClipboardData(CF_BITMAP, bitmap);
-                CloseClipboard();
+                PrintWindow(window, capture_dc, (config->include_title_bar) ? 0 : PW_CLIENTONLY);
+
+                // TODO: This sometimes captures the current window, not the target for some reason...
+                //BitBlt(capture_dc, 0, 0, width, height, dc, 0, 0, SRCCOPY | CAPTUREBLT);
+                //SelectObject(capture_dc, gdiObj);
+
+                if(config->copy_to_clipboard) {
+                    OpenClipboard(0);
+                    EmptyClipboard();
+                    SetClipboardData(CF_BITMAP, bitmap);
+                    CloseClipboard();
+                }
+
+                BITMAPINFO bmp_infp = {};
+                bmp_infp.bmiHeader.biSize = sizeof(bmp_infp.bmiHeader);
+
+                BITMAPINFOHEADER bmp_header = {};
+                bmp_header.biSize = sizeof(BITMAPINFOHEADER);
+                bmp_header.biWidth = width;
+                bmp_header.biHeight = height;
+                bmp_header.biPlanes = 1;
+                bmp_header.biBitCount = 32;
+
+                U32 image_size = ((width * bmp_header.biBitCount + 31) / 32) * 4 * height; // TODO: Why 31 / 32?? Why not just width * height * 4?
+                U8 *image_data = (U8 *)memory_push(&memory, Memory_Index_permanent, image_size);
+                GetDIBits(dc, bitmap, 0, height, image_data, (BITMAPINFO *)&bmp_header, DIB_RGB_COLORS);
+
+                // TODO: As well as saving the file, we should create an output directory per-session.
+
+                Int output_filename_size = config->target_output_directory.len + 256; // 256 is padding
+                Char *output_filename = (Char *)memory_push(&memory, Memory_Index_temp, output_filename_size);
+                Int bytes_written = stbsp_snprintf(output_filename, output_filename_size, "%.*s/file_%I64d.bmp", // TODO: %d prints S32 not U64
+                                                   config->target_output_directory.len, config->target_output_directory.e,
+                                                   iteration_count);
+                ASSERT(bytes_written < output_filename_size);
+
+                Image image = {};
+                image.width = width;
+                image.height = height;
+                image.pixels = (U32 * )image_data;
+                write_image_to_disk(api, &memory, &image, output_filename);
+
+                memory_pop(&memory, output_filename);
+
+                Sleep(config->amount_to_sleep);
+                ++iteration_count;
             }
-
-            BITMAPINFO bmp_infp = {};
-            bmp_infp.bmiHeader.biSize = sizeof(bmp_infp.bmiHeader);
-
-            BITMAPINFOHEADER bmp_header = {};
-            bmp_header.biSize = sizeof(BITMAPINFOHEADER);
-            bmp_header.biWidth = width;
-            bmp_header.biHeight = height;
-            bmp_header.biPlanes = 1;
-            bmp_header.biBitCount = 32;
-
-            U32 image_size = ((width * bmp_header.biBitCount + 31) / 32) * 4 * height; // TODO: Why 31 / 32?? Why not just width * height * 4?
-            U8 *image_data = (U8 *)memory_push(memory, Memory_Index_permanent, image_size);
-            GetDIBits(dc, bitmap, 0, height, image_data, (BITMAPINFO *)&bmp_header, DIB_RGB_COLORS);
-
-            // TODO: As well as saving the file, we should create an output directory per-session.
-
-            Int output_filename_size = config->target_output_directory.len + 256; // 256 is padding
-            Char *output_filename = (Char *)memory_push(memory, Memory_Index_temp, output_filename_size);
-            Int bytes_written = stbsp_snprintf(output_filename, output_filename_size, "%.*s/file_%I64d.bmp", // TODO: %d prints S32 not U64
-                                               config->target_output_directory.len, config->target_output_directory.e,
-                                               iteration_count);
-            ASSERT(bytes_written < output_filename_size);
-
-            Image image = {};
-            image.width = width;
-            image.height = height;
-            image.pixels = (U32 * )image_data;
-            write_image_to_disk(api, memory, &image, output_filename);
-
-            memory_pop(memory, output_filename);
-
-            Sleep(config->amount_to_sleep);
-            ++iteration_count;
         }
     }
+
+    return(0); // What to return on error?
 }
 
 int CALLBACK
@@ -552,11 +567,12 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
     // TODO: Think about these sizes more. Because this app is meant to run in the background it should be as resource-light as possible.
     Uintptr permanent_size = MEGABYTES(128);
     Uintptr temp_size = MEGABYTES(128);
+    Uintptr internal_temp_size = MEGABYTES(128);
     Uintptr bitmap_size = MAX_SCREEN_BITMAP_SIZE + 1;
 
-    Void *all_memory = VirtualAlloc(0, get_memory_base_size() + permanent_size + temp_size + bitmap_size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+    Void *all_memory = VirtualAlloc(0, get_memory_base_size() + permanent_size + temp_size + internal_temp_size + bitmap_size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
     if(all_memory) {
-        Uintptr group_inputs[] = { permanent_size, temp_size, bitmap_size};
+        Uintptr group_inputs[] = { permanent_size, temp_size, internal_temp_size, bitmap_size};
         //ASSERT(SGLG_ENUM_COUNT(Memory_Index) == ARRAY_COUNT(group_inputs));
         Memory memory = create_memory_base(all_memory, group_inputs, ARRAY_COUNT(group_inputs));
 
@@ -755,7 +771,6 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
                         config.amount_to_sleep = 5000;
 
                         Win32_Screen_Capture_Thread_Parameters thread_params = {};
-                        thread_params.memory = &memory;
                         thread_params.config = &config;
                         thread_params.api = &api;
 

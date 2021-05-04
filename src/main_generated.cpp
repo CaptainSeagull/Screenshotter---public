@@ -27,6 +27,7 @@ static char const *sglg_Memory_Index_to_string(Memory_Index e) {
     switch(e) {
         case Memory_Index_permanent: { return("Memory_Index_permanent"); } break;
         case Memory_Index_temp: { return("Memory_Index_temp"); } break;
+        case Memory_Index_internal_temp: { return("Memory_Index_internal_temp"); } break;
         case Memory_Index_bitmap: { return("Memory_Index_bitmap"); } break;
     }
     return(0);
@@ -109,6 +110,7 @@ static Memory_Index sglg_Memory_Index_from_string(char const *s, uint32_t l) {
     if(0) {}
     else if(sgl_generated_string_compare("Memory_Index_permanent", 22, s, l)) { return(Memory_Index_permanent); }
     else if(sgl_generated_string_compare("Memory_Index_temp", 17, s, l)) { return(Memory_Index_temp); }
+    else if(sgl_generated_string_compare("Memory_Index_internal_temp", 26, s, l)) { return(Memory_Index_internal_temp); }
     else if(sgl_generated_string_compare("Memory_Index_bitmap", 19, s, l)) { return(Memory_Index_bitmap); }
     return((Memory_Index)0);
 }
@@ -178,7 +180,7 @@ static Key sglg_Key_from_string(char const *s, uint32_t l) {
 static uint64_t sglg_get_enum_count(sglg_Type type) {
     switch(type) {
         case sglg_Type_Memory_Arena_Error: { return(7); } break;
-        case sglg_Type_Memory_Index: { return(3); } break;
+        case sglg_Type_Memory_Index: { return(4); } break;
         case sglg_Type_Key: { return(58); } break;
     }
     return(0);
@@ -203,7 +205,9 @@ static uint64_t sglg_type_to_size(sglg_Type type) {
         case sglg_Type_Image: { return(sizeof(Image)); } break;
         case sglg_Type_Bitmap_Header: { return(sizeof(Bitmap_Header)); } break;
         case sglg_Type_Rect: { return(sizeof(Rect)); } break;
+        case sglg_Type_Image_Rect: { return(sizeof(Image_Rect)); } break;
         case sglg_Type_Render_Entity: { return(sizeof(Render_Entity)); } break;
+        case sglg_Type_Render_Image: { return(sizeof(Render_Image)); } break;
         case sglg_Type_Renderer: { return(sizeof(Renderer)); } break;
         case sglg_Type_DLL_Data: { return(sizeof(DLL_Data)); } break;
     }
@@ -229,7 +233,9 @@ static sglg_Type sglg_string_to_type(char const *s, uint64_t l) {
     else if(sgl_generated_string_compare("Image", 5, s, l)) { return(sglg_Type_Image); }
     else if(sgl_generated_string_compare("Bitmap_Header", 13, s, l)) { return(sglg_Type_Bitmap_Header); }
     else if(sgl_generated_string_compare("Rect", 4, s, l)) { return(sglg_Type_Rect); }
+    else if(sgl_generated_string_compare("Image_Rect", 10, s, l)) { return(sglg_Type_Image_Rect); }
     else if(sgl_generated_string_compare("Render_Entity", 13, s, l)) { return(sglg_Type_Render_Entity); }
+    else if(sgl_generated_string_compare("Render_Image", 12, s, l)) { return(sglg_Type_Render_Image); }
     else if(sgl_generated_string_compare("Renderer", 8, s, l)) { return(sglg_Type_Renderer); }
     else if(sgl_generated_string_compare("DLL_Data", 8, s, l)) { return(sglg_Type_DLL_Data); }
     return(sglg_Type_unknown);

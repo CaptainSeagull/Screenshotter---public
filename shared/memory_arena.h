@@ -1,4 +1,4 @@
-/*  memory_arena.h - v0.2 - public domain helper library - no warranty implied; use at your own risk
+/*  memory_arena.h - v0.3 - public domain helper library - no warranty implied; use at your own risk
 
     Utility for create memory arenas in C++
 
@@ -120,7 +120,8 @@ struct Memory {
 MEMORY_PUBLIC_DEC uint64_t get_memory_base_size(void);
 MEMORY_PUBLIC_DEC Memory create_memory_base(void *base_memory, uintptr_t *inputs, uintptr_t inputs_count);
 MEMORY_PUBLIC_DEC Memory_Group *get_memory_group(Memory *memory, uintptr_t buffer_index);
-MEMORY_PUBLIC_DEC void *memory_push(Memory *memory, uintptr_t buffer_index, uintptr_t size, uintptr_t alignment = MEMORY_ARENA_DEFAULT_MEMORY_ALIGNMENT);
+#define memory_push(memory, buffer_index, size, ...) memory_push_(memory, buffer_index, size, __FILE__, __LINE__, ##__VA_ARGS__)
+MEMORY_PUBLIC_DEC void *memory_push_(Memory *memory, uintptr_t buffer_index, uintptr_t size, char *fname, int line, uintptr_t alignment = MEMORY_ARENA_DEFAULT_MEMORY_ALIGNMENT);
 MEMORY_PUBLIC_DEC void memory_pop(Memory *memory, void *memory_buffer);
 MEMORY_PUBLIC_DEC void memory_clear_entire_group(Memory *memory, uintptr_t buffer_index);
 
@@ -139,6 +140,9 @@ struct Internal_Push_Info {
     uintptr_t size;
     uintptr_t alignment_offset;
     uintptr_t buffer_index;
+
+    Char *file;
+    Int line;
 };
 
 static uintptr_t internal_get_alignment_offset(Memory *memory, void *memory_base, uintptr_t current_index, uintptr_t alignment) {
@@ -227,8 +231,8 @@ MEMORY_PUBLIC_DEC Memory_Group *get_memory_group(Memory *memory, uintptr_t buffe
     return(res);
 }
 
-MEMORY_PUBLIC_DEC void *memory_push(Memory *memory, uintptr_t buffer_index, uintptr_t size,
-                                    uintptr_t alignment/*=MEMORY_ARENA_DEFAULT_MEMORY_ALIGNMENT*/) {
+MEMORY_PUBLIC_DEC void *memory_push_(Memory *memory, uintptr_t buffer_index, uintptr_t size, char *file, int line,
+                                     uintptr_t alignment/*=MEMORY_ARENA_DEFAULT_MEMORY_ALIGNMENT*/) {
     void *res = 0;
 
     if(memory && size > 0) {
@@ -242,6 +246,8 @@ MEMORY_PUBLIC_DEC void *memory_push(Memory *memory, uintptr_t buffer_index, uint
                 push_info->size = size + sizeof(Internal_Push_Info);
                 push_info->alignment_offset = alignment_offset;
                 push_info->buffer_index = buffer_index;
+                push_info->file = file;
+                push_info->line = line;
 
                 group->used += push_info->size + push_info->alignment_offset;
 

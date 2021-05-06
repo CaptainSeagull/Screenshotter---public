@@ -467,7 +467,6 @@ win32_find_window_from_name(Memory *memory, String window_title) {
 }
 
 // Done on a separate thread so when we have a UI and Window it can handle window-messages without interuption.
-// TODO: May be better to do just have one thread so this app takes up the least system resources possible.
 internal DWORD
 win32_screen_capture_thread(void *data) {
     Win32_Screen_Capture_Thread_Parameters *tp = (Win32_Screen_Capture_Thread_Parameters *)data;

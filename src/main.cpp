@@ -23,11 +23,11 @@ handle_input_and_render(API *api) {
         push_solid_rectangle(&data->renderer, 100, 100, 100, 100, 255, 0,   0, 0);
         push_solid_rectangle(&data->renderer, 200, 100, 100, 100, 255, 0, 255, 0);
 
-
-        Image image = load_image(api, "arrow.bmp");
+        //Image image = load_image(api, "arrow.bmp");
+        Image image = load_image(api, "test.bmp");
         U64 image_id = push_image(&data->renderer, image);
 
-        push_image_rect(&data->renderer, 300, 100, 100, 100, image_id);
+        push_image_rect(&data->renderer, 0, 0, 100, 100, image_id);
     }
 
     render(&data->renderer, &api->screen_bitmap);

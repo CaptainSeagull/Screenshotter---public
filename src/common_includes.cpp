@@ -110,7 +110,5 @@ struct Config {
     Int amount_to_sleep;
 };
 
-
-
 #include "platform.h"
 #include "image.cpp"

@@ -44,6 +44,7 @@ enum sglg_Type {
     sglg_Type_Render_Entity,
     sglg_Type_Render_Image,
     sglg_Type_Renderer,
+    sglg_Type_V2,
     sglg_Type_DLL_Data,
 };
 
@@ -98,6 +99,7 @@ struct Image_Rect;
 struct Render_Entity;
 struct Render_Image;
 struct Renderer;
+struct V2;
 struct DLL_Data;
 
 // Forward declaration of functions
@@ -163,6 +165,9 @@ Image load_image(API * api , String file_name );
  static U64 push_solid_rectangle(Renderer * renderer , Int start_x , Int start_y , Int width , Int height , U8 r , U8 g , U8 b , U8 a );
  static U64 push_image_rect(Renderer * renderer , Int start_x , Int start_y , Int width , Int height , U64 image_id );
  static Render_Image* find_image_from_id(Renderer * renderer , U64 id );
+ static V2 v2(F32 x , F32 y );
+ static F32 lerp(F32 t , F32 a , F32 b );
+ static F32 floor(F32 a );
  static Void render(Renderer * renderer , Bitmap * bitmap );
 extern "C" Void init_platform_settings(Settings * settings );
 extern "C" Void handle_input_and_render(API * api );

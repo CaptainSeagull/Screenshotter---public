@@ -79,6 +79,28 @@ find_image_from_id(Renderer *renderer, U64 id) {
     return(img);
 }
 
+struct V2 {
+    F32 x, y;
+};
+
+internal V2
+v2(F32 x, F32 y) {
+    V2 r = { x, y };
+    return(r);
+}
+
+internal F32
+lerp(F32 t, F32 a, F32 b) {
+    F32 r = (1.0f - t) * a + t * b;
+    return(r);
+}
+
+internal F32
+floor(F32 a) {
+    F32 r = (F32)((S32)a);
+    return(r);
+}
+
 internal Void
 render(Renderer *renderer, Bitmap *bitmap) {
 
@@ -104,15 +126,47 @@ render(Renderer *renderer, Bitmap *bitmap) {
                 Render_Image *img = find_image_from_id(renderer, img_rect->image_id);
                 ASSERT(img);
 
+#if 1
                 // TODO: Does a dumb render not taking scaling into the actual size of the rectangle into account.
-                U32 *pixels = img->img.pixels;
-                for(Int y = img_rect->y; (y < img_rect->y + img->img.height); ++y) {
-                    U32 *out_position = (U32 *)bitmap->memory + (y * bitmap->width) + img_rect->x;
-                    for(Int x = img_rect->x; (x < img_rect->x + img->img.width); ++x) {
+#if 0
+                U32 width = img_rect->width;
+                U32 height = img_rect->height;
+#else
+                U32 width = img->img.width;
+                U32 height = img->img.height;
+#endif
+
+                U32 *image_pixels = img->img.pixels;
+                for(Int y = 0; (y < height); ++y) {
+                    U32 *out_position = (U32 *)bitmap->memory + ((y + img_rect->y) * bitmap->width) + img_rect->x;
+
+                    U32 *pixels = image_pixels + (y * width);
+                    for(Int x = 0; (x < width); ++x) {
                         *out_position++ = *pixels++;
                     }
                 }
+#else
+                V2 top_left     = v2(img_rect->x,                  img_rect->y);
+                V2 bottom_right = v2(img_rect->x + img->img.width, img_rect->y + + img->img.height);
 
+                U32 *pixels = img->img.pixels;
+                for(Int y = 0, _y = img_rect->y; (_y < img_rect->y + img->img.height); ++_y, ++y) {
+                    U32 *out_position = (U32 *)bitmap->memory + (_y * bitmap->width) + img_rect->x;
+                    for(Int x = 0; (x < img->img.width); ++x) {
+                        F32 pct_x = clamp01(lerp(x, top_left.x, bottom_right.x));
+                        F32 pct_y = clamp01(lerp(y, top_left.y, bottom_right.y));
+
+                        F32 hit_x = floor((F32)img->img.width * pct_x);
+                        F32 hit_y = floor((F32)img->img.height * pct_y);
+
+                        U64 pixel_pointer_offset = (U64)(((hit_y * (F32)img->img.width) + hit_x));
+
+                        U32 *pixel_pointer = img->img.pixels + pixel_pointer_offset;
+
+                        *out_position++ = *pixel_pointer;
+                    }
+                }
+#endif
 
             } break;
 

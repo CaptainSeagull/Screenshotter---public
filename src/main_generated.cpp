@@ -209,6 +209,7 @@ static uint64_t sglg_type_to_size(sglg_Type type) {
         case sglg_Type_Render_Entity: { return(sizeof(Render_Entity)); } break;
         case sglg_Type_Render_Image: { return(sizeof(Render_Image)); } break;
         case sglg_Type_Renderer: { return(sizeof(Renderer)); } break;
+        case sglg_Type_V2: { return(sizeof(V2)); } break;
         case sglg_Type_DLL_Data: { return(sizeof(DLL_Data)); } break;
     }
     return(0);
@@ -237,6 +238,7 @@ static sglg_Type sglg_string_to_type(char const *s, uint64_t l) {
     else if(sgl_generated_string_compare("Render_Entity", 13, s, l)) { return(sglg_Type_Render_Entity); }
     else if(sgl_generated_string_compare("Render_Image", 12, s, l)) { return(sglg_Type_Render_Image); }
     else if(sgl_generated_string_compare("Renderer", 8, s, l)) { return(sglg_Type_Renderer); }
+    else if(sgl_generated_string_compare("V2", 2, s, l)) { return(sglg_Type_V2); }
     else if(sgl_generated_string_compare("DLL_Data", 8, s, l)) { return(sglg_Type_DLL_Data); }
     return(sglg_Type_unknown);
 }

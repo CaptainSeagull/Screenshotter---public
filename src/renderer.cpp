@@ -28,7 +28,7 @@ create_image_rectangle(Int x, Int y, Int width, Int height, U64 image_id) {
 internal U64
 push_image(Renderer *renderer, Image image) {
     U64 id = global_entity_id++;
-    renderer->images[renderer->image_count++] = { image, id };
+    renderer->images[renderer->image_count++] = { image.width, image.height, image.pixels, id };
 
     return(id);
 }
@@ -95,14 +95,14 @@ lerp(F32 t, F32 a, F32 b) {
     return(r);
 }
 
-internal F32
+internal U32
 floor(F32 a) {
-    F32 r = (F32)((S32)a);
+    U64 r = (F32)((S32)a);
     return(r);
 }
 
 internal Void
-render(Renderer *renderer, Bitmap *bitmap) {
+render(Renderer *renderer, Bitmap *screen_bitmap) {
 
     // TODO: Sort entities based on depth first.
 
@@ -113,10 +113,14 @@ render(Renderer *renderer, Bitmap *bitmap) {
             case sglg_Type_Rect: {
                 Rect *rectangle = (Rect *)render_entity;
 
-                for(Int y = rectangle->y; (y < rectangle->y + rectangle->height); ++y) {
-                    U32 *out = (U32 *)bitmap->memory + (y * bitmap->width) + rectangle->x;
-                    for(Int x = rectangle->x; (x < rectangle->x + rectangle->width); ++x) {
-                        *out++ = rectangle->output_colour;
+                U32 width = rectangle->width;
+                U32 height = rectangle->height;
+
+                for(U32 y = 0; (y < height); ++y) {
+                    U32 *out_position = (U32 *)screen_bitmap->memory + ((y + rectangle->y) * screen_bitmap->width) + rectangle->x;
+
+                    for(U32 x = 0; (x < width); ++x) {
+                        *out_position++ = rectangle->output_colour;
                     }
                 }
             } break;
@@ -126,48 +130,25 @@ render(Renderer *renderer, Bitmap *bitmap) {
                 Render_Image *img = find_image_from_id(renderer, img_rect->image_id);
                 ASSERT(img);
 
-#if 1
-                // TODO: Does a dumb render not taking scaling into the actual size of the rectangle into account.
-#if 0
-                U32 width = img_rect->width;
-                U32 height = img_rect->height;
-#else
-                U32 width = img->img.width;
-                U32 height = img->img.height;
-#endif
+                // TODO: Why / 2??
+                U32 width = img_rect->width / 2;
+                U32 height = img_rect->height / 2;
 
-                U32 *image_pixels = img->img.pixels;
-                for(Int y = 0; (y < height); ++y) {
-                    U32 *out_position = (U32 *)bitmap->memory + ((y + img_rect->y) * bitmap->width) + img_rect->x;
+                F32 pct_width = (F32)img->width / (F32)img_rect->width;
+                F32 pct_height = (F32)img->height / (F32)img_rect->height;
 
-                    U32 *pixels = image_pixels + (y * width);
-                    for(Int x = 0; (x < width); ++x) {
-                        *out_position++ = *pixels++;
+                for(U32 y = 0; (y < height); ++y) {
+                    U32 *out_position = (U32 *)screen_bitmap->memory + ((y + img_rect->y) * screen_bitmap->width) + img_rect->x;
+
+                    for(U32 x = 0; (x < width); ++x) {
+                        U32 img_x = floor((F32)x * pct_width);
+                        U32 img_y = floor((F32)y * pct_height);
+
+                        U32 pixel = *((img->pixels + (img_y * img->width)) + img_x);
+
+                        *out_position++ = pixel;
                     }
                 }
-#else
-                V2 top_left     = v2(img_rect->x,                  img_rect->y);
-                V2 bottom_right = v2(img_rect->x + img->img.width, img_rect->y + + img->img.height);
-
-                U32 *pixels = img->img.pixels;
-                for(Int y = 0, _y = img_rect->y; (_y < img_rect->y + img->img.height); ++_y, ++y) {
-                    U32 *out_position = (U32 *)bitmap->memory + (_y * bitmap->width) + img_rect->x;
-                    for(Int x = 0; (x < img->img.width); ++x) {
-                        F32 pct_x = clamp01(lerp(x, top_left.x, bottom_right.x));
-                        F32 pct_y = clamp01(lerp(y, top_left.y, bottom_right.y));
-
-                        F32 hit_x = floor((F32)img->img.width * pct_x);
-                        F32 hit_y = floor((F32)img->img.height * pct_y);
-
-                        U64 pixel_pointer_offset = (U64)(((hit_y * (F32)img->img.width) + hit_x));
-
-                        U32 *pixel_pointer = img->img.pixels + pixel_pointer_offset;
-
-                        *out_position++ = *pixel_pointer;
-                    }
-                }
-#endif
-
             } break;
 
             default: { ASSERT(0); }

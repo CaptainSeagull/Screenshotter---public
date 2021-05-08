@@ -19,7 +19,10 @@ struct Render_Entity {
 };
 
 struct Render_Image {
-    Image img; // TODO: Named poorly...
+    Int width;
+    Int height;
+    U32 *pixels;
+
     U64 id;
     // TODO: Maybe an enum for how to render?
 };

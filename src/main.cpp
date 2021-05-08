@@ -20,14 +20,17 @@ handle_input_and_render(API *api) {
     DLL_Data *data = (DLL_Data *)api->dll_data;
 
     if(api->init) {
+        push_solid_rectangle(&data->renderer, 0, 0, 640, 480, 255, 255, 255, 0);
+
         push_solid_rectangle(&data->renderer, 100, 100, 100, 100, 255, 0,   0, 0);
         push_solid_rectangle(&data->renderer, 200, 100, 100, 100, 255, 0, 255, 0);
 
-        //Image image = load_image(api, "arrow.bmp");
-        Image image = load_image(api, "test.bmp");
-        U64 image_id = push_image(&data->renderer, image);
+        Image image_arrow = load_image(api, "arrow.bmp");
+        U64 arrow_id = push_image(&data->renderer, image_arrow);
 
-        push_image_rect(&data->renderer, 0, 0, 100, 100, image_id);
+        push_image_rect(&data->renderer, 100, 100, 128, 128, arrow_id);
+        push_image_rect(&data->renderer, 200, 200,  64,  64, arrow_id);
+        push_image_rect(&data->renderer, 300, 300,  32,  32, arrow_id);
     }
 
     render(&data->renderer, &api->screen_bitmap);
@@ -35,7 +38,7 @@ handle_input_and_render(API *api) {
 
 extern "C" { int _fltused = 0; }
 void __stdcall
-_DllMainCRTStartup(Void) {
+_DllMainCRTStartup(void) {
     // TODO: Windows only... I don't think this needs to do anything
 }
 

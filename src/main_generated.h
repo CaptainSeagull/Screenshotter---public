@@ -44,7 +44,6 @@ enum sglg_Type {
     sglg_Type_Render_Entity,
     sglg_Type_Render_Image,
     sglg_Type_Renderer,
-    sglg_Type_V2,
     sglg_Type_DLL_Data,
 };
 
@@ -99,7 +98,6 @@ struct Image_Rect;
 struct Render_Entity;
 struct Render_Image;
 struct Renderer;
-struct V2;
 struct DLL_Data;
 
 // Forward declaration of functions
@@ -163,14 +161,13 @@ Image load_image(API * api , String file_name );
  static Render_Entity* find_end_node(Render_Entity * node );
  static Void internal_add_new_node(Render_Entity * * parent , Render_Entity * child );
  static Render_Entity* add_child_to_node(Memory * memory , Render_Entity * * parent );
- static Void create_renderer(Memory * memory , Renderer * renderer );
+ static Void create_renderer(Renderer * renderer , Memory * memory );
  static Rect create_rectangle(Int x , Int y , Int width , Int height , U8 r , U8 g , U8 b , U8 a );
  static Image_Rect create_image_rectangle(Int x , Int y , Int width , Int height , U64 image_id );
  static U64 push_image(Renderer * renderer , Image image );
- static U64 push_solid_rectangle(Memory * memory , Render_Entity * * parent , Int start_x , Int start_y , Int width , Int height , U8 r , U8 g , U8 b , U8 a );
- static U64 push_image_rect(Renderer * renderer , Memory * memory , Render_Entity * * parent , Int start_x , Int start_y , Int width , Int height , U64 image_id );
+ static U64 push_solid_rectangle(Renderer * renderer , Render_Entity * * parent , Int start_x , Int start_y , Int width , Int height , U8 r , U8 g , U8 b , U8 a );
+ static U64 push_image_rect(Renderer * renderer , Render_Entity * * parent , Int start_x , Int start_y , Int width , Int height , U64 image_id );
  static Render_Image* find_image_from_id(Renderer * renderer , U64 id );
- static V2 v2(F32 x , F32 y );
  static F32 lerp(F32 t , F32 a , F32 b );
  static F32 floor(F32 a );
  static Void render(Renderer * renderer , Bitmap * screen_bitmap );

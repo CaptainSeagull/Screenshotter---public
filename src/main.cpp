@@ -19,25 +19,25 @@ extern "C" Void
 handle_input_and_render(API *api) {
     DLL_Data *data = (DLL_Data *)api->dll_data;
 
-    Memory *memory = api->memory;
+    Renderer *renderer = &data->renderer;
 
     if(api->init) {
-        create_renderer(memory, &data->renderer);
+        create_renderer(renderer, api->memory);
 
-        push_solid_rectangle(memory, &data->renderer.root, 0, 0, 640, 480, 255, 255, 255, 0);
+        push_solid_rectangle(renderer, &renderer->root, 0, 0, 640, 480, 255, 255, 255, 0);
 
-        push_solid_rectangle(memory, &data->renderer.root, 100, 100, 100, 100, 255, 0,   0, 0);
-        push_solid_rectangle(memory, &data->renderer.root, 200, 100, 100, 100, 255, 0, 255, 0);
+        push_solid_rectangle(renderer, &renderer->root, 100, 100, 100, 100, 255, 0,   0, 0);
+        push_solid_rectangle(renderer, &renderer->root, 200, 100, 100, 100, 255, 0, 255, 0);
 
         Image image_arrow = load_image(api, "arrow.bmp");
-        U64 arrow_id = push_image(&data->renderer, image_arrow);
+        U64 arrow_id = push_image(renderer, image_arrow);
 
-        push_image_rect(&data->renderer, memory, &data->renderer.root, 100, 100, 128, 128, arrow_id);
-        push_image_rect(&data->renderer, memory, &data->renderer.root, 200, 200,  64,  64, arrow_id);
-        push_image_rect(&data->renderer, memory, &data->renderer.root, 300, 300,  32,  32, arrow_id);
+        push_image_rect(renderer, &renderer->root, 100, 100, 128, 128, arrow_id);
+        push_image_rect(renderer, &renderer->root, 200, 200,  64,  64, arrow_id);
+        push_image_rect(renderer, &renderer->root, 300, 300,  32,  32, arrow_id);
     }
 
-    render(&data->renderer, &api->screen_bitmap);
+    render(renderer, &api->screen_bitmap);
 }
 
 extern "C" { int _fltused = 0; }

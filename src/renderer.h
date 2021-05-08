@@ -30,6 +30,7 @@ struct Render_Image {
 
 struct Renderer {
     Render_Entity *root;
+    Memory *memory;
 
     Render_Image images[256];
     Int image_count;

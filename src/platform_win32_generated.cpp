@@ -29,6 +29,7 @@ static char const *sglg_Memory_Index_to_string(Memory_Index e) {
         case Memory_Index_temp: { return("Memory_Index_temp"); } break;
         case Memory_Index_internal_temp: { return("Memory_Index_internal_temp"); } break;
         case Memory_Index_bitmap: { return("Memory_Index_bitmap"); } break;
+        case Memory_Index_renderer: { return("Memory_Index_renderer"); } break;
     }
     return(0);
 }
@@ -112,6 +113,7 @@ static Memory_Index sglg_Memory_Index_from_string(char const *s, uint32_t l) {
     else if(sgl_generated_string_compare("Memory_Index_temp", 17, s, l)) { return(Memory_Index_temp); }
     else if(sgl_generated_string_compare("Memory_Index_internal_temp", 26, s, l)) { return(Memory_Index_internal_temp); }
     else if(sgl_generated_string_compare("Memory_Index_bitmap", 19, s, l)) { return(Memory_Index_bitmap); }
+    else if(sgl_generated_string_compare("Memory_Index_renderer", 21, s, l)) { return(Memory_Index_renderer); }
     return((Memory_Index)0);
 }
 static Key sglg_Key_from_string(char const *s, uint32_t l) {
@@ -180,7 +182,7 @@ static Key sglg_Key_from_string(char const *s, uint32_t l) {
 static uint64_t sglg_get_enum_count(sglg_Type type) {
     switch(type) {
         case sglg_Type_Memory_Arena_Error: { return(7); } break;
-        case sglg_Type_Memory_Index: { return(4); } break;
+        case sglg_Type_Memory_Index: { return(5); } break;
         case sglg_Type_Key: { return(58); } break;
     }
     return(0);

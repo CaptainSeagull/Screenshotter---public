@@ -481,12 +481,14 @@ win32_screen_capture_thread(void *data) {
     Uintptr temp_size = MEGABYTES(128);
     Uintptr internal_temp_size = MEGABYTES(128);
     Uintptr bitmap_size = 0;
+    Uintptr renderer_size = 0;
 
-    Void *all_memory = VirtualAlloc(0, get_memory_base_size() + permanent_size + temp_size + internal_temp_size + bitmap_size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+    Void *all_memory = VirtualAlloc(0, get_memory_base_size() + permanent_size + temp_size + internal_temp_size + bitmap_size + renderer_size,
+                                    MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
     ASSERT(all_memory);
     if(all_memory) {
-        Uintptr group_inputs[] = { permanent_size, temp_size, internal_temp_size, bitmap_size};
-        //ASSERT(SGLG_ENUM_COUNT(Memory_Index) == ARRAY_COUNT(group_inputs));
+        Uintptr group_inputs[] = { permanent_size, temp_size, internal_temp_size, bitmap_size, renderer_size };
+        ASSERT(SGLG_ENUM_COUNT(Memory_Index) == ARRAY_COUNT(group_inputs));
         Memory memory = create_memory_base(all_memory, group_inputs, ARRAY_COUNT(group_inputs));
 
         U64 iteration_count = 0;
@@ -568,11 +570,13 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
     Uintptr temp_size = MEGABYTES(128);
     Uintptr internal_temp_size = MEGABYTES(128);
     Uintptr bitmap_size = MAX_SCREEN_BITMAP_SIZE + 1;
+    Uintptr renderer_size = MEGABYTES(128);
 
-    Void *all_memory = VirtualAlloc(0, get_memory_base_size() + permanent_size + temp_size + internal_temp_size + bitmap_size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+    Void *all_memory = VirtualAlloc(0, get_memory_base_size() + permanent_size + temp_size + internal_temp_size + bitmap_size + renderer_size,
+                                    MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
     if(all_memory) {
-        Uintptr group_inputs[] = { permanent_size, temp_size, internal_temp_size, bitmap_size};
-        //ASSERT(SGLG_ENUM_COUNT(Memory_Index) == ARRAY_COUNT(group_inputs));
+        Uintptr group_inputs[] = { permanent_size, temp_size, internal_temp_size, bitmap_size, renderer_size };
+        ASSERT(SGLG_ENUM_COUNT(Memory_Index) == ARRAY_COUNT(group_inputs));
         Memory memory = create_memory_base(all_memory, group_inputs, ARRAY_COUNT(group_inputs));
 
         Bool successfully_parsed_command_line = false;

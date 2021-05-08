@@ -14,8 +14,9 @@ SGLG_ENTITY_PATTERN(Render_Entity) struct Image_Rect {
 struct Render_Entity {
     SGLG_ENTITY_OUTPUT_INTERNAL_Render_Entity;
     sglg_Type type;
-
     U64 id;
+
+    Render_Entity *next, *child;
 };
 
 struct Render_Image {
@@ -24,12 +25,11 @@ struct Render_Image {
     U32 *pixels;
 
     U64 id;
-    // TODO: Maybe an enum for how to render?
+    // TODO: Maybe an enum for how to render for scaling / tiling, etc...
 };
 
 struct Renderer {
-    Render_Entity render_entity[256]; // TODO: Should be a binary tree.
-    Int render_entity_count;
+    Render_Entity *root;
 
     Render_Image images[256];
     Int image_count;

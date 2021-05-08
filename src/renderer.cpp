@@ -1,6 +1,50 @@
 
 internal_global U64 global_entity_id = 1; // Start at 1 so we know 0 is invalid.
 
+internal Render_Entity *
+new_node(Memory *memory) {
+    Render_Entity *render_entity = (Render_Entity *)memory_push(memory, Memory_Index_renderer, sizeof(Render_Entity));
+    ASSERT(render_entity);
+
+    return(render_entity);
+}
+
+internal Render_Entity *
+find_end_node(Render_Entity *node) {
+    if(node) {
+        while(node->next) {
+            node = node->next;
+        }
+    }
+
+    return(node);
+}
+
+internal Void
+internal_add_new_node(Render_Entity **parent, Render_Entity *child) {
+    if((*parent)->child) {
+        Render_Entity *end_node = find_end_node((*parent)->child);
+        end_node->next = child;
+    } else {
+        (*parent)->child = child;
+    }
+}
+
+internal Render_Entity *
+add_child_to_node(Memory *memory, Render_Entity **parent) {
+    Render_Entity *node = new_node(memory);
+    internal_add_new_node(parent, node);
+
+    return(node);
+}
+
+internal Void
+create_renderer(Memory *memory, Renderer *renderer) {
+    renderer->root = (Render_Entity * )memory_push(memory, Memory_Index_renderer, sizeof(Render_Entity));
+    ASSERT(renderer->root);
+    add_child_to_node(memory, &renderer->root);
+}
+
 internal Rect
 create_rectangle(Int x, Int y, Int width, Int height, U8 r, U8 g, U8 b, U8 a) {
     Rect res = {};
@@ -34,31 +78,33 @@ push_image(Renderer *renderer, Image image) {
 }
 
 internal U64
-push_solid_rectangle(Renderer *renderer, Int start_x, Int start_y, Int width, Int height, U8 r, U8 g, U8 b, U8 a) {
-    Render_Entity *render_entity = &renderer->render_entity[renderer->render_entity_count];
+push_solid_rectangle(Memory *memory, Render_Entity **parent, Int start_x, Int start_y, Int width, Int height, U8 r, U8 g, U8 b, U8 a) {
+    Render_Entity *render_entity = add_child_to_node(memory, parent);
+    ASSERT(render_entity);
+
     render_entity->type = sglg_Type_Rect;
     Rect *rectangle = (Rect *)render_entity;
 
     *rectangle = create_rectangle(start_x, start_y, width, height, r, g, b, a);
     render_entity->id = global_entity_id++;
-    ++renderer->render_entity_count;
 
     return(render_entity->id);
 }
 
 internal U64
-push_image_rect(Renderer *renderer, Int start_x, Int start_y, Int width, Int height, U64 image_id) {
+push_image_rect(Renderer *renderer, Memory *memory, Render_Entity **parent, Int start_x, Int start_y, Int width, Int height, U64 image_id) {
     U64 entity_id = 0;
     if(!find_image_from_id(renderer, image_id)) {
         ASSERT(0);
     } else {
-        Render_Entity *render_entity = &renderer->render_entity[renderer->render_entity_count];
+        Render_Entity *render_entity = add_child_to_node(memory, parent);
+        ASSERT(render_entity);
+
         render_entity->type = sglg_Type_Image_Rect;
         Image_Rect *rectangle = (Image_Rect *)render_entity;
 
         *rectangle = create_image_rectangle(start_x, start_y, width, height, image_id);
         render_entity->id = global_entity_id++;
-        ++renderer->render_entity_count;
 
         entity_id = render_entity->id;
     }
@@ -95,20 +141,19 @@ lerp(F32 t, F32 a, F32 b) {
     return(r);
 }
 
-internal U32
+internal F32
 floor(F32 a) {
-    U64 r = (F32)((S32)a);
+    F32 r = (F32)((S32)a);
     return(r);
 }
 
 internal Void
 render(Renderer *renderer, Bitmap *screen_bitmap) {
 
-    // TODO: Sort entities based on depth first.
+    // TODO: Sort entities based on depth first?
 
-    for(Int entity_i = 0; (entity_i < renderer->render_entity_count); ++entity_i) {
-        Render_Entity *render_entity = &renderer->render_entity[entity_i];
-
+    Render_Entity *render_entity = renderer->root->child; // TODO: Hardcoded single-level
+    while(render_entity) {
         switch(render_entity->type) {
             case sglg_Type_Rect: {
                 Rect *rectangle = (Rect *)render_entity;
@@ -145,15 +190,15 @@ render(Renderer *renderer, Bitmap *screen_bitmap) {
                         U32 img_y = floor((F32)y * pct_height);
 
                         U32 pixel = *((img->pixels + (img_y * img->width)) + img_x);
-
                         *out_position++ = pixel;
                     }
                 }
             } break;
 
-            default: { ASSERT(0); }
+                //default: { ASSERT(0); } // TODO: Why is this being hit?
         }
 
+        render_entity = render_entity->next;
     }
 }
 

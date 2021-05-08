@@ -159,15 +159,20 @@ struct DLL_Data;
  static F32 clamp01(F32 a );
  static Void write_image_to_disk(API * api , Memory * memory , Image * image , String file_name );
 Image load_image(API * api , String file_name );
+ static Render_Entity* new_node(Memory * memory );
+ static Render_Entity* find_end_node(Render_Entity * node );
+ static Void internal_add_new_node(Render_Entity * * parent , Render_Entity * child );
+ static Render_Entity* add_child_to_node(Memory * memory , Render_Entity * * parent );
+ static Void create_renderer(Memory * memory , Renderer * renderer );
  static Rect create_rectangle(Int x , Int y , Int width , Int height , U8 r , U8 g , U8 b , U8 a );
  static Image_Rect create_image_rectangle(Int x , Int y , Int width , Int height , U64 image_id );
  static U64 push_image(Renderer * renderer , Image image );
- static U64 push_solid_rectangle(Renderer * renderer , Int start_x , Int start_y , Int width , Int height , U8 r , U8 g , U8 b , U8 a );
- static U64 push_image_rect(Renderer * renderer , Int start_x , Int start_y , Int width , Int height , U64 image_id );
+ static U64 push_solid_rectangle(Memory * memory , Render_Entity * * parent , Int start_x , Int start_y , Int width , Int height , U8 r , U8 g , U8 b , U8 a );
+ static U64 push_image_rect(Renderer * renderer , Memory * memory , Render_Entity * * parent , Int start_x , Int start_y , Int width , Int height , U64 image_id );
  static Render_Image* find_image_from_id(Renderer * renderer , U64 id );
  static V2 v2(F32 x , F32 y );
  static F32 lerp(F32 t , F32 a , F32 b );
- static U32 floor(F32 a );
+ static F32 floor(F32 a );
  static Void render(Renderer * renderer , Bitmap * screen_bitmap );
 extern "C" Void init_platform_settings(Settings * settings );
 extern "C" Void handle_input_and_render(API * api );
@@ -181,6 +186,6 @@ static Int sglg_Key_count(Key e);
 
 // Helpers
 #define sglg_internal_enum_Memory_Arena_Error (7)
-#define sglg_internal_enum_Memory_Index (4)
+#define sglg_internal_enum_Memory_Index (5)
 #define sglg_internal_enum_Key (58)
 #define SGLG_ENTITY_OUTPUT_INTERNAL_Render_Entity union { Rect _Rect; Image_Rect _Image_Rect; }; 

@@ -185,5 +185,5 @@ static Int sglg_Key_count(Key e);
 
 // Helpers
 #define sglg_internal_enum_Memory_Arena_Error (7)
-#define sglg_internal_enum_Memory_Index (4)
+#define sglg_internal_enum_Memory_Index (5)
 #define sglg_internal_enum_Key (58)

@@ -19,18 +19,22 @@ extern "C" Void
 handle_input_and_render(API *api) {
     DLL_Data *data = (DLL_Data *)api->dll_data;
 
-    if(api->init) {
-        push_solid_rectangle(&data->renderer, 0, 0, 640, 480, 255, 255, 255, 0);
+    Memory *memory = api->memory;
 
-        push_solid_rectangle(&data->renderer, 100, 100, 100, 100, 255, 0,   0, 0);
-        push_solid_rectangle(&data->renderer, 200, 100, 100, 100, 255, 0, 255, 0);
+    if(api->init) {
+        create_renderer(memory, &data->renderer);
+
+        push_solid_rectangle(memory, &data->renderer.root, 0, 0, 640, 480, 255, 255, 255, 0);
+
+        push_solid_rectangle(memory, &data->renderer.root, 100, 100, 100, 100, 255, 0,   0, 0);
+        push_solid_rectangle(memory, &data->renderer.root, 200, 100, 100, 100, 255, 0, 255, 0);
 
         Image image_arrow = load_image(api, "arrow.bmp");
         U64 arrow_id = push_image(&data->renderer, image_arrow);
 
-        push_image_rect(&data->renderer, 100, 100, 128, 128, arrow_id);
-        push_image_rect(&data->renderer, 200, 200,  64,  64, arrow_id);
-        push_image_rect(&data->renderer, 300, 300,  32,  32, arrow_id);
+        push_image_rect(&data->renderer, memory, &data->renderer.root, 100, 100, 128, 128, arrow_id);
+        push_image_rect(&data->renderer, memory, &data->renderer.root, 200, 200,  64,  64, arrow_id);
+        push_image_rect(&data->renderer, memory, &data->renderer.root, 300, 300,  32,  32, arrow_id);
     }
 
     render(&data->renderer, &api->screen_bitmap);

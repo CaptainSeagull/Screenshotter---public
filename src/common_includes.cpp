@@ -52,6 +52,7 @@ enum Memory_Index : Int {
     Memory_Index_temp,
     Memory_Index_internal_temp,
     Memory_Index_bitmap,
+    Memory_Index_renderer,
 };
 
 #define ARRAY_COUNT(arr) (sizeof(arr) / (sizeof(*(arr))))

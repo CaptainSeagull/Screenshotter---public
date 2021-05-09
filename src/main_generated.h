@@ -40,6 +40,7 @@ enum sglg_Type {
     sglg_Type_Image,
     sglg_Type_Bitmap_Header,
     sglg_Type_V2,
+    sglg_Type_V2u,
     sglg_Type_Rect,
     sglg_Type_Image_Rect,
     sglg_Type_Render_Entity,
@@ -95,6 +96,7 @@ struct API;
 struct Image;
 struct Bitmap_Header;
 struct V2;
+struct V2u;
 struct Rect;
 struct Image_Rect;
 struct Render_Entity;
@@ -161,6 +163,8 @@ struct DLL_Data;
 Image load_image(API * api , String file_name );
  static V2 v2(F32 x , F32 y );
  static V2 operator+(V2 a , V2 b );
+ static V2u v2u(V2 v );
+ static V2 get_position(Render_Entity * render_entity );
  static Render_Entity* new_node(Memory * memory );
  static Render_Entity* find_end_node(Render_Entity * node );
  static Void internal_add_new_node(Render_Entity * * parent , Render_Entity * child );
@@ -174,8 +178,7 @@ Image load_image(API * api , String file_name );
  static Render_Image* find_image_from_id(Renderer * renderer , U64 id );
  static F32 lerp(F32 t , F32 a , F32 b );
  static F32 floor(F32 a );
- static Void render_node(Render_Entity * render_entity , Renderer * renderer , Bitmap * screen_bitmap , V2 offset );
- static V2 get_position(Render_Entity * render_entity );
+ static Void render_node(Render_Entity * render_entity , Renderer * renderer , Bitmap * screen_bitmap , V2 input_offset );
  static Void render_node_and_siblings(Render_Entity * render_entity , Renderer * renderer , Bitmap * screen_bitmap , V2 offset );
  static Void render(Renderer * renderer , Bitmap * screen_bitmap );
 extern "C" Void init_platform_settings(Settings * settings );

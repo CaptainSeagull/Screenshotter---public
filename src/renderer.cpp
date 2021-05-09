@@ -13,6 +13,32 @@ operator+(V2 a, V2 b) {
     return(r);
 }
 
+internal V2u
+v2u(V2 v) {
+    V2u r = { (U32)v.x, (U32)v.y };
+    return(r);
+}
+
+internal V2
+get_position(Render_Entity *render_entity) {
+    // TODO: I don't really like this... maybe move the X, Y to the Render_Image struct?
+
+    V2 res = {};
+    switch(render_entity->type) {
+        case sglg_Type_Rect: {
+            Rect *rect = (Rect *)render_entity;
+            res = v2(rect->x, rect->y);
+        } break;
+
+        case sglg_Type_Image_Rect: {
+            Image_Rect *rect = (Image_Rect *)render_entity;
+            res = v2(rect->x, rect->y);
+        } break;
+    }
+
+    return(res);
+}
+
 internal Render_Entity *
 new_node(Memory *memory) {
     Render_Entity *render_entity = (Render_Entity *)memory_push(memory, Memory_Index_renderer, sizeof(Render_Entity));
@@ -151,7 +177,9 @@ floor(F32 a) {
 }
 
 internal Void
-render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bitmap, V2 offset) {
+render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bitmap, V2 input_offset) {
+    V2u offset = v2u(input_offset + get_position(render_entity));
+
     switch(render_entity->type) {
         case sglg_Type_Rect: {
             Rect *rect = (Rect *)render_entity;
@@ -159,11 +187,8 @@ render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bit
             U32 width = rect->width;
             U32 height = rect->height;
 
-            U32 offset_x = (U32)offset.x;
-            U32 offset_y = (U32)offset.y;
-
             for(U32 y = 0; (y < height); ++y) {
-                U32 *output = (U32 *)screen_bitmap->memory + ((y + (rect->y + offset_y)) * screen_bitmap->width) + (rect->x + offset_x);
+                U32 *output = (U32 *)screen_bitmap->memory + ((y + offset.y) * screen_bitmap->width) + offset.x;
 
                 for(U32 x = 0; (x < width); ++x) {
                     *output++ = rect->output_colour;
@@ -180,14 +205,11 @@ render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bit
             U32 width = img_rect->width / 2;
             U32 height = img_rect->height / 2;
 
-            U32 offset_x = (U32)offset.x;
-            U32 offset_y = (U32)offset.y;
-
             F32 pct_width = (F32)img->width / (F32)img_rect->width;
             F32 pct_height = (F32)img->height / (F32)img_rect->height;
 
             for(U32 y = 0; (y < height); ++y) {
-                U32 *output = (U32 *)screen_bitmap->memory + ((y + (offset_y + img_rect->y)) * screen_bitmap->width) + (img_rect->x + offset_x);
+                U32 *output = (U32 *)screen_bitmap->memory + ((y + offset.y) * screen_bitmap->width) + offset.x;
 
                 for(U32 x = 0; (x < width); ++x) {
                     U32 img_x = floor((F32)x * pct_width);
@@ -203,26 +225,10 @@ render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bit
     }
 }
 
-internal V2
-get_position(Render_Entity *render_entity) {
-    V2 res = {};
-    switch(render_entity->type) {
-        case sglg_Type_Rect: {
-            Rect *rect = (Rect *)render_entity;
-            res = v2(rect->x, rect->y);
-        } break;
-
-        case sglg_Type_Image_Rect: {
-            Image_Rect *rect = (Image_Rect *)render_entity;
-            res = v2(rect->x, rect->y);
-        } break;
-    }
-
-    return(res);
-}
-
 internal Void
 render_node_and_siblings(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bitmap, V2 offset) {
+    // TODO: Sort entities based on depth first?
+
     // Render all siblings first
     Render_Entity *next = render_entity;
     while(next) {
@@ -230,6 +236,7 @@ render_node_and_siblings(Render_Entity *render_entity, Renderer *renderer, Bitma
         next = next->next;
     }
 
+    // Now render children
     next = render_entity;
     while(next) {
         if(next->child) {
@@ -241,17 +248,8 @@ render_node_and_siblings(Render_Entity *render_entity, Renderer *renderer, Bitma
 
 internal Void
 render(Renderer *renderer, Bitmap *screen_bitmap) {
-
     render_node_and_siblings(renderer->root, renderer, screen_bitmap, v2(0, 0));
 
-    //for(Render_Entity *render_entity = renderer->root; (render_entity); render_entity = render_entity->next) {
-    //    render_node_and_siblings(render_entity);
-    //}
-
-    // TODO: Sort entities based on depth first?
-
-    // TODO: This also needs to handle clipping for drawing bitmaps off the end of screen.
-    // TODO: Rotation would be good to handle too.
-    // TODO: Entities position should be based on parents. So moving a parents position should move all their children.
-
+    // TODO: Needs to handle clipping for drawing bitmaps off the end of screen.
+    // TODO: Handle Rotation
 }

@@ -1,4 +1,8 @@
 
+struct V2 {
+    F32 x, y;
+};
+
 SGLG_ENTITY_PATTERN(Render_Entity) struct Rect {
     Int x, y;
     Int width, height;

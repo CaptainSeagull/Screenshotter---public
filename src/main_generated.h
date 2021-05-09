@@ -39,6 +39,7 @@ enum sglg_Type {
     sglg_Type_API,
     sglg_Type_Image,
     sglg_Type_Bitmap_Header,
+    sglg_Type_V2,
     sglg_Type_Rect,
     sglg_Type_Image_Rect,
     sglg_Type_Render_Entity,
@@ -93,6 +94,7 @@ struct Settings;
 struct API;
 struct Image;
 struct Bitmap_Header;
+struct V2;
 struct Rect;
 struct Image_Rect;
 struct Render_Entity;
@@ -157,6 +159,8 @@ struct DLL_Data;
  static F32 clamp01(F32 a );
  static Void write_image_to_disk(API * api , Memory * memory , Image * image , String file_name );
 Image load_image(API * api , String file_name );
+ static V2 v2(F32 x , F32 y );
+ static V2 operator+(V2 a , V2 b );
  static Render_Entity* new_node(Memory * memory );
  static Render_Entity* find_end_node(Render_Entity * node );
  static Void internal_add_new_node(Render_Entity * * parent , Render_Entity * child );
@@ -165,11 +169,14 @@ Image load_image(API * api , String file_name );
  static Rect create_rectangle(Int x , Int y , Int width , Int height , U8 r , U8 g , U8 b , U8 a );
  static Image_Rect create_image_rectangle(Int x , Int y , Int width , Int height , U64 image_id );
  static U64 push_image(Renderer * renderer , Image image );
- static U64 push_solid_rectangle(Renderer * renderer , Render_Entity * * parent , Int start_x , Int start_y , Int width , Int height , U8 r , U8 g , U8 b , U8 a );
- static U64 push_image_rect(Renderer * renderer , Render_Entity * * parent , Int start_x , Int start_y , Int width , Int height , U64 image_id );
+ static Render_Entity* push_solid_rectangle(Renderer * renderer , Render_Entity * * parent , Int start_x , Int start_y , Int width , Int height , U8 r , U8 g , U8 b , U8 a );
+ static Render_Entity* push_image_rect(Renderer * renderer , Render_Entity * * parent , Int start_x , Int start_y , Int width , Int height , U64 image_id );
  static Render_Image* find_image_from_id(Renderer * renderer , U64 id );
  static F32 lerp(F32 t , F32 a , F32 b );
  static F32 floor(F32 a );
+ static Void render_node(Render_Entity * render_entity , Renderer * renderer , Bitmap * screen_bitmap , V2 offset );
+ static V2 get_position(Render_Entity * render_entity );
+ static Void render_node_and_siblings(Render_Entity * render_entity , Renderer * renderer , Bitmap * screen_bitmap , V2 offset );
  static Void render(Renderer * renderer , Bitmap * screen_bitmap );
 extern "C" Void init_platform_settings(Settings * settings );
 extern "C" Void handle_input_and_render(API * api );

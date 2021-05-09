@@ -27,14 +27,16 @@ handle_input_and_render(API *api) {
         push_solid_rectangle(renderer, &renderer->root, 0, 0, 640, 480, 255, 255, 255, 0);
 
         push_solid_rectangle(renderer, &renderer->root, 100, 100, 100, 100, 255, 0,   0, 0);
-        push_solid_rectangle(renderer, &renderer->root, 200, 100, 100, 100, 255, 0, 255, 0);
+        Render_Entity *sudo_window = push_solid_rectangle(renderer, &renderer->root, 200, 100, 300, 300, 255, 0, 255, 0);
+        Render_Entity *sudo_window2 = push_solid_rectangle(renderer, &sudo_window, 50, 50, 128, 128, 0, 0, 255, 0);
 
         Image image_arrow = load_image(api, "arrow.bmp");
         U64 arrow_id = push_image(renderer, image_arrow);
 
-        push_image_rect(renderer, &renderer->root, 100, 100, 128, 128, arrow_id);
-        push_image_rect(renderer, &renderer->root, 200, 200,  64,  64, arrow_id);
-        push_image_rect(renderer, &renderer->root, 300, 300,  32,  32, arrow_id);
+        push_image_rect(renderer, &renderer->root, 0, 0, 64, 64, arrow_id);
+        push_image_rect(renderer, &sudo_window2, 0, 0, 64, 64, arrow_id);
+        //push_image_rect(renderer, &renderer->root, 200, 200,  64,  64, arrow_id);
+        //push_image_rect(renderer, &renderer->root, 300, 300,  32,  32, arrow_id);
     }
 
     render(renderer, &api->screen_bitmap);

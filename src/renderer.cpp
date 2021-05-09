@@ -1,6 +1,18 @@
 
 internal_global U64 global_entity_id = 1; // Start at 1 so we know 0 is invalid.
 
+internal V2
+v2(F32 x, F32 y) {
+    V2 r = { x, y };
+    return(r);
+}
+
+internal V2
+operator+(V2 a, V2 b) {
+    V2 r = { a.x + b.x, a.y + b.y };
+    return(r);
+}
+
 internal Render_Entity *
 new_node(Memory *memory) {
     Render_Entity *render_entity = (Render_Entity *)memory_push(memory, Memory_Index_renderer, sizeof(Render_Entity));
@@ -80,7 +92,7 @@ push_image(Renderer *renderer, Image image) {
     return(id);
 }
 
-internal U64
+internal Render_Entity *
 push_solid_rectangle(Renderer *renderer, Render_Entity **parent, Int start_x, Int start_y, Int width, Int height, U8 r, U8 g, U8 b, U8 a) {
     Render_Entity *render_entity = add_child_to_node(renderer->memory, parent);
     ASSERT(render_entity);
@@ -91,16 +103,16 @@ push_solid_rectangle(Renderer *renderer, Render_Entity **parent, Int start_x, In
     *rectangle = create_rectangle(start_x, start_y, width, height, r, g, b, a);
     render_entity->id = global_entity_id++;
 
-    return(render_entity->id);
+    return(render_entity);
 }
 
-internal U64
+internal Render_Entity *
 push_image_rect(Renderer *renderer, Render_Entity **parent, Int start_x, Int start_y, Int width, Int height, U64 image_id) {
-    U64 entity_id = 0;
+    Render_Entity *render_entity = 0;
     if(!find_image_from_id(renderer, image_id)) {
         ASSERT(0);
     } else {
-        Render_Entity *render_entity = add_child_to_node(renderer->memory, parent);
+        render_entity = add_child_to_node(renderer->memory, parent);
         ASSERT(render_entity);
 
         render_entity->type = sglg_Type_Image_Rect;
@@ -108,11 +120,9 @@ push_image_rect(Renderer *renderer, Render_Entity **parent, Int start_x, Int sta
 
         *rectangle = create_image_rectangle(start_x, start_y, width, height, image_id);
         render_entity->id = global_entity_id++;
-
-        entity_id = render_entity->id;
     }
 
-    return(entity_id);
+    return(render_entity);
 }
 
 internal Render_Image *
@@ -141,7 +151,102 @@ floor(F32 a) {
 }
 
 internal Void
+render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bitmap, V2 offset) {
+    switch(render_entity->type) {
+        case sglg_Type_Rect: {
+            Rect *rect = (Rect *)render_entity;
+
+            U32 width = rect->width;
+            U32 height = rect->height;
+
+            U32 offset_x = (U32)offset.x;
+            U32 offset_y = (U32)offset.y;
+
+            for(U32 y = 0; (y < height); ++y) {
+                U32 *output = (U32 *)screen_bitmap->memory + ((y + (rect->y + offset_y)) * screen_bitmap->width) + (rect->x + offset_x);
+
+                for(U32 x = 0; (x < width); ++x) {
+                    *output++ = rect->output_colour;
+                }
+            }
+        } break;
+
+        case sglg_Type_Image_Rect: {
+            Image_Rect *img_rect = (Image_Rect *)render_entity;
+            Render_Image *img = find_image_from_id(renderer, img_rect->image_id);
+            ASSERT(img);
+
+            // TODO: Why / 2??
+            U32 width = img_rect->width / 2;
+            U32 height = img_rect->height / 2;
+
+            U32 offset_x = (U32)offset.x;
+            U32 offset_y = (U32)offset.y;
+
+            F32 pct_width = (F32)img->width / (F32)img_rect->width;
+            F32 pct_height = (F32)img->height / (F32)img_rect->height;
+
+            for(U32 y = 0; (y < height); ++y) {
+                U32 *output = (U32 *)screen_bitmap->memory + ((y + (offset_y + img_rect->y)) * screen_bitmap->width) + (img_rect->x + offset_x);
+
+                for(U32 x = 0; (x < width); ++x) {
+                    U32 img_x = floor((F32)x * pct_width);
+                    U32 img_y = floor((F32)y * pct_height);
+
+                    U32 *bitmap_pixel = (img->pixels + (img_y * img->width)) + img_x;
+                    *output++ = *bitmap_pixel;
+                }
+            }
+        } break;
+
+            //default: { ASSERT(0); } // TODO: Why is this being hit?
+    }
+}
+
+internal V2
+get_position(Render_Entity *render_entity) {
+    V2 res = {};
+    switch(render_entity->type) {
+        case sglg_Type_Rect: {
+            Rect *rect = (Rect *)render_entity;
+            res = v2(rect->x, rect->y);
+        } break;
+
+        case sglg_Type_Image_Rect: {
+            Image_Rect *rect = (Image_Rect *)render_entity;
+            res = v2(rect->x, rect->y);
+        } break;
+    }
+
+    return(res);
+}
+
+internal Void
+render_node_and_siblings(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bitmap, V2 offset) {
+    // Render all siblings first
+    Render_Entity *next = render_entity;
+    while(next) {
+        render_node(next, renderer, screen_bitmap, offset);
+        next = next->next;
+    }
+
+    next = render_entity;
+    while(next) {
+        if(next->child) {
+            render_node_and_siblings(next->child, renderer, screen_bitmap, offset + get_position(next));
+        }
+        next = next->next;
+    }
+}
+
+internal Void
 render(Renderer *renderer, Bitmap *screen_bitmap) {
+
+    render_node_and_siblings(renderer->root, renderer, screen_bitmap, v2(0, 0));
+
+    //for(Render_Entity *render_entity = renderer->root; (render_entity); render_entity = render_entity->next) {
+    //    render_node_and_siblings(render_entity);
+    //}
 
     // TODO: Sort entities based on depth first?
 
@@ -149,52 +254,4 @@ render(Renderer *renderer, Bitmap *screen_bitmap) {
     // TODO: Rotation would be good to handle too.
     // TODO: Entities position should be based on parents. So moving a parents position should move all their children.
 
-    Render_Entity *render_entity = renderer->root->child; // TODO: Hardcoded single-level
-    while(render_entity) {
-        switch(render_entity->type) {
-            case sglg_Type_Rect: {
-                Rect *rect = (Rect *)render_entity;
-
-                U32 width = rect->width;
-                U32 height = rect->height;
-
-                for(U32 y = 0; (y < height); ++y) {
-                    U32 *output = (U32 *)screen_bitmap->memory + ((y + rect->y) * screen_bitmap->width) + rect->x;
-
-                    for(U32 x = 0; (x < width); ++x) {
-                        *output++ = rect->output_colour;
-                    }
-                }
-            } break;
-
-            case sglg_Type_Image_Rect: {
-                Image_Rect *img_rect = (Image_Rect *)render_entity;
-                Render_Image *img = find_image_from_id(renderer, img_rect->image_id);
-                ASSERT(img);
-
-                // TODO: Why / 2??
-                U32 width = img_rect->width / 2;
-                U32 height = img_rect->height / 2;
-
-                F32 pct_width = (F32)img->width / (F32)img_rect->width;
-                F32 pct_height = (F32)img->height / (F32)img_rect->height;
-
-                for(U32 y = 0; (y < height); ++y) {
-                    U32 *output = (U32 *)screen_bitmap->memory + ((y + img_rect->y) * screen_bitmap->width) + img_rect->x;
-
-                    for(U32 x = 0; (x < width); ++x) {
-                        U32 img_x = floor((F32)x * pct_width);
-                        U32 img_y = floor((F32)y * pct_height);
-
-                        U32 *bitmap_pixel = (img->pixels + (img_y * img->width)) + img_x;
-                        *output++ = *bitmap_pixel;
-                    }
-                }
-            } break;
-
-                //default: { ASSERT(0); } // TODO: Why is this being hit?
-        }
-
-        render_entity = render_entity->next;
-    }
 }

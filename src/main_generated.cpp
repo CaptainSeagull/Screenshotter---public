@@ -206,6 +206,7 @@ static uint64_t sglg_type_to_size(sglg_Type type) {
         case sglg_Type_API: { return(sizeof(API)); } break;
         case sglg_Type_Image: { return(sizeof(Image)); } break;
         case sglg_Type_Bitmap_Header: { return(sizeof(Bitmap_Header)); } break;
+        case sglg_Type_V2: { return(sizeof(V2)); } break;
         case sglg_Type_Rect: { return(sizeof(Rect)); } break;
         case sglg_Type_Image_Rect: { return(sizeof(Image_Rect)); } break;
         case sglg_Type_Render_Entity: { return(sizeof(Render_Entity)); } break;
@@ -234,6 +235,7 @@ static sglg_Type sglg_string_to_type(char const *s, uint64_t l) {
     else if(sgl_generated_string_compare("API", 3, s, l)) { return(sglg_Type_API); }
     else if(sgl_generated_string_compare("Image", 5, s, l)) { return(sglg_Type_Image); }
     else if(sgl_generated_string_compare("Bitmap_Header", 13, s, l)) { return(sglg_Type_Bitmap_Header); }
+    else if(sgl_generated_string_compare("V2", 2, s, l)) { return(sglg_Type_V2); }
     else if(sgl_generated_string_compare("Rect", 4, s, l)) { return(sglg_Type_Rect); }
     else if(sgl_generated_string_compare("Image_Rect", 10, s, l)) { return(sglg_Type_Image_Rect); }
     else if(sgl_generated_string_compare("Render_Entity", 13, s, l)) { return(sglg_Type_Render_Entity); }

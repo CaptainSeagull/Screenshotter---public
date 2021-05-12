@@ -14,6 +14,7 @@ SGLG_ENTITY_PATTERN(Render_Entity) struct Rect {
     U32 output_colour;
 };
 
+// TODO: Make a sprite-sheet version.
 SGLG_ENTITY_PATTERN(Render_Entity) struct Image_Rect {
     U64 image_id;
     Int x, y;

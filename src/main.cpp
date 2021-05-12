@@ -3,6 +3,10 @@
 #include "renderer.h"
 #include "renderer.cpp"
 
+// TODO: Mirror is angry... :-(
+//#define STB_TRUETYPE_IMPLEMENTATION
+//#include "../shared/stb_truetype.h"
+
 struct DLL_Data {
     Renderer renderer;
 };

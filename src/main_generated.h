@@ -184,6 +184,8 @@ Image load_image(API * api , String file_name );
 extern "C" Void init_platform_settings(Settings * settings );
 extern "C" Void handle_input_and_render(API * api );
 void  __stdcall _DllMainCRTStartup(void );
+void* my_malloc(uint64_t size );
+void my_free(void * d );
 static char const *sglg_Memory_Arena_Error_to_string(Memory_Arena_Error e);
 static int sglg_Memory_Arena_Error_count(Memory_Arena_Error e);
 static char const *sglg_Memory_Index_to_string(Memory_Index e);
@@ -193,6 +195,6 @@ static Int sglg_Key_count(Key e);
 
 // Helpers
 #define sglg_internal_enum_Memory_Arena_Error (7)
-#define sglg_internal_enum_Memory_Index (5)
+#define sglg_internal_enum_Memory_Index (6)
 #define sglg_internal_enum_Key (58)
 #define SGLG_ENTITY_OUTPUT_INTERNAL_Render_Entity union { Rect _Rect; Image_Rect _Image_Rect; }; 

@@ -24,7 +24,7 @@ typedef double F64;
 #define ASSERT(exp) { }
 #if ALLOW_ASSERTS
     #undef ASSERT
-    #define ASSERT(exp) { if(!(exp)) {*(uint64_t volatile *)0 = 0; } }
+    #define ASSERT(exp) do { if(!(exp)) {*(uint64_t volatile *)0 = 0; } } while(0)
     #define MEMORY_ARENA_ALLOW_ASSERT
     #define STRING_ALLOW_ASSERT
 #endif
@@ -53,6 +53,7 @@ enum Memory_Index : Int {
     Memory_Index_internal_temp,
     Memory_Index_bitmap,
     Memory_Index_renderer,
+    Memory_Index_malloc_nofree_size,
 };
 
 #define ARRAY_COUNT(arr) (sizeof(arr) / (sizeof(*(arr))))

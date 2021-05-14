@@ -1,11 +1,8 @@
 #include "common_includes.cpp"
+
 #include "main_generated.h"
 #include "renderer.h"
 #include "renderer.cpp"
-
-// TODO: Mirror is angry... :-(
-//#define STB_TRUETYPE_IMPLEMENTATION
-//#include "../shared/stb_truetype.h"
 
 struct DLL_Data {
     Renderer renderer;
@@ -19,8 +16,11 @@ init_platform_settings(Settings *settings) {
     settings->window_height = 480;
 }
 
+internal API *global_api;
 extern "C" Void
 handle_input_and_render(API *api) {
+    global_api = api;
+
     DLL_Data *data = (DLL_Data *)api->dll_data;
 
     Renderer *renderer = &data->renderer;
@@ -51,5 +51,10 @@ void __stdcall
 _DllMainCRTStartup(void) {
     // TODO: Windows only... I don't think this needs to do anything
 }
+
+// Some stuff which library code can use.
+void *my_malloc(uint64_t size) { return memory_push(global_api->memory, Memory_Index_malloc_nofree_size, size); }
+void my_free(void *d) { /* Do nothing... */ }
+
 
 #include "main_generated.cpp"

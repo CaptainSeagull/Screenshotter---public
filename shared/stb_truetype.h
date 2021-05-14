@@ -1097,6 +1097,10 @@ enum { // languageID for STBTT_PLATFORM_ID_MAC
 
 typedef int stbtt__test_oversample_pow2[(STBTT_MAX_OVERSAMPLE & (STBTT_MAX_OVERSAMPLE - 1)) == 0 ? 1 : -1];
 
+#ifndef STBTT_RASTERIZER_VERSION
+    #define STBTT_RASTERIZER_VERSION 2
+#endif
+
 #ifdef _MSC_VER
     #define STBTT__NOTUSED(v)  (void)(v)
 #else
@@ -2735,11 +2739,18 @@ typedef struct stbtt__edge {
 
 typedef struct stbtt__active_edge {
     struct stbtt__active_edge *next;
-
+#if STBTT_RASTERIZER_VERSION==1
+    int x, dx;
+    float ey;
+    int direction;
+#elif STBTT_RASTERIZER_VERSION==2
     float fx, fdx, fdy;
     float direction;
     float sy;
     float ey;
+#else
+#error "Unrecognized value of STBTT_RASTERIZER_VERSION"
+#endif
 } stbtt__active_edge;
 
 #if STBTT_RASTERIZER_VERSION == 1

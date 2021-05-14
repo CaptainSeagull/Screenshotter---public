@@ -566,16 +566,18 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
     int res = 0xFF;
 
     // TODO: Think about these sizes more. Because this app is meant to run in the background it should be as resource-light as possible.
-    Uintptr permanent_size = MEGABYTES(128);
-    Uintptr temp_size = MEGABYTES(128);
-    Uintptr internal_temp_size = MEGABYTES(128);
-    Uintptr bitmap_size = MAX_SCREEN_BITMAP_SIZE + 1;
-    Uintptr renderer_size = MEGABYTES(128);
+    U64 permanent_size = MEGABYTES(128);
+    U64 temp_size = MEGABYTES(128);
+    U64 internal_temp_size = MEGABYTES(128);
+    U64 bitmap_size = MAX_SCREEN_BITMAP_SIZE + 1;
+    U64 renderer_size = MEGABYTES(128);
+    U64 malloc_nofree_size = MEGABYTES(128);
+    U64 total_size = get_memory_base_size() + permanent_size + temp_size + internal_temp_size + bitmap_size +
+                     renderer_size + malloc_nofree_size;
 
-    Void *all_memory = VirtualAlloc(0, get_memory_base_size() + permanent_size + temp_size + internal_temp_size + bitmap_size + renderer_size,
-                                    MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+    Void *all_memory = VirtualAlloc(0, total_size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
     if(all_memory) {
-        Uintptr group_inputs[] = { permanent_size, temp_size, internal_temp_size, bitmap_size, renderer_size };
+        U64 group_inputs[] = { permanent_size, temp_size, internal_temp_size, bitmap_size, renderer_size };
         ASSERT(SGLG_ENUM_COUNT(Memory_Index) == ARRAY_COUNT(group_inputs));
         Memory memory = create_memory_base(all_memory, group_inputs, ARRAY_COUNT(group_inputs));
 

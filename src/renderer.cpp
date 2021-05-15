@@ -98,12 +98,16 @@ create_rectangle(Int x, Int y, Int width, Int height, U8 r, U8 g, U8 b, U8 a) {
 }
 
 internal Image_Rect
-create_image_rectangle(Int x, Int y, Int width, Int height, U64 image_id) {
+create_image_rectangle(Int x, Int y, Int width, Int height, Int sprite_x, Int sprite_y, Int sprite_width, Int sprite_height, U64 image_id) {
     Image_Rect res = {};
     res.x = x;
     res.y = y;
     res.width = width;
     res.height = height;
+    res.sprite_x = sprite_x;
+    res.sprite_y = sprite_y;
+    res.sprite_width = sprite_width;
+    res.sprite_height = sprite_height;
     res.image_id = image_id;
 
     return(res);
@@ -133,7 +137,10 @@ push_solid_rectangle(Renderer *renderer, Render_Entity **parent, Int start_x, In
 }
 
 internal Render_Entity *
-push_image_rect(Renderer *renderer, Render_Entity **parent, Int start_x, Int start_y, Int width, Int height, U64 image_id) {
+push_image_rect(Renderer *renderer, Render_Entity **parent,
+                Int start_x, Int start_y, Int width, Int height,
+                Int sprite_x, Int sprite_y, Int sprite_width, Int sprite_height,
+                U64 image_id) {
     Render_Entity *render_entity = 0;
     if(!find_image_from_id(renderer, image_id)) {
         ASSERT(0);
@@ -144,7 +151,7 @@ push_image_rect(Renderer *renderer, Render_Entity **parent, Int start_x, Int sta
         render_entity->type = sglg_Type_Image_Rect;
         Image_Rect *rectangle = (Image_Rect *)render_entity;
 
-        *rectangle = create_image_rectangle(start_x, start_y, width, height, image_id);
+        *rectangle = create_image_rectangle(start_x, start_y, width, height, sprite_x, sprite_y, sprite_width, sprite_height, image_id);
         render_entity->id = global_entity_id++;
     }
 
@@ -176,9 +183,21 @@ floor(F32 a) {
     return(r);
 }
 
+#define image_at(base,y,width,x) image_at_((U32 *)base,y,width,x)
+internal U32 *
+image_at_(U32 *base, U32 y, U32 width, U32 x) {
+    U32 accessor = ((y * width) + x);
+    // TODO: ASSERT we're not reading off the end.
+    U32 *r = &base[accessor];
+    return(r);
+}
+
 internal Void
 render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bitmap, V2 input_offset) {
     V2u offset = v2u(input_offset + get_position(render_entity));
+
+    // TODO: Most of the renderers are reading the screen pixels for y,x. However it'd probably be faster to just read for the y then
+    //       ++ iterate through to write the X. Wouldn't be able to ASSERT as nicely though...
 
     switch(render_entity->type) {
         case sglg_Type_Rect: {
@@ -188,10 +207,9 @@ render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bit
             U32 height = rect->height;
 
             for(U32 y = 0; (y < height); ++y) {
-                U32 *output = (U32 *)screen_bitmap->memory + ((y + offset.y) * screen_bitmap->width) + offset.x;
-
                 for(U32 x = 0; (x < width); ++x) {
-                    *output++ = rect->output_colour;
+                    U32 *output = image_at(screen_bitmap->memory, y + offset.y, screen_bitmap->width, x + offset.x);
+                    *output = rect->output_colour;
                 }
             }
         } break;
@@ -201,22 +219,21 @@ render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bit
             Render_Image *img = find_image_from_id(renderer, img_rect->image_id);
             ASSERT(img);
 
-            // TODO: Why / 2??
-            U32 width = img_rect->width / 2;
-            U32 height = img_rect->height / 2;
+            F32 pct_w = (F32)img_rect->sprite_width / (F32)img_rect->width;
+            F32 pct_h = (F32)img_rect->sprite_height / (F32)img_rect->height;
 
-            F32 pct_width = (F32)img->width / (F32)img_rect->width;
-            F32 pct_height = (F32)img->height / (F32)img_rect->height;
+            ASSERT(pct_w >= 0 && pct_w <= 1);
+            ASSERT(pct_h >= 0 && pct_h <= 1);
 
-            for(U32 y = 0; (y < height); ++y) {
-                U32 *output = (U32 *)screen_bitmap->memory + ((y + offset.y) * screen_bitmap->width) + offset.x;
+            for(U32 y = 0; (y < img_rect->width); ++y) {
+                for(U32 x = 0; (x < img_rect->height); ++x) {
+                    U32 img_x = floor((F32)x * pct_w);
+                    U32 img_y = floor((F32)y * pct_h);
 
-                for(U32 x = 0; (x < width); ++x) {
-                    U32 img_x = floor((F32)x * pct_width);
-                    U32 img_y = floor((F32)y * pct_height);
+                    U32 *screen_pixel = image_at(screen_bitmap->memory, y + offset.y, screen_bitmap->width, x + offset.x);
+                    U32 *bitmap_pixel = image_at(img->pixels, img_rect->sprite_y + img_y, img->width, img_rect->sprite_x + img_x);
 
-                    U32 *bitmap_pixel = (img->pixels + (img_y * img->width)) + img_x;
-                    *output++ = *bitmap_pixel;
+                    *screen_pixel = *bitmap_pixel;
                 }
             }
         } break;

@@ -19,6 +19,9 @@ SGLG_ENTITY_PATTERN(Render_Entity) struct Image_Rect {
     U64 image_id;
     Int x, y;
     Int width, height;
+
+    Int sprite_x, sprite_y;
+    Int sprite_width, sprite_height;
 };
 
 struct Render_Entity {
@@ -30,8 +33,7 @@ struct Render_Entity {
 };
 
 struct Render_Image {
-    Int width;
-    Int height;
+    Int width, height;
     U32 *pixels;
 
     U64 id;

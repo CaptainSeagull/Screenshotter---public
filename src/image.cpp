@@ -123,9 +123,9 @@ Image load_image(API *api, String file_name) {
                 U8 *src_at = (U8 *)data_start;
                 U32 *dst_at = (U32 *)img.pixels;
                 for(U64 pixel_i = 0; (pixel_i < raw_bitmap.size - header->bitmap_offset); pixel_i += 3) {
-                    U8 *r = src_at++;
-                    U8 *g = src_at++;
-                    U8 *b = src_at++;
+                    U8 *r = &src_at[0];
+                    U8 *g = &src_at[1];
+                    U8 *b = &src_at[2];
 
                     *dst_at = (0xFF << 24) | (*b << 16) | (*g << 8) | (*r << 0);
                     dst_at += 1;

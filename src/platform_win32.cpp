@@ -1,4 +1,4 @@
-#include "common_includes.cpp"
+#include "common.cpp"
 
 #include <windows.h>
 #include <gl/gl.h>

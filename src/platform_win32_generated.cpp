@@ -11,6 +11,17 @@ static int sgl_generated_string_compare(char const *a, uint32_t a_len, char cons
     }
     return(res);
 }
+static char const *sglg_Memory_Index_to_string(Memory_Index e) {
+    switch(e) {
+        case Memory_Index_permanent: { return("Memory_Index_permanent"); } break;
+        case Memory_Index_temp: { return("Memory_Index_temp"); } break;
+        case Memory_Index_internal_temp: { return("Memory_Index_internal_temp"); } break;
+        case Memory_Index_bitmap: { return("Memory_Index_bitmap"); } break;
+        case Memory_Index_renderer: { return("Memory_Index_renderer"); } break;
+        case Memory_Index_malloc_nofree_size: { return("Memory_Index_malloc_nofree_size"); } break;
+    }
+    return(0);
+}
 static char const *sglg_Memory_Arena_Error_to_string(Memory_Arena_Error e) {
     switch(e) {
         case Memory_Arena_Error_success: { return("Memory_Arena_Error_success"); } break;
@@ -20,17 +31,6 @@ static char const *sglg_Memory_Arena_Error_to_string(Memory_Arena_Error e) {
         case Memory_Arena_Error_internal_error: { return("Memory_Arena_Error_internal_error"); } break;
         case Memory_Arena_Error_wrong_free_order: { return("Memory_Arena_Error_wrong_free_order"); } break;
         case Memory_Arena_Error_count: { return("Memory_Arena_Error_count"); } break;
-    }
-    return(0);
-}
-static char const *sglg_Memory_Index_to_string(Memory_Index e) {
-    switch(e) {
-        case Memory_Index_permanent: { return("Memory_Index_permanent"); } break;
-        case Memory_Index_temp: { return("Memory_Index_temp"); } break;
-        case Memory_Index_internal_temp: { return("Memory_Index_internal_temp"); } break;
-        case Memory_Index_bitmap: { return("Memory_Index_bitmap"); } break;
-        case Memory_Index_renderer: { return("Memory_Index_renderer"); } break;
-        case Memory_Index_malloc_nofree_size: { return("Memory_Index_malloc_nofree_size"); } break;
     }
     return(0);
 }
@@ -97,6 +97,16 @@ static char const *sglg_Key_to_string(Key e) {
     }
     return(0);
 }
+static Memory_Index sglg_Memory_Index_from_string(char const *s, uint32_t l) {
+    if(0) {}
+    else if(sgl_generated_string_compare("Memory_Index_permanent", 22, s, l)) { return(Memory_Index_permanent); }
+    else if(sgl_generated_string_compare("Memory_Index_temp", 17, s, l)) { return(Memory_Index_temp); }
+    else if(sgl_generated_string_compare("Memory_Index_internal_temp", 26, s, l)) { return(Memory_Index_internal_temp); }
+    else if(sgl_generated_string_compare("Memory_Index_bitmap", 19, s, l)) { return(Memory_Index_bitmap); }
+    else if(sgl_generated_string_compare("Memory_Index_renderer", 21, s, l)) { return(Memory_Index_renderer); }
+    else if(sgl_generated_string_compare("Memory_Index_malloc_nofree_size", 31, s, l)) { return(Memory_Index_malloc_nofree_size); }
+    return((Memory_Index)0);
+}
 static Memory_Arena_Error sglg_Memory_Arena_Error_from_string(char const *s, uint32_t l) {
     if(0) {}
     else if(sgl_generated_string_compare("Memory_Arena_Error_success", 26, s, l)) { return(Memory_Arena_Error_success); }
@@ -107,16 +117,6 @@ static Memory_Arena_Error sglg_Memory_Arena_Error_from_string(char const *s, uin
     else if(sgl_generated_string_compare("Memory_Arena_Error_wrong_free_order", 35, s, l)) { return(Memory_Arena_Error_wrong_free_order); }
     else if(sgl_generated_string_compare("Memory_Arena_Error_count", 24, s, l)) { return(Memory_Arena_Error_count); }
     return((Memory_Arena_Error)0);
-}
-static Memory_Index sglg_Memory_Index_from_string(char const *s, uint32_t l) {
-    if(0) {}
-    else if(sgl_generated_string_compare("Memory_Index_permanent", 22, s, l)) { return(Memory_Index_permanent); }
-    else if(sgl_generated_string_compare("Memory_Index_temp", 17, s, l)) { return(Memory_Index_temp); }
-    else if(sgl_generated_string_compare("Memory_Index_internal_temp", 26, s, l)) { return(Memory_Index_internal_temp); }
-    else if(sgl_generated_string_compare("Memory_Index_bitmap", 19, s, l)) { return(Memory_Index_bitmap); }
-    else if(sgl_generated_string_compare("Memory_Index_renderer", 21, s, l)) { return(Memory_Index_renderer); }
-    else if(sgl_generated_string_compare("Memory_Index_malloc_nofree_size", 31, s, l)) { return(Memory_Index_malloc_nofree_size); }
-    return((Memory_Index)0);
 }
 static Key sglg_Key_from_string(char const *s, uint32_t l) {
     if(0) {}
@@ -183,14 +183,15 @@ static Key sglg_Key_from_string(char const *s, uint32_t l) {
 // sglg_Type
 static uint64_t sglg_get_enum_count(sglg_Type type) {
     switch(type) {
-        case sglg_Type_Memory_Arena_Error: { return(7); } break;
         case sglg_Type_Memory_Index: { return(6); } break;
+        case sglg_Type_Memory_Arena_Error: { return(7); } break;
         case sglg_Type_Key: { return(58); } break;
     }
     return(0);
 }
 static uint64_t sglg_type_to_size(sglg_Type type) {
     switch(type) {
+        case sglg_Type_Memory_Index: { return(sizeof(Memory_Index)); } break;
         case sglg_Type_Memory_Arena_Error: { return(sizeof(Memory_Arena_Error)); } break;
         case sglg_Type_Memory_Group: { return(sizeof(Memory_Group)); } break;
         case sglg_Type_Memory: { return(sizeof(Memory)); } break;
@@ -198,7 +199,6 @@ static uint64_t sglg_type_to_size(sglg_Type type) {
         case sglg_Type_String: { return(sizeof(String)); } break;
         case sglg_Type_String_To_Int_Result: { return(sizeof(String_To_Int_Result)); } break;
         case sglg_Type_String_To_Float_Result: { return(sizeof(String_To_Float_Result)); } break;
-        case sglg_Type_Memory_Index: { return(sizeof(Memory_Index)); } break;
         case sglg_Type_Config: { return(sizeof(Config)); } break;
         case sglg_Type_File: { return(sizeof(File)); } break;
         case sglg_Type_Key: { return(sizeof(Key)); } break;
@@ -219,6 +219,7 @@ static uint64_t sglg_type_to_size(sglg_Type type) {
 }
 static sglg_Type sglg_string_to_type(char const *s, uint64_t l) {
     if(0) {}
+    else if(sgl_generated_string_compare("Memory_Index", 12, s, l)) { return(sglg_Type_Memory_Index); }
     else if(sgl_generated_string_compare("Memory_Arena_Error", 18, s, l)) { return(sglg_Type_Memory_Arena_Error); }
     else if(sgl_generated_string_compare("Memory_Group", 12, s, l)) { return(sglg_Type_Memory_Group); }
     else if(sgl_generated_string_compare("Memory", 6, s, l)) { return(sglg_Type_Memory); }
@@ -226,7 +227,6 @@ static sglg_Type sglg_string_to_type(char const *s, uint64_t l) {
     else if(sgl_generated_string_compare("String", 6, s, l)) { return(sglg_Type_String); }
     else if(sgl_generated_string_compare("String_To_Int_Result", 20, s, l)) { return(sglg_Type_String_To_Int_Result); }
     else if(sgl_generated_string_compare("String_To_Float_Result", 22, s, l)) { return(sglg_Type_String_To_Float_Result); }
-    else if(sgl_generated_string_compare("Memory_Index", 12, s, l)) { return(sglg_Type_Memory_Index); }
     else if(sgl_generated_string_compare("Config", 6, s, l)) { return(sglg_Type_Config); }
     else if(sgl_generated_string_compare("File", 4, s, l)) { return(sglg_Type_File); }
     else if(sgl_generated_string_compare("Key", 3, s, l)) { return(sglg_Type_Key); }

@@ -3,11 +3,7 @@
 
 // From: https://en.wikipedia.org/wiki/BMP_file_format#Bitmap_file_header and https://www.fileformat.info/format/bmp/egff.htm
 
-struct Image {
-    Int width;
-    Int height;
-    U32 *pixels;
-};
+#include "image.h"
 
 #pragma pack(push, 1)
 struct Bitmap_Header {

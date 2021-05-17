@@ -171,6 +171,8 @@ find_image_from_id(Renderer *renderer, U64 id) {
     return(img);
 }
 
+// TODO: Find entity_from_id would be useful.
+
 internal F32
 lerp(F32 t, F32 a, F32 b) {
     F32 r = (1.0f - t) * a + t * b;
@@ -219,8 +221,13 @@ render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bit
             Render_Image *img = find_image_from_id(renderer, img_rect->image_id);
             ASSERT(img);
 
-            F32 pct_w = (F32)img_rect->sprite_width / (F32)img_rect->width;
-            F32 pct_h = (F32)img_rect->sprite_height / (F32)img_rect->height;
+            F32 sprite_width_to_use = img_rect->sprite_width;
+            if(sprite_width_to_use == 0) { sprite_width_to_use = img->width; }
+            F32 sprite_height_to_use = img_rect->sprite_height;
+            if(sprite_height_to_use == 0) { sprite_height_to_use = img->height; }
+
+            F32 pct_w = sprite_width_to_use / (F32)img_rect->width;
+            F32 pct_h = sprite_height_to_use / (F32)img_rect->height;
 
             ASSERT(pct_w >= 0 && pct_w <= 1);
             ASSERT(pct_h >= 0 && pct_h <= 1);

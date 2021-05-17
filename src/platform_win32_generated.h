@@ -22,6 +22,7 @@ enum sglg_Type {
     sglg_Type_uintptr_t,
     sglg_Type_intptr_t,
     sglg_Type_Int,
+    sglg_Type_Memory_Index,
     sglg_Type_Memory_Arena_Error,
     sglg_Type_Memory_Group,
     sglg_Type_Memory,
@@ -29,7 +30,6 @@ enum sglg_Type {
     sglg_Type_String,
     sglg_Type_String_To_Int_Result,
     sglg_Type_String_To_Float_Result,
-    sglg_Type_Memory_Index,
     sglg_Type_Config,
     sglg_Type_File,
     sglg_Type_Key,
@@ -77,6 +77,8 @@ typedef Void Handle_Input_And_Render ( API * ) ;
 typedef Void Init_Platform_Settings ( Settings * settings ) ;
 
 // Forward declared structs
+enum Memory_Index : Int;
+
 
 struct Memory_Group;
 struct Memory;
@@ -84,8 +86,6 @@ struct Internal_Push_Info;
 struct String;
 struct String_To_Int_Result;
 struct String_To_Float_Result;
-enum Memory_Index : Int;
-
 struct Config;
 struct File;
 enum Key : Int;
@@ -176,14 +176,14 @@ Image load_image(API * api , String file_name );
  static Win32_Loaded_Code win32_load_code(Char * source_fname , Char * temp_fname );
 int  CALLBACK WinMain(HINSTANCE hInstance , HINSTANCE hPrevInstance , LPSTR lpCmdLine , int nShowCmd );
 void  __stdcall WinMainCRTStartup();
-static char const *sglg_Memory_Arena_Error_to_string(Memory_Arena_Error e);
-static int sglg_Memory_Arena_Error_count(Memory_Arena_Error e);
 static char const *sglg_Memory_Index_to_string(Memory_Index e);
 static Int sglg_Memory_Index_count(Memory_Index e);
+static char const *sglg_Memory_Arena_Error_to_string(Memory_Arena_Error e);
+static int sglg_Memory_Arena_Error_count(Memory_Arena_Error e);
 static char const *sglg_Key_to_string(Key e);
 static Int sglg_Key_count(Key e);
 
 // Helpers
-#define sglg_internal_enum_Memory_Arena_Error (7)
 #define sglg_internal_enum_Memory_Index (6)
+#define sglg_internal_enum_Memory_Arena_Error (7)
 #define sglg_internal_enum_Key (58)

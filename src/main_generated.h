@@ -22,6 +22,7 @@ enum sglg_Type {
     sglg_Type_uintptr_t,
     sglg_Type_intptr_t,
     sglg_Type_Int,
+    sglg_Type_Memory_Index,
     sglg_Type_Memory_Arena_Error,
     sglg_Type_Memory_Group,
     sglg_Type_Memory,
@@ -29,7 +30,6 @@ enum sglg_Type {
     sglg_Type_String,
     sglg_Type_String_To_Int_Result,
     sglg_Type_String_To_Float_Result,
-    sglg_Type_Memory_Index,
     sglg_Type_Config,
     sglg_Type_File,
     sglg_Type_Key,
@@ -76,6 +76,8 @@ typedef float F32 ;
 typedef double F64 ;
 
 // Forward declared structs
+enum Memory_Index : Int;
+
 
 struct Memory_Group;
 struct Memory;
@@ -83,8 +85,6 @@ struct Internal_Push_Info;
 struct String;
 struct String_To_Int_Result;
 struct String_To_Float_Result;
-enum Memory_Index : Int;
-
 struct Config;
 struct File;
 enum Key : Int;
@@ -183,19 +183,20 @@ Image load_image(API * api , String file_name );
  static Void render_node_and_siblings(Render_Entity * render_entity , Renderer * renderer , Bitmap * screen_bitmap , V2 offset );
  static Void render(Renderer * renderer , Bitmap * screen_bitmap );
 extern "C" Void init_platform_settings(Settings * settings );
+Image make_letter_image(U8 * file_data , U64 file_size );
 extern "C" Void handle_input_and_render(API * api );
 void  __stdcall _DllMainCRTStartup(void );
 void* my_malloc(uint64_t size );
 void my_free(void * d );
-static char const *sglg_Memory_Arena_Error_to_string(Memory_Arena_Error e);
-static int sglg_Memory_Arena_Error_count(Memory_Arena_Error e);
 static char const *sglg_Memory_Index_to_string(Memory_Index e);
 static Int sglg_Memory_Index_count(Memory_Index e);
+static char const *sglg_Memory_Arena_Error_to_string(Memory_Arena_Error e);
+static int sglg_Memory_Arena_Error_count(Memory_Arena_Error e);
 static char const *sglg_Key_to_string(Key e);
 static Int sglg_Key_count(Key e);
 
 // Helpers
-#define sglg_internal_enum_Memory_Arena_Error (7)
 #define sglg_internal_enum_Memory_Index (6)
+#define sglg_internal_enum_Memory_Arena_Error (7)
 #define sglg_internal_enum_Key (58)
 #define SGLG_ENTITY_OUTPUT_INTERNAL_Render_Entity union { Rect _Rect; Image_Rect _Image_Rect; }; 

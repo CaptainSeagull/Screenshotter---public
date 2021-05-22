@@ -19,11 +19,10 @@ void my_free(void *d);
 #endif
 #include "../shared/stb_truetype.h"
 
-Image
-make_letter_image(U8 *file_data, U64 file_size) {
+internal Image
+make_letter(U8 *file_data, U64 file_size, Char ch) {
     Image res = {};
 
-    Char ch = 'A';
     Char size = 50;
 
     stbtt_fontinfo font;
@@ -54,4 +53,20 @@ make_letter_image(U8 *file_data, U64 file_size) {
     }
 
     return(res);
+}
+
+Image *
+create_font_data(API *api) {
+    Memory *memory = api->memory;
+
+    File file = api->cb.read_file(memory, Memory_Index_permanent, "c:/windows/fonts/arial.ttf", false);
+
+    Image *font_images = (Image *)memory_push(memory, Memory_Index_font_data, sizeof(Image) * 256);
+
+    // TODO: This is _super_ slow. Maybe a better way than gathering each letter individually.
+    for(U32 c = 0; (c < 128); ++c) {
+        font_images[c] = make_letter((U8 *)file.e, file.size, c);
+    }
+
+    return(font_images);
 }

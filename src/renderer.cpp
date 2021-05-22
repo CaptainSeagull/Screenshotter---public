@@ -1,18 +1,6 @@
 
 internal_global U64 global_entity_id = 1; // Start at 1 so we know 0 is invalid.
 
-internal V2
-v2(F32 x, F32 y) {
-    V2 r = { x, y };
-    return(r);
-}
-
-internal V2
-operator+(V2 a, V2 b) {
-    V2 r = { a.x + b.x, a.y + b.y };
-    return(r);
-}
-
 internal V2u
 v2u(V2 v) {
     V2u r = { (U32)v.x, (U32)v.y };
@@ -174,12 +162,6 @@ find_image_from_id(Renderer *renderer, U64 id) {
 // TODO: Find entity_from_id would be useful.
 
 internal F32
-lerp(F32 t, F32 a, F32 b) {
-    F32 r = (1.0f - t) * a + t * b;
-    return(r);
-}
-
-internal F32
 floor(F32 a) {
     F32 r = (F32)((S32)a);
     return(r);
@@ -211,7 +193,17 @@ render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bit
             for(U32 y = 0; (y < height); ++y) {
                 for(U32 x = 0; (x < width); ++x) {
                     U32 *output = image_at(screen_bitmap->memory, y + offset.y, screen_bitmap->width, x + offset.x);
-                    *output = rect->output_colour;
+
+                    // TODO: Is the order actually swapped? Would alpha be index 0?
+                    F64 a = (F64)((U8 *)&rect->output_colour)[3] / 255.0;
+
+                    U32 l = minu32(rect->output_colour, *output);
+                    U32 u = maxu32(rect->output_colour, *output);
+                    U32 d = a * (u - l);
+
+                    U32 output_colour = l + d;
+
+                    *output = output_colour;
                 }
             }
         } break;
@@ -221,13 +213,15 @@ render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bit
             Render_Image *img = find_image_from_id(renderer, img_rect->image_id);
             ASSERT(img);
 
-            F32 sprite_width_to_use = img_rect->sprite_width;
-            if(sprite_width_to_use == 0) { sprite_width_to_use = img->width; }
+            F32 sprite_width_to_use  = img_rect->sprite_width;
             F32 sprite_height_to_use = img_rect->sprite_height;
+
+            if(sprite_width_to_use  == 0) { sprite_width_to_use  = img->width;  }
             if(sprite_height_to_use == 0) { sprite_height_to_use = img->height; }
 
-            F32 pct_w = sprite_width_to_use / (F32)img_rect->width;
-            F32 pct_h = sprite_height_to_use / (F32)img_rect->height;
+            // TODO: The clamp here may just be masking bugs.
+            F32 pct_w = clamp01(sprite_width_to_use  / (F32)img_rect->width);
+            F32 pct_h = clamp01(sprite_height_to_use / (F32)img_rect->height);
 
             ASSERT(pct_w >= 0 && pct_w <= 1);
             ASSERT(pct_h >= 0 && pct_h <= 1);
@@ -240,7 +234,21 @@ render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bit
                     U32 *screen_pixel = image_at(screen_bitmap->memory, y + offset.y, screen_bitmap->width, x + offset.x);
                     U32 *bitmap_pixel = image_at(img->pixels, img_rect->sprite_y + img_y, img->width, img_rect->sprite_x + img_x);
 
-                    *screen_pixel = *bitmap_pixel;
+                    // TODO: Is this alpha stuff correct?
+                    F64 a = (F64)((U8 *)bitmap_pixel)[3] / 255.0;
+
+                    U32 output_colour = 0;
+                    for(Int i = 0; (i < 3); ++i) {
+                        F64 c = (F64)((U8 *)bitmap_pixel)[i] / 255.0;
+
+                        U32 l = minu32(*bitmap_pixel, *screen_pixel);
+                        U32 u = maxu32(*bitmap_pixel, *screen_pixel);
+                        U32 d = a * (u - l);
+                        U32 o = l + d;
+                        ((U8 *)&output_colour)[i] = o;
+                    }
+
+                    *screen_pixel = output_colour;
                 }
             }
         } break;

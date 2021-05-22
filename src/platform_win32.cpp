@@ -1,4 +1,15 @@
+
+#define MEMORY_ARENA_IMPLEMENTATION
+#if INTERNAL
+    #define MEMORY_ARENA_WRITE_ERRORS
+#endif
+#define STRING_IMPLEMENTATION
+#define STB_SPRINTF_IMPLEMENTATION
+
 #include "common.cpp"
+#define LANE_PUBLIC_DEC static
+#define LANE_WIDTH 1 // TODO: Mirror isn't handling this being different correctly.
+#include "../shared/lane/lane.cpp"
 
 #include <windows.h>
 #include <gl/gl.h>
@@ -483,13 +494,14 @@ win32_screen_capture_thread(void *data) {
     U64 bitmap_size = 0;
     U64 renderer_size = 0;
     U64 malloc_nofree_size = 0;
+    U64 font_size = 0;
     U64 total_size = get_memory_base_size() + permanent_size + temp_size + internal_temp_size + bitmap_size + renderer_size +
-                     malloc_nofree_size;
+                     malloc_nofree_size + font_size;
 
     Void *all_memory = VirtualAlloc(0, total_size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
     ASSERT(all_memory);
     if(all_memory) {
-        U64 group_inputs[] = { permanent_size, temp_size, internal_temp_size, bitmap_size, renderer_size, malloc_nofree_size };
+        U64 group_inputs[] = { permanent_size, temp_size, internal_temp_size, bitmap_size, renderer_size, malloc_nofree_size, font_size };
         ASSERT(SGLG_ENUM_COUNT(Memory_Index) == ARRAY_COUNT(group_inputs));
         Memory memory = create_memory_base(all_memory, group_inputs, ARRAY_COUNT(group_inputs));
 
@@ -574,12 +586,13 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
     U64 bitmap_size = MAX_SCREEN_BITMAP_SIZE + 1;
     U64 renderer_size = MEGABYTES(128);
     U64 malloc_nofree_size = MEGABYTES(128);
+    U32 font_size = sizeof(Image) * 256 + 1;
     U64 total_size = get_memory_base_size() + permanent_size + temp_size + internal_temp_size + bitmap_size +
-                     renderer_size + malloc_nofree_size;
+                     renderer_size + malloc_nofree_size + font_size;
 
     Void *all_memory = VirtualAlloc(0, total_size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
     if(all_memory) {
-        U64 group_inputs[] = { permanent_size, temp_size, internal_temp_size, bitmap_size, renderer_size, malloc_nofree_size };
+        U64 group_inputs[] = { permanent_size, temp_size, internal_temp_size, bitmap_size, renderer_size, malloc_nofree_size, font_size };
         ASSERT(SGLG_ENUM_COUNT(Memory_Index) == ARRAY_COUNT(group_inputs));
         Memory memory = create_memory_base(all_memory, group_inputs, ARRAY_COUNT(group_inputs));
 

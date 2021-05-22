@@ -11,17 +11,6 @@ static int sgl_generated_string_compare(char const *a, uint32_t a_len, char cons
     }
     return(res);
 }
-static char const *sglg_Memory_Index_to_string(Memory_Index e) {
-    switch(e) {
-        case Memory_Index_permanent: { return("Memory_Index_permanent"); } break;
-        case Memory_Index_temp: { return("Memory_Index_temp"); } break;
-        case Memory_Index_internal_temp: { return("Memory_Index_internal_temp"); } break;
-        case Memory_Index_bitmap: { return("Memory_Index_bitmap"); } break;
-        case Memory_Index_renderer: { return("Memory_Index_renderer"); } break;
-        case Memory_Index_malloc_nofree_size: { return("Memory_Index_malloc_nofree_size"); } break;
-    }
-    return(0);
-}
 static char const *sglg_Memory_Arena_Error_to_string(Memory_Arena_Error e) {
     switch(e) {
         case Memory_Arena_Error_success: { return("Memory_Arena_Error_success"); } break;
@@ -97,15 +86,17 @@ static char const *sglg_Key_to_string(Key e) {
     }
     return(0);
 }
-static Memory_Index sglg_Memory_Index_from_string(char const *s, uint32_t l) {
-    if(0) {}
-    else if(sgl_generated_string_compare("Memory_Index_permanent", 22, s, l)) { return(Memory_Index_permanent); }
-    else if(sgl_generated_string_compare("Memory_Index_temp", 17, s, l)) { return(Memory_Index_temp); }
-    else if(sgl_generated_string_compare("Memory_Index_internal_temp", 26, s, l)) { return(Memory_Index_internal_temp); }
-    else if(sgl_generated_string_compare("Memory_Index_bitmap", 19, s, l)) { return(Memory_Index_bitmap); }
-    else if(sgl_generated_string_compare("Memory_Index_renderer", 21, s, l)) { return(Memory_Index_renderer); }
-    else if(sgl_generated_string_compare("Memory_Index_malloc_nofree_size", 31, s, l)) { return(Memory_Index_malloc_nofree_size); }
-    return((Memory_Index)0);
+static char const *sglg_Memory_Index_to_string(Memory_Index e) {
+    switch(e) {
+        case Memory_Index_permanent: { return("Memory_Index_permanent"); } break;
+        case Memory_Index_temp: { return("Memory_Index_temp"); } break;
+        case Memory_Index_internal_temp: { return("Memory_Index_internal_temp"); } break;
+        case Memory_Index_bitmap: { return("Memory_Index_bitmap"); } break;
+        case Memory_Index_renderer: { return("Memory_Index_renderer"); } break;
+        case Memory_Index_malloc_nofree_size: { return("Memory_Index_malloc_nofree_size"); } break;
+        case Memory_Index_font_data: { return("Memory_Index_font_data"); } break;
+    }
+    return(0);
 }
 static Memory_Arena_Error sglg_Memory_Arena_Error_from_string(char const *s, uint32_t l) {
     if(0) {}
@@ -180,18 +171,28 @@ static Key sglg_Key_from_string(char const *s, uint32_t l) {
     else if(sgl_generated_string_compare("key_cnt", 7, s, l)) { return(key_cnt); }
     return((Key)0);
 }
+static Memory_Index sglg_Memory_Index_from_string(char const *s, uint32_t l) {
+    if(0) {}
+    else if(sgl_generated_string_compare("Memory_Index_permanent", 22, s, l)) { return(Memory_Index_permanent); }
+    else if(sgl_generated_string_compare("Memory_Index_temp", 17, s, l)) { return(Memory_Index_temp); }
+    else if(sgl_generated_string_compare("Memory_Index_internal_temp", 26, s, l)) { return(Memory_Index_internal_temp); }
+    else if(sgl_generated_string_compare("Memory_Index_bitmap", 19, s, l)) { return(Memory_Index_bitmap); }
+    else if(sgl_generated_string_compare("Memory_Index_renderer", 21, s, l)) { return(Memory_Index_renderer); }
+    else if(sgl_generated_string_compare("Memory_Index_malloc_nofree_size", 31, s, l)) { return(Memory_Index_malloc_nofree_size); }
+    else if(sgl_generated_string_compare("Memory_Index_font_data", 22, s, l)) { return(Memory_Index_font_data); }
+    return((Memory_Index)0);
+}
 // sglg_Type
 static uint64_t sglg_get_enum_count(sglg_Type type) {
     switch(type) {
-        case sglg_Type_Memory_Index: { return(6); } break;
         case sglg_Type_Memory_Arena_Error: { return(7); } break;
         case sglg_Type_Key: { return(58); } break;
+        case sglg_Type_Memory_Index: { return(7); } break;
     }
     return(0);
 }
 static uint64_t sglg_type_to_size(sglg_Type type) {
     switch(type) {
-        case sglg_Type_Memory_Index: { return(sizeof(Memory_Index)); } break;
         case sglg_Type_Memory_Arena_Error: { return(sizeof(Memory_Arena_Error)); } break;
         case sglg_Type_Memory_Group: { return(sizeof(Memory_Group)); } break;
         case sglg_Type_Memory: { return(sizeof(Memory)); } break;
@@ -199,16 +200,25 @@ static uint64_t sglg_type_to_size(sglg_Type type) {
         case sglg_Type_String: { return(sizeof(String)); } break;
         case sglg_Type_String_To_Int_Result: { return(sizeof(String_To_Int_Result)); } break;
         case sglg_Type_String_To_Float_Result: { return(sizeof(String_To_Float_Result)); } break;
-        case sglg_Type_Config: { return(sizeof(Config)); } break;
         case sglg_Type_File: { return(sizeof(File)); } break;
         case sglg_Type_Key: { return(sizeof(Key)); } break;
         case sglg_Type_Platform_Callbacks: { return(sizeof(Platform_Callbacks)); } break;
         case sglg_Type_Bitmap: { return(sizeof(Bitmap)); } break;
         case sglg_Type_Settings: { return(sizeof(Settings)); } break;
         case sglg_Type_API: { return(sizeof(API)); } break;
+        case sglg_Type_Memory_Index: { return(sizeof(Memory_Index)); } break;
+        case sglg_Type_Config: { return(sizeof(Config)); } break;
         case sglg_Type_Image: { return(sizeof(Image)); } break;
         case sglg_Type_Bitmap_Header: { return(sizeof(Bitmap_Header)); } break;
         case sglg_Type_V2: { return(sizeof(V2)); } break;
+        case sglg_Type_V3: { return(sizeof(V3)); } break;
+        case sglg_Type_V4: { return(sizeof(V4)); } break;
+        case sglg_Type_Lane_F32: { return(sizeof(Lane_F32)); } break;
+        case sglg_Type_Lane_U32: { return(sizeof(Lane_U32)); } break;
+        case sglg_Type_Lane_V2: { return(sizeof(Lane_V2)); } break;
+        case sglg_Type_Lane_V3: { return(sizeof(Lane_V3)); } break;
+        case sglg_Type_Lane_V4: { return(sizeof(Lane_V4)); } break;
+        case sglg_Type_Lane_M2x2: { return(sizeof(Lane_M2x2)); } break;
         case sglg_Type_V2u: { return(sizeof(V2u)); } break;
         case sglg_Type_Rect: { return(sizeof(Rect)); } break;
         case sglg_Type_Image_Rect: { return(sizeof(Image_Rect)); } break;
@@ -221,7 +231,6 @@ static uint64_t sglg_type_to_size(sglg_Type type) {
 }
 static sglg_Type sglg_string_to_type(char const *s, uint64_t l) {
     if(0) {}
-    else if(sgl_generated_string_compare("Memory_Index", 12, s, l)) { return(sglg_Type_Memory_Index); }
     else if(sgl_generated_string_compare("Memory_Arena_Error", 18, s, l)) { return(sglg_Type_Memory_Arena_Error); }
     else if(sgl_generated_string_compare("Memory_Group", 12, s, l)) { return(sglg_Type_Memory_Group); }
     else if(sgl_generated_string_compare("Memory", 6, s, l)) { return(sglg_Type_Memory); }
@@ -229,16 +238,25 @@ static sglg_Type sglg_string_to_type(char const *s, uint64_t l) {
     else if(sgl_generated_string_compare("String", 6, s, l)) { return(sglg_Type_String); }
     else if(sgl_generated_string_compare("String_To_Int_Result", 20, s, l)) { return(sglg_Type_String_To_Int_Result); }
     else if(sgl_generated_string_compare("String_To_Float_Result", 22, s, l)) { return(sglg_Type_String_To_Float_Result); }
-    else if(sgl_generated_string_compare("Config", 6, s, l)) { return(sglg_Type_Config); }
     else if(sgl_generated_string_compare("File", 4, s, l)) { return(sglg_Type_File); }
     else if(sgl_generated_string_compare("Key", 3, s, l)) { return(sglg_Type_Key); }
     else if(sgl_generated_string_compare("Platform_Callbacks", 18, s, l)) { return(sglg_Type_Platform_Callbacks); }
     else if(sgl_generated_string_compare("Bitmap", 6, s, l)) { return(sglg_Type_Bitmap); }
     else if(sgl_generated_string_compare("Settings", 8, s, l)) { return(sglg_Type_Settings); }
     else if(sgl_generated_string_compare("API", 3, s, l)) { return(sglg_Type_API); }
+    else if(sgl_generated_string_compare("Memory_Index", 12, s, l)) { return(sglg_Type_Memory_Index); }
+    else if(sgl_generated_string_compare("Config", 6, s, l)) { return(sglg_Type_Config); }
     else if(sgl_generated_string_compare("Image", 5, s, l)) { return(sglg_Type_Image); }
     else if(sgl_generated_string_compare("Bitmap_Header", 13, s, l)) { return(sglg_Type_Bitmap_Header); }
     else if(sgl_generated_string_compare("V2", 2, s, l)) { return(sglg_Type_V2); }
+    else if(sgl_generated_string_compare("V3", 2, s, l)) { return(sglg_Type_V3); }
+    else if(sgl_generated_string_compare("V4", 2, s, l)) { return(sglg_Type_V4); }
+    else if(sgl_generated_string_compare("Lane_F32", 8, s, l)) { return(sglg_Type_Lane_F32); }
+    else if(sgl_generated_string_compare("Lane_U32", 8, s, l)) { return(sglg_Type_Lane_U32); }
+    else if(sgl_generated_string_compare("Lane_V2", 7, s, l)) { return(sglg_Type_Lane_V2); }
+    else if(sgl_generated_string_compare("Lane_V3", 7, s, l)) { return(sglg_Type_Lane_V3); }
+    else if(sgl_generated_string_compare("Lane_V4", 7, s, l)) { return(sglg_Type_Lane_V4); }
+    else if(sgl_generated_string_compare("Lane_M2x2", 9, s, l)) { return(sglg_Type_Lane_M2x2); }
     else if(sgl_generated_string_compare("V2u", 3, s, l)) { return(sglg_Type_V2u); }
     else if(sgl_generated_string_compare("Rect", 4, s, l)) { return(sglg_Type_Rect); }
     else if(sgl_generated_string_compare("Image_Rect", 10, s, l)) { return(sglg_Type_Image_Rect); }

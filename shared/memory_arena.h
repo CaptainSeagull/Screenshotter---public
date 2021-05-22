@@ -141,8 +141,8 @@ struct Internal_Push_Info {
     uintptr_t alignment_offset;
     uintptr_t buffer_index;
 
-    Char *file;
-    Int line;
+    char *file;
+    int line;
 };
 
 static uintptr_t internal_get_alignment_offset(Memory *memory, void *memory_base, uintptr_t current_index, uintptr_t alignment) {

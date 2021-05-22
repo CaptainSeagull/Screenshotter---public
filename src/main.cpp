@@ -1,5 +1,15 @@
 
+#define MEMORY_ARENA_IMPLEMENTATION
+#if INTERNAL
+    #define MEMORY_ARENA_WRITE_ERRORS
+#endif
+#define STRING_IMPLEMENTATION
+#define STB_SPRINTF_IMPLEMENTATION
+
 #include "common.cpp"
+#define LANE_PUBLIC_DEC static
+#define LANE_WIDTH 1 // TODO: Mirror isn't handling this being different correctly.
+#include "../shared/lane/lane.cpp"
 
 #include "main_generated.h"
 #include "renderer.h"
@@ -17,7 +27,7 @@ init_platform_settings(Settings *settings) {
     settings->window_height = 480;
 }
 
-Image make_letter_image(U8 *file_data, U64 file_size);
+Image *create_font_data(API *api);
 
 internal API *global_api;
 extern "C" Void
@@ -31,51 +41,42 @@ handle_input_and_render(API *api) {
     if(api->init) {
         create_renderer(renderer, api->memory);
 
-        push_solid_rectangle(renderer, &renderer->root,
-                             0, 0, 640, 480,
-                             255, 255, 255, 0);
+        Render_Entity *white_window = push_solid_rectangle(renderer, &renderer->root,
+                                                           0, 0, 640, 480,
+                                                           255, 255, 255, 255);
 
-        /*push_solid_rectangle(renderer, &renderer->root,
-                             100, 100, 100, 100,
-                             255, 0, 0, 0);
-        Render_Entity *purple_window = push_solid_rectangle(renderer, &renderer->root,
-                                                            200, 100, 350, 300,
-                                                            255, 0, 255, 0);
-        Render_Entity *blue_window = push_solid_rectangle(renderer, &purple_window,
-                                                          50, 50, 256, 128,
-                                                          0, 0, 255, 0);
+        push_solid_rectangle(renderer, &white_window,
+                             0, 0, 256, 256,
+                             255, 0, 0, 128);
+        push_solid_rectangle(renderer, &white_window,
+                             128, 128, 256, 256,
+                             0, 0, 255, 128);
 
         Image image_arrow = load_image(api, "arrow2.bmp");
-        U64 arrow_id = push_image(renderer, image_arrow);*/
+        U64 arrow_id = push_image(renderer, image_arrow);
 
-        File file = api->cb.read_file(api->memory, Memory_Index_permanent, "c:/windows/fonts/arial.ttf", false);
-        Image image_j = make_letter_image((U8 *)file.e, file.size);
-        U64 j_id = push_image(renderer, image_j);
+        File file = api->cb.read_file(api->memory, Memory_Index_permanent, "c:/windows/fonts/courier_new.ttf", false);
+        Image *font_images = create_font_data(api);
+        U64 id_a = push_image(renderer, font_images['a']);
+        U64 id_b = push_image(renderer, font_images['B']);
+        U64 id_3 = push_image(renderer, font_images['3']);
 
-        /*push_image_rect(renderer, &blue_window,
-                        0, 0, 64, 64,
-                        0, 0, 64, 64,
-                        arrow_id);
-        push_image_rect(renderer, &blue_window,
-                        64, 0, 64, 64,
-                        64, 0, 64, 64,
-                        arrow_id);
-        push_image_rect(renderer, &blue_window,
-                        128, 0, 64, 64,
-                        0, 64, 64, 64,
-                        arrow_id);
-        push_image_rect(renderer, &blue_window,
-                        192, 0, 64, 64,
-                        64, 64, 64, 64,
-                        arrow_id);*/
         Render_Entity *black_window = push_solid_rectangle(renderer, &renderer->root,
-                                                           0, 0, 512, 512,
-                                                           0, 0, 0, 255);
+                                                           200, 0, 512, 512,
+                                                           255, 0, 0, 255);
 
         push_image_rect(renderer, &black_window,
-                        128, 128, 256, 256,
+                        0, 0, 128, 128,
                         0, 0, 0, 0,
-                        j_id);
+                        id_a);
+        push_image_rect(renderer, &black_window,
+                        128, 0, 128, 128,
+                        0, 0, 0, 0,
+                        id_b);
+        push_image_rect(renderer, &black_window,
+                        256, 0, 128, 128,
+                        0, 0, 0, 0,
+                        id_3);
     }
 
     render(renderer, &api->screen_bitmap);

@@ -1,9 +1,4 @@
 
-// TODO: Bring in Lane instead of defining this _every_ time.
-struct V2 {
-    F32 x, y;
-};
-
 struct V2u {
     U32 x, y;
 };

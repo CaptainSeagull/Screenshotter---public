@@ -22,6 +22,11 @@ get_position(Render_Entity *render_entity) {
             Image_Rect *rect = (Image_Rect *)render_entity;
             res = v2(rect->x, rect->y);
         } break;
+
+        case sglg_Type_Word: {
+            Word *word = (Word *)render_entity;
+            res = v2(word->x, word->y);
+        } break;
     }
 
     return(res);
@@ -111,7 +116,9 @@ push_image(Renderer *renderer, Image image) {
 }
 
 internal Render_Entity *
-push_solid_rectangle(Renderer *renderer, Render_Entity **parent, Int start_x, Int start_y, Int width, Int height, U8 r, U8 g, U8 b, U8 a) {
+push_solid_rectangle(Renderer *renderer, Render_Entity **parent,
+                     Int start_x, Int start_y, Int width, Int height,
+                     U8 r, U8 g, U8 b, U8 a) {
     Render_Entity *render_entity = add_child_to_node(renderer->memory, parent);
     ASSERT(render_entity);
 
@@ -124,24 +131,55 @@ push_solid_rectangle(Renderer *renderer, Render_Entity **parent, Int start_x, In
     return(render_entity);
 }
 
+// TODO: What to return here?
+internal Render_Entity *
+push_word(Renderer *renderer, Render_Entity **parent, String str, Image *font_images, Int start_x, Int start_y, Int height) {
+    Render_Entity *render_entity = add_child_to_node(renderer->memory, parent);
+    ASSERT(render_entity);
+
+    Word *word = (Word *)render_entity;
+    word->x = start_x;
+    word->y = start_y;
+
+    Int running_x = 0, running_y = 0;
+
+    for(Int i = 0; (i < str.len); ++i) {
+        if(str.e[i] == '\n') {
+            running_x = 0;
+            running_y -= height;
+        } else {
+            U64 image_id = push_image(renderer, font_images[str.e[i]]); // TODO: Should do this once per-letter
+            Render_Image *image = find_image_from_id(renderer, image_id); // TODO: Why doesn't push_image return the image??
+            ASSERT(image);
+
+            // TODO: Calculate this properly based on the pct from target-height -> image->height.
+            Int width = (F32)image->width * 2.0f;
+            running_x += width;
+            push_image_rect(renderer, &render_entity,
+                            running_x, running_y, width, height,
+                            0, 0, 0, 0,
+                            image_id);
+        }
+    }
+
+    return(render_entity);
+}
+
 internal Render_Entity *
 push_image_rect(Renderer *renderer, Render_Entity **parent,
                 Int start_x, Int start_y, Int width, Int height,
                 Int sprite_x, Int sprite_y, Int sprite_width, Int sprite_height,
                 U64 image_id) {
-    Render_Entity *render_entity = 0;
-    if(!find_image_from_id(renderer, image_id)) {
-        ASSERT(0);
-    } else {
-        render_entity = add_child_to_node(renderer->memory, parent);
-        ASSERT(render_entity);
+    ASSERT(find_image_from_id(renderer, image_id));
 
-        render_entity->type = sglg_Type_Image_Rect;
-        Image_Rect *rectangle = (Image_Rect *)render_entity;
+    Render_Entity *render_entity = add_child_to_node(renderer->memory, parent);
+    ASSERT(render_entity);
 
-        *rectangle = create_image_rectangle(start_x, start_y, width, height, sprite_x, sprite_y, sprite_width, sprite_height, image_id);
-        render_entity->id = global_entity_id++;
-    }
+    render_entity->type = sglg_Type_Image_Rect;
+    Image_Rect *rectangle = (Image_Rect *)render_entity;
+
+    *rectangle = create_image_rectangle(start_x, start_y, width, height, sprite_x, sprite_y, sprite_width, sprite_height, image_id);
+    render_entity->id = global_entity_id++;
 
     return(render_entity);
 }
@@ -167,6 +205,7 @@ floor(F32 a) {
     return(r);
 }
 
+// TODO: Have this return 0 if we're accessing outside the image.
 #define image_at(base,y,width,x) image_at_((U32 *)base,y,width,x)
 internal U32 *
 image_at_(U32 *base, U32 y, U32 width, U32 x) {
@@ -192,18 +231,33 @@ render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bit
 
             for(U32 y = 0; (y < height); ++y) {
                 for(U32 x = 0; (x < width); ++x) {
-                    U32 *output = image_at(screen_bitmap->memory, y + offset.y, screen_bitmap->width, x + offset.x);
+                    U32 *screen_pixel = image_at(screen_bitmap->memory, y + offset.y, screen_bitmap->width, x + offset.x);
 
                     // TODO: Is the order actually swapped? Would alpha be index 0?
+#if 0
                     F64 a = (F64)((U8 *)&rect->output_colour)[3] / 255.0;
 
-                    U32 l = minu32(rect->output_colour, *output);
-                    U32 u = maxu32(rect->output_colour, *output);
+                    U32 l = minu32(rect->output_colour, *screen_pixel);
+                    U32 u = maxu32(rect->output_colour, *screen_pixel);
                     U32 d = a * (u - l);
-
                     U32 output_colour = l + d;
+#else
+                    U32 bitmap_pixel = rect->output_colour;
+                    F64 a = (F64)((U8 *)&bitmap_pixel)[3] / 255.0;
+                    U32 output_colour = 0xFFFFFFFF;
+                    for(Int i = 0; (i < 3); ++i) {
+                        U32 s = ((U8 *)screen_pixel)[i];
+                        U32 b = ((U8 *)&bitmap_pixel)[i];
 
-                    *output = output_colour;
+                        U32 l = minu32(b, s);
+                        U32 u = maxu32(b, s);
+                        U32 d = a * (u - l);
+                        U32 o = l + d;
+                        ((U8 *)&output_colour)[i] = o;
+                    }
+#endif
+
+                    *screen_pixel = output_colour;
                 }
             }
         } break;
@@ -234,15 +288,15 @@ render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bit
                     U32 *screen_pixel = image_at(screen_bitmap->memory, y + offset.y, screen_bitmap->width, x + offset.x);
                     U32 *bitmap_pixel = image_at(img->pixels, img_rect->sprite_y + img_y, img->width, img_rect->sprite_x + img_x);
 
-                    // TODO: Is this alpha stuff correct?
+                    // TODO: Is this alpha stuff correct? I'm not convinced...
                     F64 a = (F64)((U8 *)bitmap_pixel)[3] / 255.0;
-
-                    U32 output_colour = 0;
+                    U32 output_colour = 0xFFFFFFFF;
                     for(Int i = 0; (i < 3); ++i) {
-                        F64 c = (F64)((U8 *)bitmap_pixel)[i] / 255.0;
+                        U32 s = ((U8 *)screen_pixel)[i];
+                        U32 b = ((U8 *)&bitmap_pixel)[i];
 
-                        U32 l = minu32(*bitmap_pixel, *screen_pixel);
-                        U32 u = maxu32(*bitmap_pixel, *screen_pixel);
+                        U32 l = minu32(b, s);
+                        U32 u = maxu32(b, s);
                         U32 d = a * (u - l);
                         U32 o = l + d;
                         ((U8 *)&output_colour)[i] = o;

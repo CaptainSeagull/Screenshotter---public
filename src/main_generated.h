@@ -51,6 +51,7 @@ enum sglg_Type {
     sglg_Type_V2u,
     sglg_Type_Rect,
     sglg_Type_Image_Rect,
+    sglg_Type_Word,
     sglg_Type_Render_Entity,
     sglg_Type_Render_Image,
     sglg_Type_Renderer,
@@ -117,6 +118,7 @@ struct Lane_M2x2;
 struct V2u;
 struct Rect;
 struct Image_Rect;
+struct Word;
 struct Render_Entity;
 struct Render_Image;
 struct Renderer;
@@ -852,6 +854,7 @@ float square_root(float a );
  static Image_Rect create_image_rectangle(Int x , Int y , Int width , Int height , Int sprite_x , Int sprite_y , Int sprite_width , Int sprite_height , U64 image_id );
  static U64 push_image(Renderer * renderer , Image image );
  static Render_Entity* push_solid_rectangle(Renderer * renderer , Render_Entity * * parent , Int start_x , Int start_y , Int width , Int height , U8 r , U8 g , U8 b , U8 a );
+ static Render_Entity* push_word(Renderer * renderer , Render_Entity * * parent , String str , Image * font_images , Int start_x , Int start_y , Int height );
  static Render_Entity* push_image_rect(Renderer * renderer , Render_Entity * * parent , Int start_x , Int start_y , Int width , Int height , Int sprite_x , Int sprite_y , Int sprite_width , Int sprite_height , U64 image_id );
  static Render_Image* find_image_from_id(Renderer * renderer , U64 id );
  static F32 floor(F32 a );
@@ -876,4 +879,4 @@ static Int sglg_Memory_Index_count(Memory_Index e);
 #define sglg_internal_enum_Memory_Arena_Error (7)
 #define sglg_internal_enum_Key (58)
 #define sglg_internal_enum_Memory_Index (7)
-#define SGLG_ENTITY_OUTPUT_INTERNAL_Render_Entity union { Rect _Rect; Image_Rect _Image_Rect; }; 
+#define SGLG_ENTITY_OUTPUT_INTERNAL_Render_Entity union { Rect _Rect; Image_Rect _Image_Rect; Word _Word; }; 

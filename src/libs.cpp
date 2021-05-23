@@ -23,13 +23,11 @@ internal Image
 make_letter(U8 *file_data, U64 file_size, Char ch) {
     Image res = {};
 
-    Char size = 50;
-
     stbtt_fontinfo font;
     stbtt_InitFont(&font, file_data, stbtt_GetFontOffsetForIndex(file_data, 0));
 
     Int w, h, x_off, y_off;
-    U8 *mono_bmp = stbtt_GetCodepointBitmap(&font, 0, stbtt_ScaleForPixelHeight(&font, 256.0f), ch, &w, &h, &x_off, &y_off);
+    U8 *mono_bmp = stbtt_GetCodepointBitmap(&font, 0, stbtt_ScaleForPixelHeight(&font, 32.0f), ch, &w, &h, &x_off, &y_off);
     if(mono_bmp) {
         res.width = w;
         res.height = h;

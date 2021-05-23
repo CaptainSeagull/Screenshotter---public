@@ -19,6 +19,10 @@ SGLG_ENTITY_PATTERN(Render_Entity) struct Image_Rect {
     Int sprite_width, sprite_height;
 };
 
+SGLG_ENTITY_PATTERN(Render_Entity) struct Word {
+    Int x, y;
+};
+
 struct Render_Entity {
     SGLG_ENTITY_OUTPUT_INTERNAL_Render_Entity;
     sglg_Type type;

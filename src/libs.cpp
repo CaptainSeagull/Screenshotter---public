@@ -27,7 +27,7 @@ make_letter(U8 *file_data, U64 file_size, Char ch) {
     stbtt_InitFont(&font, file_data, stbtt_GetFontOffsetForIndex(file_data, 0));
 
     Int w, h, x_off, y_off;
-    U8 *mono_bmp = stbtt_GetCodepointBitmap(&font, 0, stbtt_ScaleForPixelHeight(&font, 32.0f), ch, &w, &h, &x_off, &y_off);
+    U8 *mono_bmp = stbtt_GetCodepointBitmap(&font, 0, stbtt_ScaleForPixelHeight(&font, 256.0f), ch, &w, &h, &x_off, &y_off);
     if(mono_bmp) {
         res.width = w;
         res.height = h;
@@ -40,7 +40,7 @@ make_letter(U8 *file_data, U64 file_size, Char ch) {
         for(U32 y = 0; (y < h); ++y) {
             U32 *dst = (U32 *)dst_row;
             for(U32 x = 0; (x < w); ++x) {
-                U8 alpha = 255 - *src++;
+                U8 alpha = 0xFF - *src++;
                 *dst++ = ((alpha << 24) | (alpha << 16) | (alpha << 8) | (alpha << 0));
             }
 

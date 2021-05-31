@@ -67,19 +67,36 @@ handle_input_and_render(API *api) {
         // TODO: The image rendering seems a little flakey, especially for indivual letters (even ignoring the alpha issues).
         //       Investigate it further.
 
-        push_word(renderer, &yellow_window, "Jonathan\nLivingstone!", font_images, 0, 200, 32);
+        push_word(renderer, &yellow_window, "Jonathan\nLivingstone!", font_images, 0, 200, 64);
 
         Image img = load_image(api, "arrow3.bmp");
         U64 id_a = push_image(renderer, img);
-        push_image_rect(renderer, &yellow_window,
+        /*push_image_rect(renderer, &yellow_window,
                         300, 0, 128, 128,
                         0, 0, 64, 64,
-                        id_a);
+                        id_a);*/
 
-        push_image_rect(renderer, &yellow_window,
+        /*push_image_rect(renderer, &yellow_window,
                         300, 0, 256, 256,
                         64, 64, 64, 64,
+                        id_a);*/
+        Int start_x = 100;
+        /*push_image_rect(renderer, &yellow_window,
+                        start_x, 0, 32, 32,
+                        64, 64, 64, 64,
                         id_a);
+        push_image_rect(renderer, &yellow_window,
+                        start_x + 32, 0, 64, 64,
+                        64, 64, 64, 64,
+                        id_a);
+        push_image_rect(renderer, &yellow_window,
+                        start_x + 32 + 64, 0, 32, 64,
+                        64, 64, 64, 64,
+                        id_a);
+        push_image_rect(renderer, &yellow_window,
+                        start_x + 128, 0, 64, 32,
+                        64, 64, 64, 64,
+                        id_a);*/
 
 
 #if 0

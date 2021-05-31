@@ -7,6 +7,12 @@ v2u(V2 v) {
     return(r);
 }
 
+internal V2u
+v2u(U32 x, U32 y) {
+    V2u r = { x, y };
+    return(r);
+}
+
 internal V2
 get_position(Render_Entity *render_entity) {
     // TODO: I don't really like this... maybe move the X, Y to the Render_Image struct?
@@ -137,6 +143,8 @@ push_word(Renderer *renderer, Render_Entity **parent, String str, Image *font_im
     Render_Entity *render_entity = add_child_to_node(renderer->memory, parent);
     ASSERT(render_entity);
 
+    V2u padding = v2u(1, 1);
+
     Word *word = (Word *)render_entity;
     word->x = start_x;
     word->y = start_y;
@@ -146,20 +154,21 @@ push_word(Renderer *renderer, Render_Entity **parent, String str, Image *font_im
     for(Int i = 0; (i < str.len); ++i) {
         if(str.e[i] == '\n') {
             running_x = 0;
-            running_y -= height;
+            running_y -= (height + padding.y);
         } else {
             U64 image_id = push_image(renderer, font_images[str.e[i]]); // TODO: Should do this once per-letter
             Render_Image *image = find_image_from_id(renderer, image_id); // TODO: Why doesn't push_image return the image??
             ASSERT(image);
 
             //Int width = height;
-            Int width = image->width * ((F32)height / (F32)image->height); // TODO: Is this correct?
+            Int width = floor((F32)image->width * ((F32)height / (F32)image->height)); // TODO: Is this correct?
 
-            running_x += width;
             push_image_rect(renderer, &render_entity,
                             running_x, running_y, width, height,
                             0, 0, 0, 0,
                             image_id);
+
+            running_x += (width + padding.x);
         }
     }
 
@@ -274,15 +283,13 @@ render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bit
             if(sprite_width_to_use  == 0) { sprite_width_to_use  = img->width;  }
             if(sprite_height_to_use == 0) { sprite_height_to_use = img->height; }
 
-            // TODO: The clamp here may just be masking bugs.
-            F32 pct_w = clamp01(sprite_width_to_use  / (F32)img_rect->width);
-            F32 pct_h = clamp01(sprite_height_to_use / (F32)img_rect->height);
+            // TODO: This doesn't work if the width / height aren't uniform... apparently?
 
-            ASSERT(pct_w >= 0 && pct_w <= 1);
-            ASSERT(pct_h >= 0 && pct_h <= 1);
+            F32 pct_w = sprite_width_to_use  / (F32)img_rect->width;
+            F32 pct_h = sprite_height_to_use / (F32)img_rect->height;
 
-            for(U32 y = 0; (y < img_rect->width); ++y) {
-                for(U32 x = 0; (x < img_rect->height); ++x) {
+            for(U32 y = 0; (y < img_rect->height); ++y) {
+                for(U32 x = 0; (x < img_rect->width); ++x) {
                     U32 img_x = floor((F32)x * pct_w);
                     U32 img_y = floor((F32)y * pct_h);
 

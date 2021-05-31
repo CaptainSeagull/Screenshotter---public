@@ -152,8 +152,9 @@ push_word(Renderer *renderer, Render_Entity **parent, String str, Image *font_im
             Render_Image *image = find_image_from_id(renderer, image_id); // TODO: Why doesn't push_image return the image??
             ASSERT(image);
 
-            // TODO: Calculate this properly based on the pct from target-height -> image->height.
-            Int width = (F32)image->width * 2.0f;
+            //Int width = height;
+            Int width = image->width * ((F32)height / (F32)image->height); // TODO: Is this correct?
+
             running_x += width;
             push_image_rect(renderer, &render_entity,
                             running_x, running_y, width, height,
@@ -288,19 +289,37 @@ render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bit
                     U32 *screen_pixel = image_at(screen_bitmap->memory, y + offset.y, screen_bitmap->width, x + offset.x);
                     U32 *bitmap_pixel = image_at(img->pixels, img_rect->sprite_y + img_y, img->width, img_rect->sprite_x + img_x);
 
-                    // TODO: Is this alpha stuff correct? I'm not convinced...
-                    F64 a = (F64)((U8 *)bitmap_pixel)[3] / 255.0;
-                    U32 output_colour = 0xFFFFFFFF;
-                    for(Int i = 0; (i < 3); ++i) {
-                        U32 s = ((U8 *)screen_pixel)[i];
-                        U32 b = ((U8 *)&bitmap_pixel)[i];
+#if 0
+                    // TODO: Doesn't work :-(
+                    U8 alpha8 = ((U8 *)bitmap_pixel)[0];
 
-                        U32 l = minu32(b, s);
-                        U32 u = maxu32(b, s);
-                        U32 d = a * (u - l);
-                        U32 o = l + d;
-                        ((U8 *)&output_colour)[i] = o;
+                    F32 alphaf32 = alpha8 / 255.0f;
+
+                    U32 output_colour = 0xFFFFFFFF;
+                    U8 *at = (U8 *)&output_colour;
+                    for(Int i = 0; (i < 4); ++i, ++at) {
+                        U8 bitmap_pixel8 = ((U8 *)bitmap_pixel)[i];
+                        U8 screen_pixel8 = ((U8 *)screen_pixel)[i];
+
+                        U32 lower = minu32(bitmap_pixel8, screen_pixel8);
+                        U32 upper = maxu32(bitmap_pixel8, screen_pixel8);
+
+                        U32 delta = alphaf32 * (upper - lower);
+                        U32 output_colour_tmp = lower + delta;
+                        ASSERT(output_colour_tmp <= 0xFF);
+                        U8 output_colour8 = (U8)output_colour_tmp;
+
+                        *at = output_colour8;
                     }
+
+                    if(alphaf32 == 0) { ASSERT(output_colour == *screen_pixel); }
+                    if(alphaf32 == 1) { ASSERT(output_colour == *bitmap_pixel); }
+#else
+                    // Binary alpha
+                    U8 alpha8 = ((U8 *)bitmap_pixel)[0]; // TODO: 0 or 3?
+                    U32 output_colour = *bitmap_pixel;
+                    if(alpha8 == 255) { output_colour = *screen_pixel; }
+#endif
 
                     *screen_pixel = output_colour;
                 }

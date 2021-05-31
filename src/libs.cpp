@@ -40,7 +40,7 @@ make_letter(U8 *file_data, U64 file_size, Char ch) {
         for(U32 y = 0; (y < h); ++y) {
             U32 *dst = (U32 *)dst_row;
             for(U32 x = 0; (x < w); ++x) {
-                U8 alpha = *src++;
+                U8 alpha = 255 - *src++;
                 *dst++ = ((alpha << 24) | (alpha << 16) | (alpha << 8) | (alpha << 0));
             }
 

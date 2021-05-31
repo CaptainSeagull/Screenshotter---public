@@ -137,7 +137,7 @@ push_solid_rectangle(Renderer *renderer, Render_Entity **parent,
     return(render_entity);
 }
 
-// TODO: What to return here?
+// TODO: The start_x / start_y stuff doesn't seem to be working...
 internal Render_Entity *
 push_word(Renderer *renderer, Render_Entity **parent, String str, Image *font_images, Int start_x, Int start_y, Int height) {
     Render_Entity *render_entity = add_child_to_node(renderer->memory, parent);
@@ -156,8 +156,11 @@ push_word(Renderer *renderer, Render_Entity **parent, String str, Image *font_im
             running_x = 0;
             running_y -= (height + padding.y);
         } else {
-            U64 image_id = push_image(renderer, font_images[str.e[i]]); // TODO: Should do this once per-letter
-            Render_Image *image = find_image_from_id(renderer, image_id); // TODO: Why doesn't push_image return the image??
+            Char c = to_upper(str.e[i]); // TODO: Temp, while we're rendering all text at the same height.
+
+            // TODO: Why doesn't push_image return the image??
+            U64 image_id = push_image(renderer, font_images[c]);
+            Render_Image *image = find_image_from_id(renderer, image_id);
             ASSERT(image);
 
             //Int width = height;

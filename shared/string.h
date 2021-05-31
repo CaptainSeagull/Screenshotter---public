@@ -1,4 +1,4 @@
-/*  string.h - v0.2 - public domain helper library - no warranty implied; use at your own risk
+/*  string.h - v0.3 - public domain helper library - no warranty implied; use at your own risk
 
     Utility for working with strings in C++.
     Note that this class does NO ALLOCATIONS. It expects calling code to deal with mallocing/freeing of the memory.
@@ -116,6 +116,9 @@ STRING_PUBLIC_DEC STRING_SIZE_TYPE string_copy(char *dst, char *src);
 STRING_PUBLIC_DEC STRING_SIZE_TYPE string_copy(char const *dst, char const *src);
 STRING_PUBLIC_DEC STRING_SIZE_TYPE string_copy(char *dst, char const *src);
 STRING_PUBLIC_DEC STRING_SIZE_TYPE string_copy(char *dst, char *src, STRING_SIZE_TYPE len);
+
+STRING_PUBLIC_DEC char to_upper(char a);
+STRING_PUBLIC_DEC char to_lower(char a);
 
 #if defined(STRING_IMPLEMENTATION)
 
@@ -377,6 +380,25 @@ STRING_PUBLIC_DEC STRING_SIZE_TYPE string_copy(char *dst, char *src, STRING_SIZE
 
     return(i);
 }
+
+STRING_PUBLIC_DEC char to_lower(char a) {
+    char r = a;
+    if(a >= 'A' && a <= 'Z') {
+        r += 32; // 'a' - 'A'
+    }
+
+    return(r);
+}
+
+STRING_PUBLIC_DEC char to_upper(char a) {
+    char r = a;
+    if(a >= 'a' && a <= 'z') {
+        r -= 32; // 'a' - 'A'
+    }
+
+    return(r);
+}
+
 
 #endif // STRING_IMPLEMENTATION
 

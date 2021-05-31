@@ -102,8 +102,7 @@ Image load_image(API *api, String file_name) {
     if(raw_bitmap.size > 0) {
         Bitmap_Header *header = (Bitmap_Header *)raw_bitmap.e;
         ASSERT((header->file_type == 0x4D42) &&
-               (header->planes == 1) &&
-               (header->compression == 0));
+               (header->planes == 1));
 
         Void *data_start = (U8 *)raw_bitmap.e + header->bitmap_offset;
 

@@ -16,6 +16,7 @@
 
 struct DLL_Data {
     Renderer renderer;
+    U64 yellow_window_id;
 };
 
 extern "C" Void
@@ -28,6 +29,51 @@ init_platform_settings(Settings *settings) {
 
 Image_Letter *create_font_data(API *api);
 
+internal Void
+setup(API *api, DLL_Data *data, Renderer *renderer) {
+
+    create_renderer(renderer, api->memory);
+
+    Render_Entity *white_window = push_solid_rectangle(renderer, &renderer->root,
+                                                       0, 0, 640, 480,
+                                                       255, 255, 255, 255);
+
+    Image image_arrow = load_image(api, "arrow2.bmp");
+    U64 arrow_id = push_image(renderer, image_arrow);
+
+    Image_Letter *font_images = create_font_data(api);
+
+    push_font(renderer, font_images);
+
+    Render_Entity *yellow_window = push_solid_rectangle(renderer, &white_window,
+                                                        0, 100, 640, 128,
+                                                        255, 255, 0, 0);
+    data->yellow_window_id = yellow_window->id;
+
+    push_word(renderer, &yellow_window, "Jonathan\nLivingstone!", font_images, 50, 150, 64);
+
+    Image img = load_image(api, "arrow3.bmp");
+    U64 id_a = push_image(renderer, img);
+
+    Int start_x = 100;
+    push_image_rect(renderer, &yellow_window,
+                    start_x, 0, 32, 32,
+                    64, 64, 64, 64,
+                    id_a);
+    push_image_rect(renderer, &yellow_window,
+                    start_x + 32, 0, 64, 64,
+                    64, 64, 64, 64,
+                    id_a);
+    push_image_rect(renderer, &yellow_window,
+                    start_x + 32 + 64, 0, 32, 64,
+                    64, 64, 64, 64,
+                    id_a);
+    push_image_rect(renderer, &yellow_window,
+                    start_x + 128, 0, 64, 32,
+                    64, 64, 64, 64,
+                    id_a);
+}
+
 internal API *global_api;
 extern "C" Void
 handle_input_and_render(API *api) {
@@ -38,48 +84,22 @@ handle_input_and_render(API *api) {
     Renderer *renderer = &data->renderer;
 
     if(api->init) {
-        create_renderer(renderer, api->memory);
+        setup(api, data, renderer);
+    } else {
+        Render_Entity *yellow_window_render_entity = find_render_entity(renderer, data->yellow_window_id);
+        ASSERT(yellow_window_render_entity);
 
-        Render_Entity *white_window = push_solid_rectangle(renderer, &renderer->root,
-                                                           0, 0, 640, 480,
-                                                           255, 255, 255, 255);
+        Image_Rect *yellow_window = (Image_Rect *)yellow_window_render_entity;
 
-        Image image_arrow = load_image(api, "arrow2.bmp");
-        U64 arrow_id = push_image(renderer, image_arrow);
+        // TODO: Even though we're moving the yellow window all the elements aren't moving with it. Look into this!
+        yellow_window->x += 10;
+        if(yellow_window->x > 640) {
+            yellow_window->x -= 640;
+        }
 
-        Image_Letter *font_images = create_font_data(api);
-
-        push_font(renderer, font_images);
-
-        Render_Entity *yellow_window = push_solid_rectangle(renderer, &white_window,
-                                                            0, 100, 640, 128,
-                                                            255, 255, 0, 0);
-
-        push_word(renderer, &yellow_window, "Jonathan\nLivingstone!", font_images, 50, 150, 64);
-
-        Image img = load_image(api, "arrow3.bmp");
-        U64 id_a = push_image(renderer, img);
-
-        Int start_x = 100;
-        push_image_rect(renderer, &yellow_window,
-                        start_x, 0, 32, 32,
-                        64, 64, 64, 64,
-                        id_a);
-        push_image_rect(renderer, &yellow_window,
-                        start_x + 32, 0, 64, 64,
-                        64, 64, 64, 64,
-                        id_a);
-        push_image_rect(renderer, &yellow_window,
-                        start_x + 32 + 64, 0, 32, 64,
-                        64, 64, 64, 64,
-                        id_a);
-        push_image_rect(renderer, &yellow_window,
-                        start_x + 128, 0, 64, 32,
-                        64, 64, 64, 64,
-                        id_a);
+        render(renderer, &api->screen_bitmap);
     }
 
-    render(renderer, &api->screen_bitmap);
 }
 
 extern "C" { int _fltused = 0; }

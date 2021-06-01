@@ -169,7 +169,7 @@ push_word(Renderer *renderer, Render_Entity **parent, String str, Image_Letter *
     render_entity->type = sglg_Type_Word;
     ASSERT(render_entity);
 
-    V2u padding = v2u(1, 1);
+    V2u padding = v2u(0, 10);
 
     Word *word = (Word *)render_entity;
     word->x = start_x;
@@ -182,10 +182,13 @@ push_word(Renderer *renderer, Render_Entity **parent, String str, Image_Letter *
             running_x = 0;
             running_y -= (height + padding.y);
         } else {
+#if 0
             Char c = to_upper(str.e[i]); // TODO: Temp, while we're rendering all text at the same height.
+#else
+            Char c = str.e[i];
+#endif
             Render_Image *image = find_font_image(renderer, c);
 
-            //Int width = height;
             Int width = floor((F32)image->width * ((F32)height / (F32)image->height)); // TODO: Is this correct?
 
             push_image_rect(renderer, &render_entity,
@@ -193,7 +196,7 @@ push_word(Renderer *renderer, Render_Entity **parent, String str, Image_Letter *
                             0, 0, 0, 0,
                             renderer->letter_ids[c]);
 
-            running_x += (width + padding.x);
+            running_x += (width + padding.x + image->off_x);
         }
     }
 
@@ -230,6 +233,43 @@ find_image_from_id(Renderer *renderer, U64 id) {
     }
 
     return(img);
+}
+
+internal Render_Entity *
+find_render_entity(Render_Entity *render_entity, U64 id) {
+    Render_Entity *res = 0;
+
+    Render_Entity *next = render_entity;
+    while(next) {
+        if(next->id == id) {
+            res = next;
+            break; // while
+        }
+
+        next = next->next;
+    }
+
+    if(!res) {
+        next = render_entity;
+        while(next) {
+            if(next->child) {
+                res = find_render_entity(next->child, id);
+                if(res) {
+                    break; // while
+                }
+            }
+
+            next = next->next;
+        }
+    }
+
+    return(res);
+}
+
+internal Render_Entity *
+find_render_entity(Renderer *renderer, U64 id) {
+    Render_Entity *r = find_render_entity(renderer->root, id);
+    return(r);
 }
 
 // TODO: Find entity_from_id would be useful.
@@ -318,8 +358,14 @@ render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bit
                     U32 img_x = floor((F32)x * pct_w);
                     U32 img_y = floor((F32)y * pct_h);
 
-                    U32 *screen_pixel = image_at(screen_bitmap->memory, y + offset.y, screen_bitmap->width, x + offset.x);
-                    U32 *bitmap_pixel = image_at(img->pixels, img_rect->sprite_y + img_y, img->width, img_rect->sprite_x + img_x);
+                    U32 *screen_pixel = image_at(screen_bitmap->memory,
+                                                 y + offset.y,
+                                                 screen_bitmap->width,
+                                                 x + offset.x);
+                    U32 *bitmap_pixel = image_at(img->pixels,
+                                                 img_rect->sprite_y + img_y,
+                                                 img->width,
+                                                 img_rect->sprite_x + img_x);
 
                     // TODO: Use off_x / off_y in here as well.
 

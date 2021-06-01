@@ -116,7 +116,11 @@ internal U64
 push_image(Renderer *renderer, Image image) {
     U64 id = global_entity_id++;
     ASSERT(renderer->image_count + 1 < ARRAY_COUNT(renderer->images));
-    renderer->images[renderer->image_count++] = { image.width, image.height, image.pixels, id };
+    Render_Image *render_image = &renderer->images[renderer->image_count++];
+    render_image->width = image.width;
+    render_image->height = image.height;
+    render_image->pixels = image.pixels;
+    render_image->id = id;
 
     return(id);
 }
@@ -137,10 +141,32 @@ push_solid_rectangle(Renderer *renderer, Render_Entity **parent,
     return(render_entity);
 }
 
+internal Void
+push_font(Renderer *renderer, Image_Letter *font_images) {
+    for(Int i = 0; (i < 128); ++i) {
+        U64 image_id = push_image(renderer, font_images[i].img);
+        Render_Image *image = find_image_from_id(renderer, image_id);
+        ASSERT(image);
+
+        image->off_x = font_images[i].off_x;
+        image->off_y = font_images[i].off_y;
+        renderer->letter_ids[i] = image_id;
+    }
+}
+
+internal Render_Image *
+find_font_image(Renderer *renderer, Char c) {
+    Render_Image *image = find_image_from_id(renderer, renderer->letter_ids[c]);
+    ASSERT(image);
+
+    return(image);
+}
+
 // TODO: The start_x / start_y stuff doesn't seem to be working...
 internal Render_Entity *
-push_word(Renderer *renderer, Render_Entity **parent, String str, Image *font_images, Int start_x, Int start_y, Int height) {
+push_word(Renderer *renderer, Render_Entity **parent, String str, Image_Letter *font_images, Int start_x, Int start_y, Int height) {
     Render_Entity *render_entity = add_child_to_node(renderer->memory, parent);
+    render_entity->type = sglg_Type_Word;
     ASSERT(render_entity);
 
     V2u padding = v2u(1, 1);
@@ -157,11 +183,7 @@ push_word(Renderer *renderer, Render_Entity **parent, String str, Image *font_im
             running_y -= (height + padding.y);
         } else {
             Char c = to_upper(str.e[i]); // TODO: Temp, while we're rendering all text at the same height.
-
-            // TODO: Why doesn't push_image return the image??
-            U64 image_id = push_image(renderer, font_images[c]);
-            Render_Image *image = find_image_from_id(renderer, image_id);
-            ASSERT(image);
+            Render_Image *image = find_font_image(renderer, c);
 
             //Int width = height;
             Int width = floor((F32)image->width * ((F32)height / (F32)image->height)); // TODO: Is this correct?
@@ -169,7 +191,7 @@ push_word(Renderer *renderer, Render_Entity **parent, String str, Image *font_im
             push_image_rect(renderer, &render_entity,
                             running_x, running_y, width, height,
                             0, 0, 0, 0,
-                            image_id);
+                            renderer->letter_ids[c]);
 
             running_x += (width + padding.x);
         }
@@ -299,8 +321,10 @@ render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bit
                     U32 *screen_pixel = image_at(screen_bitmap->memory, y + offset.y, screen_bitmap->width, x + offset.x);
                     U32 *bitmap_pixel = image_at(img->pixels, img_rect->sprite_y + img_y, img->width, img_rect->sprite_x + img_x);
 
+                    // TODO: Use off_x / off_y in here as well.
+
 #if 0
-                    // TODO: Doesn't work :-(
+                    // Contrinuous alpha... doesn't work :-(
                     U8 alpha8 = ((U8 *)bitmap_pixel)[0];
 
                     F32 alphaf32 = alpha8 / 255.0f;

@@ -26,7 +26,7 @@ init_platform_settings(Settings *settings) {
     settings->window_height = 480;
 }
 
-Image *create_font_data(API *api);
+Image_Letter *create_font_data(API *api);
 
 internal API *global_api;
 extern "C" Void
@@ -44,44 +44,24 @@ handle_input_and_render(API *api) {
                                                            0, 0, 640, 480,
                                                            255, 255, 255, 255);
 
-        /*push_solid_rectangle(renderer, &white_window,
-                             0, 0, 256, 256,
-                             255, 0, 0, 128);
-        push_solid_rectangle(renderer, &white_window,
-                             128, 128, 256, 256,
-                             0, 0, 255, 128);*/
-
         Image image_arrow = load_image(api, "arrow2.bmp");
         U64 arrow_id = push_image(renderer, image_arrow);
 
-        File file = api->cb.read_file(api->memory, Memory_Index_permanent, "c:/windows/fonts/courier_new.ttf", false);
-        Image *font_images = create_font_data(api);
+        Image_Letter *font_images = create_font_data(api);
 
-        //Render_Entity *black_window = push_solid_rectangle(renderer, &white_window,
-        //                                                   0, 0, 512, 512,
-        //                                                   255, 0, 0, 255);
+        push_font(renderer, font_images);
+
         Render_Entity *yellow_window = push_solid_rectangle(renderer, &white_window,
                                                             0, 100, 640, 128,
                                                             255, 255, 0, 0);
 
-        // TODO: The image rendering seems a little flakey, especially for indivual letters (even ignoring the alpha issues).
-        //       Investigate it further.
-
-        push_word(renderer, &yellow_window, "Jonathan\nLivingstone!", font_images, 0, 400, 64);
+        push_word(renderer, &yellow_window, "Jonathan\nLivingstone!", font_images, 50, 150, 64);
 
         Image img = load_image(api, "arrow3.bmp");
         U64 id_a = push_image(renderer, img);
-        /*push_image_rect(renderer, &yellow_window,
-                        300, 0, 128, 128,
-                        0, 0, 64, 64,
-                        id_a);*/
 
-        /*push_image_rect(renderer, &yellow_window,
-                        300, 0, 256, 256,
-                        64, 64, 64, 64,
-                        id_a);*/
         Int start_x = 100;
-        /*push_image_rect(renderer, &yellow_window,
+        push_image_rect(renderer, &yellow_window,
                         start_x, 0, 32, 32,
                         64, 64, 64, 64,
                         id_a);
@@ -96,28 +76,7 @@ handle_input_and_render(API *api) {
         push_image_rect(renderer, &yellow_window,
                         start_x + 128, 0, 64, 32,
                         64, 64, 64, 64,
-                        id_a);*/
-
-
-#if 0
-        U64 id_a = push_image(renderer, font_images['a']);
-        U64 id_b = push_image(renderer, font_images['B']);
-        U64 id_3 = push_image(renderer, font_images['3']);
-
-
-        push_image_rect(renderer, &black_window,
-                        0, 0, 128, 128,
-                        0, 0, 0, 0,
                         id_a);
-        push_image_rect(renderer, &black_window,
-                        128, 0, 128, 128,
-                        0, 0, 0, 0,
-                        id_b);
-        push_image_rect(renderer, &black_window,
-                        256, 0, 128, 128,
-                        0, 0, 0, 0,
-                        id_3);
-#endif
     }
 
     render(renderer, &api->screen_bitmap);

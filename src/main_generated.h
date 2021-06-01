@@ -38,6 +38,7 @@ enum sglg_Type {
     sglg_Type_Memory_Index,
     sglg_Type_Config,
     sglg_Type_Image,
+    sglg_Type_Image_Letter,
     sglg_Type_Bitmap_Header,
     sglg_Type_V2,
     sglg_Type_V3,
@@ -105,6 +106,7 @@ enum Memory_Index : Int;
 
 struct Config;
 struct Image;
+struct Image_Letter;
 struct Bitmap_Header;
 union V2;
 union V3;
@@ -859,7 +861,9 @@ float square_root(float a );
  static Image_Rect create_image_rectangle(Int x , Int y , Int width , Int height , Int sprite_x , Int sprite_y , Int sprite_width , Int sprite_height , U64 image_id );
  static U64 push_image(Renderer * renderer , Image image );
  static Render_Entity* push_solid_rectangle(Renderer * renderer , Render_Entity * * parent , Int start_x , Int start_y , Int width , Int height , U8 r , U8 g , U8 b , U8 a );
- static Render_Entity* push_word(Renderer * renderer , Render_Entity * * parent , String str , Image * font_images , Int start_x , Int start_y , Int height );
+ static Void push_font(Renderer * renderer , Image_Letter * font_images );
+ static Render_Image* find_font_image(Renderer * renderer , Char c );
+ static Render_Entity* push_word(Renderer * renderer , Render_Entity * * parent , String str , Image_Letter * font_images , Int start_x , Int start_y , Int height );
  static Render_Entity* push_image_rect(Renderer * renderer , Render_Entity * * parent , Int start_x , Int start_y , Int width , Int height , Int sprite_x , Int sprite_y , Int sprite_width , Int sprite_height , U64 image_id );
  static Render_Image* find_image_from_id(Renderer * renderer , U64 id );
  static F32 floor(F32 a );
@@ -868,7 +872,7 @@ float square_root(float a );
  static Void render_node_and_siblings(Render_Entity * render_entity , Renderer * renderer , Bitmap * screen_bitmap , V2 offset );
  static Void render(Renderer * renderer , Bitmap * screen_bitmap );
 extern "C" Void init_platform_settings(Settings * settings );
-Image* create_font_data(API * api );
+Image_Letter* create_font_data(API * api );
 extern "C" Void handle_input_and_render(API * api );
 void  __stdcall _DllMainCRTStartup(void );
 void* my_malloc(uint64_t size );

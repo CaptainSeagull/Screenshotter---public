@@ -209,6 +209,7 @@ static uint64_t sglg_type_to_size(sglg_Type type) {
         case sglg_Type_Memory_Index: { return(sizeof(Memory_Index)); } break;
         case sglg_Type_Config: { return(sizeof(Config)); } break;
         case sglg_Type_Image: { return(sizeof(Image)); } break;
+        case sglg_Type_Image_Letter: { return(sizeof(Image_Letter)); } break;
         case sglg_Type_Bitmap_Header: { return(sizeof(Bitmap_Header)); } break;
         case sglg_Type_V2: { return(sizeof(V2)); } break;
         case sglg_Type_V3: { return(sizeof(V3)); } break;
@@ -246,6 +247,7 @@ static sglg_Type sglg_string_to_type(char const *s, uint64_t l) {
     else if(sgl_generated_string_compare("Memory_Index", 12, s, l)) { return(sglg_Type_Memory_Index); }
     else if(sgl_generated_string_compare("Config", 6, s, l)) { return(sglg_Type_Config); }
     else if(sgl_generated_string_compare("Image", 5, s, l)) { return(sglg_Type_Image); }
+    else if(sgl_generated_string_compare("Image_Letter", 12, s, l)) { return(sglg_Type_Image_Letter); }
     else if(sgl_generated_string_compare("Bitmap_Header", 13, s, l)) { return(sglg_Type_Bitmap_Header); }
     else if(sgl_generated_string_compare("V2", 2, s, l)) { return(sglg_Type_V2); }
     else if(sgl_generated_string_compare("V3", 2, s, l)) { return(sglg_Type_V3); }

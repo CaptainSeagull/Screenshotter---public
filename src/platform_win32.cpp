@@ -586,7 +586,7 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
     U64 bitmap_size = MAX_SCREEN_BITMAP_SIZE + 1;
     U64 renderer_size = MEGABYTES(128);
     U64 malloc_nofree_size = MEGABYTES(128);
-    U32 font_size = sizeof(Image) * 256 + 1;
+    U32 font_size = sizeof(Image_Letter) * 256 + 1;
     U64 total_size = get_memory_base_size() + permanent_size + temp_size + internal_temp_size + bitmap_size +
                      renderer_size + malloc_nofree_size + font_size;
 

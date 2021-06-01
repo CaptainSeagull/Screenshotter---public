@@ -35,6 +35,8 @@ struct Render_Image {
     Int width, height;
     U32 *pixels;
 
+    Int off_x, off_y;
+
     U64 id;
     // TODO: Maybe an enum for how to render for scaling / tiling, etc...
 };
@@ -45,4 +47,5 @@ struct Renderer {
 
     Render_Image images[256];
     Int image_count;
+    U64 letter_ids[128];
 };

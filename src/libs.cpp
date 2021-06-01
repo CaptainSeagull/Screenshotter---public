@@ -2,7 +2,6 @@
 
 #include "common.h"
 #include "image.h"
-#include <stdio.h>
 
 #define internal static
 
@@ -19,24 +18,31 @@ void my_free(void *d);
 #endif
 #include "../shared/stb_truetype.h"
 
-internal Image
+internal Image_Letter
 make_letter(U8 *file_data, U64 file_size, Char ch) {
-    Image res = {};
+    Image_Letter res = {};
 
     stbtt_fontinfo font;
     stbtt_InitFont(&font, file_data, stbtt_GetFontOffsetForIndex(file_data, 0));
 
-    Int w, h, x_off, y_off;
-    U8 *mono_bmp = stbtt_GetCodepointBitmap(&font, 0, stbtt_ScaleForPixelHeight(&font, 256.0f), ch, &w, &h, &x_off, &y_off);
+    Int w, h, off_x, off_y;
+    U8 *mono_bmp = stbtt_GetCodepointBitmap(&font, 0, stbtt_ScaleForPixelHeight(&font, 128.0f), ch, &w, &h, &off_x, &off_y);
     if(mono_bmp) {
+#if 1
+        res.img.width = w;
+        res.img.height = h;
+        res.img.pixels = (U32 *)my_malloc(w * h * 4);
+        res.off_x = off_x;
+        res.off_y = off_y;
+#else
         res.width = w;
         res.height = h;
         res.pixels = (U32 *)my_malloc(w * h * 4);
-
+#endif
         Int pitch = (w * 4);
 
         U8 *src = mono_bmp;
-        U8 *dst_row = (U8 * )res.pixels + (h - 1) * pitch;
+        U8 *dst_row = (U8 * )res.img.pixels + (h - 1) * pitch;
         for(U32 y = 0; (y < h); ++y) {
             U32 *dst = (U32 *)dst_row;
             for(U32 x = 0; (x < w); ++x) {
@@ -53,13 +59,13 @@ make_letter(U8 *file_data, U64 file_size, Char ch) {
     return(res);
 }
 
-Image *
+Image_Letter *
 create_font_data(API *api) {
     Memory *memory = api->memory;
 
     File file = api->cb.read_file(memory, Memory_Index_permanent, "c:/windows/fonts/arial.ttf", false);
 
-    Image *font_images = (Image *)memory_push(memory, Memory_Index_font_data, sizeof(Image) * 256);
+    Image_Letter *font_images = (Image_Letter *)memory_push(memory, Memory_Index_font_data, sizeof(Image_Letter) * 256);
 
     // TODO: This is _super_ slow. Maybe a better way than gathering each letter individually.
     for(U32 c = 0; (c < 128); ++c) {

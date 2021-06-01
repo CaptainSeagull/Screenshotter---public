@@ -38,6 +38,7 @@ enum sglg_Type {
     sglg_Type_Memory_Index,
     sglg_Type_Config,
     sglg_Type_Image,
+    sglg_Type_Image_Letter,
     sglg_Type_Bitmap_Header,
     sglg_Type_V2,
     sglg_Type_V3,
@@ -106,6 +107,7 @@ enum Memory_Index : Int;
 
 struct Config;
 struct Image;
+struct Image_Letter;
 struct Bitmap_Header;
 union V2;
 union V3;

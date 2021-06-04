@@ -83,24 +83,28 @@ handle_input_and_render(API *api) {
 
     Renderer *renderer = &data->renderer;
 
+    Int mouse_x = (Int)(api->mouse_pos_x * (F32)api->window_width);
+    Int mouse_y = (Int)((1.0f - api->mouse_pos_y) * (F32)api->window_height);
+
     if(api->init) {
         setup(api, data, renderer);
     } else {
         Render_Entity *yellow_window_render_entity = find_render_entity(renderer, data->yellow_window_id);
         ASSERT(yellow_window_render_entity);
 
-        Image_Rect *yellow_window = (Image_Rect *)yellow_window_render_entity;
+        Rect *yellow_window = (Rect *)yellow_window_render_entity;
 
-        // TODO: Even though we're moving the yellow window all the elements aren't moving with it. Look into this!
-        yellow_window->x += 10;
-        if(yellow_window->x > 640) {
-            yellow_window->x -= 640;
+        if(mouse_x > yellow_window->x && mouse_x < yellow_window->x + yellow_window->width) {
+            if(mouse_y > yellow_window->y && mouse_y < yellow_window->y + yellow_window->height) {
+                yellow_window_render_entity->visible = true;
+            }
+
         }
-
-        render(renderer, &api->screen_bitmap);
     }
 
+    render(renderer, &api->screen_bitmap);
 }
+
 
 extern "C" { int _fltused = 0; }
 void __stdcall

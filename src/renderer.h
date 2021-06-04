@@ -29,6 +29,7 @@ struct Render_Entity {
     U64 id;
 
     Render_Entity *next, *child;
+    Bool visible;
 };
 
 struct Render_Image {

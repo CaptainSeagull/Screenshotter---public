@@ -130,11 +130,10 @@ push_solid_rectangle(Renderer *renderer, Render_Entity **parent,
                      Int start_x, Int start_y, Int width, Int height,
                      U8 r, U8 g, U8 b, U8 a) {
     Render_Entity *render_entity = add_child_to_node(renderer->memory, parent);
-    ASSERT(render_entity);
-
+    render_entity->visible = true;
     render_entity->type = sglg_Type_Rect;
-    Rect *rectangle = (Rect *)render_entity;
 
+    Rect *rectangle = (Rect *)render_entity;
     *rectangle = create_rectangle(start_x, start_y, width, height, r, g, b, a);
     render_entity->id = global_entity_id++;
 
@@ -166,8 +165,9 @@ find_font_image(Renderer *renderer, Char c) {
 internal Render_Entity *
 push_word(Renderer *renderer, Render_Entity **parent, String str, Image_Letter *font_images, Int start_x, Int start_y, Int height) {
     Render_Entity *render_entity = add_child_to_node(renderer->memory, parent);
+
+    render_entity->visible = true;
     render_entity->type = sglg_Type_Word;
-    ASSERT(render_entity);
 
     V2u padding = v2u(0, 10);
 
@@ -211,9 +211,9 @@ push_image_rect(Renderer *renderer, Render_Entity **parent,
     ASSERT(find_image_from_id(renderer, image_id));
 
     Render_Entity *render_entity = add_child_to_node(renderer->memory, parent);
-    ASSERT(render_entity);
-
+    render_entity->visible = true;
     render_entity->type = sglg_Type_Image_Rect;
+
     Image_Rect *rectangle = (Image_Rect *)render_entity;
 
     *rectangle = create_image_rectangle(start_x, start_y, width, height, sprite_x, sprite_y, sprite_width, sprite_height, image_id);
@@ -296,117 +296,119 @@ render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bit
 
     // TODO: Most of the renderers are reading the screen pixels for y,x. However it'd probably be faster to just read for the y then
     //       ++ iterate through to write the X. Wouldn't be able to ASSERT as nicely though...
+    if(render_entity->visible) {
 
-    switch(render_entity->type) {
-        case sglg_Type_Rect: {
-            Rect *rect = (Rect *)render_entity;
+        switch(render_entity->type) {
+            case sglg_Type_Rect: {
+                Rect *rect = (Rect *)render_entity;
 
-            U32 width = rect->width;
-            U32 height = rect->height;
+                U32 width = rect->width;
+                U32 height = rect->height;
 
-            for(U32 y = 0; (y < height); ++y) {
-                for(U32 x = 0; (x < width); ++x) {
-                    U32 *screen_pixel = image_at(screen_bitmap->memory, y + offset.y, screen_bitmap->width, x + offset.x);
+                for(U32 y = 0; (y < height); ++y) {
+                    for(U32 x = 0; (x < width); ++x) {
+                        U32 *screen_pixel = image_at(screen_bitmap->memory, y + offset.y, screen_bitmap->width, x + offset.x);
 
-                    // TODO: Is the order actually swapped? Would alpha be index 0?
+                        // TODO: Is the order actually swapped? Would alpha be index 0?
 #if 0
-                    F64 a = (F64)((U8 *)&rect->output_colour)[3] / 255.0;
+                        F64 a = (F64)((U8 *)&rect->output_colour)[3] / 255.0;
 
-                    U32 l = minu32(rect->output_colour, *screen_pixel);
-                    U32 u = maxu32(rect->output_colour, *screen_pixel);
-                    U32 d = a * (u - l);
-                    U32 output_colour = l + d;
-#else
-                    U32 bitmap_pixel = rect->output_colour;
-                    F64 a = (F64)((U8 *)&bitmap_pixel)[3] / 255.0;
-                    U32 output_colour = 0xFFFFFFFF;
-                    for(Int i = 0; (i < 3); ++i) {
-                        U32 s = ((U8 *)screen_pixel)[i];
-                        U32 b = ((U8 *)&bitmap_pixel)[i];
-
-                        U32 l = minu32(b, s);
-                        U32 u = maxu32(b, s);
+                        U32 l = minu32(rect->output_colour, *screen_pixel);
+                        U32 u = maxu32(rect->output_colour, *screen_pixel);
                         U32 d = a * (u - l);
-                        U32 o = l + d;
-                        ((U8 *)&output_colour)[i] = o;
-                    }
+                        U32 output_colour = l + d;
+#else
+                        U32 bitmap_pixel = rect->output_colour;
+                        F64 a = (F64)((U8 *)&bitmap_pixel)[3] / 255.0;
+                        U32 output_colour = 0xFFFFFFFF;
+                        for(Int i = 0; (i < 3); ++i) {
+                            U32 s = ((U8 *)screen_pixel)[i];
+                            U32 b = ((U8 *)&bitmap_pixel)[i];
+
+                            U32 l = minu32(b, s);
+                            U32 u = maxu32(b, s);
+                            U32 d = a * (u - l);
+                            U32 o = l + d;
+                            ((U8 *)&output_colour)[i] = o;
+                        }
 #endif
 
-                    *screen_pixel = output_colour;
+                        *screen_pixel = output_colour;
+                    }
                 }
-            }
-        } break;
+            } break;
 
-        case sglg_Type_Image_Rect: {
-            Image_Rect *img_rect = (Image_Rect *)render_entity;
-            Render_Image *img = find_image_from_id(renderer, img_rect->image_id);
-            ASSERT(img);
+            case sglg_Type_Image_Rect: {
+                Image_Rect *img_rect = (Image_Rect *)render_entity;
+                Render_Image *img = find_image_from_id(renderer, img_rect->image_id);
+                ASSERT(img);
 
-            F32 sprite_width_to_use  = img_rect->sprite_width;
-            F32 sprite_height_to_use = img_rect->sprite_height;
+                F32 sprite_width_to_use  = img_rect->sprite_width;
+                F32 sprite_height_to_use = img_rect->sprite_height;
 
-            if(sprite_width_to_use  == 0) { sprite_width_to_use  = img->width;  }
-            if(sprite_height_to_use == 0) { sprite_height_to_use = img->height; }
+                if(sprite_width_to_use  == 0) { sprite_width_to_use  = img->width;  }
+                if(sprite_height_to_use == 0) { sprite_height_to_use = img->height; }
 
-            // TODO: This doesn't work if the width / height aren't uniform... apparently?
+                // TODO: This doesn't work if the width / height aren't uniform... apparently?
 
-            F32 pct_w = sprite_width_to_use  / (F32)img_rect->width;
-            F32 pct_h = sprite_height_to_use / (F32)img_rect->height;
+                F32 pct_w = sprite_width_to_use  / (F32)img_rect->width;
+                F32 pct_h = sprite_height_to_use / (F32)img_rect->height;
 
-            for(U32 y = 0; (y < img_rect->height); ++y) {
-                for(U32 x = 0; (x < img_rect->width); ++x) {
-                    U32 img_x = floor((F32)x * pct_w);
-                    U32 img_y = floor((F32)y * pct_h);
+                for(U32 y = 0; (y < img_rect->height); ++y) {
+                    for(U32 x = 0; (x < img_rect->width); ++x) {
+                        U32 img_x = floor((F32)x * pct_w);
+                        U32 img_y = floor((F32)y * pct_h);
 
-                    U32 *screen_pixel = image_at(screen_bitmap->memory,
-                                                 y + offset.y,
-                                                 screen_bitmap->width,
-                                                 x + offset.x);
-                    U32 *bitmap_pixel = image_at(img->pixels,
-                                                 img_rect->sprite_y + img_y,
-                                                 img->width,
-                                                 img_rect->sprite_x + img_x);
+                        U32 *screen_pixel = image_at(screen_bitmap->memory,
+                                                     y + offset.y,
+                                                     screen_bitmap->width,
+                                                     x + offset.x);
+                        U32 *bitmap_pixel = image_at(img->pixels,
+                                                     img_rect->sprite_y + img_y,
+                                                     img->width,
+                                                     img_rect->sprite_x + img_x);
 
-                    // TODO: Use off_x / off_y in here as well.
+                        // TODO: Use off_x / off_y in here as well.
 
 #if 0
-                    // Contrinuous alpha... doesn't work :-(
-                    U8 alpha8 = ((U8 *)bitmap_pixel)[0];
+                        // Contrinuous alpha... doesn't work :-(
+                        U8 alpha8 = ((U8 *)bitmap_pixel)[0];
 
-                    F32 alphaf32 = alpha8 / 255.0f;
+                        F32 alphaf32 = alpha8 / 255.0f;
 
-                    U32 output_colour = 0xFFFFFFFF;
-                    U8 *at = (U8 *)&output_colour;
-                    for(Int i = 0; (i < 4); ++i, ++at) {
-                        U8 bitmap_pixel8 = ((U8 *)bitmap_pixel)[i];
-                        U8 screen_pixel8 = ((U8 *)screen_pixel)[i];
+                        U32 output_colour = 0xFFFFFFFF;
+                        U8 *at = (U8 *)&output_colour;
+                        for(Int i = 0; (i < 4); ++i, ++at) {
+                            U8 bitmap_pixel8 = ((U8 *)bitmap_pixel)[i];
+                            U8 screen_pixel8 = ((U8 *)screen_pixel)[i];
 
-                        U32 lower = minu32(bitmap_pixel8, screen_pixel8);
-                        U32 upper = maxu32(bitmap_pixel8, screen_pixel8);
+                            U32 lower = minu32(bitmap_pixel8, screen_pixel8);
+                            U32 upper = maxu32(bitmap_pixel8, screen_pixel8);
 
-                        U32 delta = alphaf32 * (upper - lower);
-                        U32 output_colour_tmp = lower + delta;
-                        ASSERT(output_colour_tmp <= 0xFF);
-                        U8 output_colour8 = (U8)output_colour_tmp;
+                            U32 delta = alphaf32 * (upper - lower);
+                            U32 output_colour_tmp = lower + delta;
+                            ASSERT(output_colour_tmp <= 0xFF);
+                            U8 output_colour8 = (U8)output_colour_tmp;
 
-                        *at = output_colour8;
-                    }
+                            *at = output_colour8;
+                        }
 
-                    if(alphaf32 == 0) { ASSERT(output_colour == *screen_pixel); }
-                    if(alphaf32 == 1) { ASSERT(output_colour == *bitmap_pixel); }
+                        if(alphaf32 == 0) { ASSERT(output_colour == *screen_pixel); }
+                        if(alphaf32 == 1) { ASSERT(output_colour == *bitmap_pixel); }
 #else
-                    // Binary alpha
-                    U8 alpha8 = ((U8 *)bitmap_pixel)[0]; // TODO: 0 or 3?
-                    U32 output_colour = *bitmap_pixel;
-                    if(alpha8 == 255) { output_colour = *screen_pixel; }
+                        // Binary alpha
+                        U8 alpha8 = ((U8 *)bitmap_pixel)[0]; // TODO: 0 or 3?
+                        U32 output_colour = *bitmap_pixel;
+                        if(alpha8 == 255) { output_colour = *screen_pixel; }
 #endif
 
-                    *screen_pixel = output_colour;
+                        *screen_pixel = output_colour;
+                    }
                 }
-            }
-        } break;
+            } break;
 
-            //default: { ASSERT(0); } // TODO: Why is this being hit?
+                //default: { ASSERT(0); } // TODO: Why is this being hit?
+        }
     }
 }
 

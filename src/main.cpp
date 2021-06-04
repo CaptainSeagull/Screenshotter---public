@@ -50,7 +50,17 @@ setup(API *api, DLL_Data *data, Renderer *renderer) {
                                                         255, 255, 0, 0);
     data->yellow_window_id = yellow_window->id;
 
-    push_word(renderer, &yellow_window, "Jonathan\nLivingstone!", font_images, 50, 150, 64);
+    Int height = 20;
+    Int running_y = 0;
+    for(Int wnd_i = 0; (wnd_i < api->top_level_window_titles_count); ++wnd_i) {
+        if(api->top_level_window_titles[wnd_i].len > 0) {
+            push_word(renderer, &yellow_window,
+                      api->top_level_window_titles[wnd_i],
+                      font_images, 0, running_y, height);
+            running_y += (height + 5);
+        }
+
+    }
 
     Image img = load_image(api, "arrow3.bmp");
     U64 id_a = push_image(renderer, img);
@@ -94,11 +104,11 @@ handle_input_and_render(API *api) {
 
         Rect *yellow_window = (Rect *)yellow_window_render_entity;
 
+        yellow_window_render_entity->visible = false;
         if(mouse_x > yellow_window->x && mouse_x < yellow_window->x + yellow_window->width) {
             if(mouse_y > yellow_window->y && mouse_y < yellow_window->y + yellow_window->height) {
                 yellow_window_render_entity->visible = true;
             }
-
         }
     }
 

@@ -132,5 +132,8 @@ struct API {
 
     Settings settings;
     Void *dll_data;
+
+    Int top_level_window_titles_count;
+    String top_level_window_titles[256];
 };
 

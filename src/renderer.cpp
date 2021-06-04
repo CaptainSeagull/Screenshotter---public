@@ -126,12 +126,21 @@ push_image(Renderer *renderer, Image image) {
 }
 
 internal Render_Entity *
+create_render_entity(Memory *memory, Render_Entity **parent, sglg_Type type) {
+    Render_Entity *render_entity = add_child_to_node(memory, parent);
+    ASSERT(render_entity);
+
+    render_entity->visible = true;
+    render_entity->type = type;
+
+    return(render_entity);
+}
+
+internal Render_Entity *
 push_solid_rectangle(Renderer *renderer, Render_Entity **parent,
                      Int start_x, Int start_y, Int width, Int height,
                      U8 r, U8 g, U8 b, U8 a) {
-    Render_Entity *render_entity = add_child_to_node(renderer->memory, parent);
-    render_entity->visible = true;
-    render_entity->type = sglg_Type_Rect;
+    Render_Entity *render_entity = create_render_entity(renderer->memory, parent, sglg_Type_Rect);
 
     Rect *rectangle = (Rect *)render_entity;
     *rectangle = create_rectangle(start_x, start_y, width, height, r, g, b, a);
@@ -164,10 +173,7 @@ find_font_image(Renderer *renderer, Char c) {
 // TODO: The start_x / start_y stuff doesn't seem to be working...
 internal Render_Entity *
 push_word(Renderer *renderer, Render_Entity **parent, String str, Image_Letter *font_images, Int start_x, Int start_y, Int height) {
-    Render_Entity *render_entity = add_child_to_node(renderer->memory, parent);
-
-    render_entity->visible = true;
-    render_entity->type = sglg_Type_Word;
+    Render_Entity *render_entity = create_render_entity(renderer->memory, parent, sglg_Type_Word);
 
     V2u padding = v2u(0, 10);
 
@@ -187,16 +193,20 @@ push_word(Renderer *renderer, Render_Entity **parent, String str, Image_Letter *
 #else
             Char c = str.e[i];
 #endif
-            Render_Image *image = find_font_image(renderer, c);
+            if(c == ' ') {
+                running_x += height;
+            } else {
+                Render_Image *image = find_font_image(renderer, c);
 
-            Int width = floor((F32)image->width * ((F32)height / (F32)image->height)); // TODO: Is this correct?
+                Int width = floor((F32)image->width * ((F32)height / (F32)image->height)); // TODO: Is this correct?
 
-            push_image_rect(renderer, &render_entity,
-                            running_x, running_y, width, height,
-                            0, 0, 0, 0,
-                            renderer->letter_ids[c]);
+                push_image_rect(renderer, &render_entity,
+                                running_x, running_y, width, height,
+                                0, 0, 0, 0,
+                                renderer->letter_ids[c]);
 
-            running_x += (width + padding.x + image->off_x);
+                running_x += (width + padding.x + image->off_x);
+            }
         }
     }
 
@@ -210,9 +220,7 @@ push_image_rect(Renderer *renderer, Render_Entity **parent,
                 U64 image_id) {
     ASSERT(find_image_from_id(renderer, image_id));
 
-    Render_Entity *render_entity = add_child_to_node(renderer->memory, parent);
-    render_entity->visible = true;
-    render_entity->type = sglg_Type_Image_Rect;
+    Render_Entity *render_entity = create_render_entity(renderer->memory, parent, sglg_Type_Image_Rect);
 
     Image_Rect *rectangle = (Image_Rect *)render_entity;
 

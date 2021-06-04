@@ -575,6 +575,24 @@ win32_screen_capture_thread(void *data) {
     return(0); // What to return on error?
 }
 
+internal BOOL CALLBACK
+enum_windows_proc(HWND hwnd, LPARAM param) {
+    API *api = (API *)param;
+    Memory *memory = api->memory;
+
+    Int max_string_length = 1024;
+    Char *buf = (Char *)memory_push(memory, Memory_Index_temp, max_string_length);
+
+    if(IsWindowVisible(hwnd)) {
+        GetWindowText(hwnd, (LPSTR)buf, max_string_length);
+        String *s = &api->top_level_window_titles[api->top_level_window_titles_count++];
+        s->e = buf;
+        s->len = string_length(buf);
+    }
+
+    return(TRUE);
+}
+
 int CALLBACK
 WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd) {
     int res = 0xFF;
@@ -807,6 +825,8 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
                             CloseHandle(h);
                         }
 
+                        EnumWindows(enum_windows_proc, (LPARAM)&api);
+
                         F32 seconds_elapsed_for_last_frame = 0;
                         while(api.running) {
                             // TODO: Do rendering in separate thread and only have main thread process window messages? Maybe a good option
@@ -857,6 +877,13 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
                                     }
                                 }
                             }
+
+                            /*for(Int wnd_title_i = api.top_level_window_titles_count - 1; (wnd_title_i >= 0); ++wnd_title_i) {
+                                memory_pop(api.memory, api.top_level_window_titles[wnd_title_i].e);
+                            }
+                            api.top_level_window_titles_count = 0;
+
+                            EnumWindows(enum_windows_proc, (LPARAM)&api);*/
 
                             // Actual rendering
                             {

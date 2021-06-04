@@ -860,6 +860,7 @@ float square_root(float a );
  static Rect create_rectangle(Int x , Int y , Int width , Int height , U8 r , U8 g , U8 b , U8 a );
  static Image_Rect create_image_rectangle(Int x , Int y , Int width , Int height , Int sprite_x , Int sprite_y , Int sprite_width , Int sprite_height , U64 image_id );
  static U64 push_image(Renderer * renderer , Image image );
+ static Render_Entity* create_render_entity(Memory * memory , Render_Entity * * parent , sglg_Type type );
  static Render_Entity* push_solid_rectangle(Renderer * renderer , Render_Entity * * parent , Int start_x , Int start_y , Int width , Int height , U8 r , U8 g , U8 b , U8 a );
  static Void push_font(Renderer * renderer , Image_Letter * font_images );
  static Render_Image* find_font_image(Renderer * renderer , Char c );

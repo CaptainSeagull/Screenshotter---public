@@ -289,13 +289,15 @@ floor(F32 a) {
 }
 
 // TODO: Have this return 0 if we're accessing outside the image.
-#define image_at(base,y,width,x) image_at_((U32 *)base,y,width,x)
+#define image_at(base,w,h,x,y) image_at_((U32 *)base,w,h,x,y)
 internal U32 *
-image_at_(U32 *base, U32 y, U32 width, U32 x) {
-    U32 accessor = ((y * width) + x);
-    // TODO: ASSERT we're not reading off the end.
-    U32 *r = &base[accessor];
-    return(r);
+image_at_(U32 *base, U32 width, U32 height, U32 x, U32 y) {
+    U32 *res = 0;
+    if(x <= width && y <= height) {
+        U32 accessor = ((y * width) + x);
+        res = &base[accessor];
+    }
+    return(res);
 }
 
 internal Void
@@ -315,33 +317,40 @@ render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bit
 
                 for(U32 y = 0; (y < height); ++y) {
                     for(U32 x = 0; (x < width); ++x) {
-                        U32 *screen_pixel = image_at(screen_bitmap->memory, y + offset.y, screen_bitmap->width, x + offset.x);
+                        U32 *screen_pixel = image_at(screen_bitmap->memory,
+                                                     screen_bitmap->width,
+                                                     screen_bitmap->height,
+                                                     x + offset.x,
+                                                     y + offset.y);
 
-                        // TODO: Is the order actually swapped? Would alpha be index 0?
+                        if(screen_pixel) {
+
+                            // TODO: Is the order actually swapped? Would alpha be index 0?
 #if 0
-                        F64 a = (F64)((U8 *)&rect->output_colour)[3] / 255.0;
+                            F64 a = (F64)((U8 *)&rect->output_colour)[3] / 255.0;
 
-                        U32 l = minu32(rect->output_colour, *screen_pixel);
-                        U32 u = maxu32(rect->output_colour, *screen_pixel);
-                        U32 d = a * (u - l);
-                        U32 output_colour = l + d;
-#else
-                        U32 bitmap_pixel = rect->output_colour;
-                        F64 a = (F64)((U8 *)&bitmap_pixel)[3] / 255.0;
-                        U32 output_colour = 0xFFFFFFFF;
-                        for(Int i = 0; (i < 3); ++i) {
-                            U32 s = ((U8 *)screen_pixel)[i];
-                            U32 b = ((U8 *)&bitmap_pixel)[i];
-
-                            U32 l = minu32(b, s);
-                            U32 u = maxu32(b, s);
+                            U32 l = minu32(rect->output_colour, *screen_pixel);
+                            U32 u = maxu32(rect->output_colour, *screen_pixel);
                             U32 d = a * (u - l);
-                            U32 o = l + d;
-                            ((U8 *)&output_colour)[i] = o;
-                        }
+                            U32 output_colour = l + d;
+#else
+                            U32 bitmap_pixel = rect->output_colour;
+                            F64 a = (F64)((U8 *)&bitmap_pixel)[3] / 255.0;
+                            U32 output_colour = 0xFFFFFFFF;
+                            for(Int i = 0; (i < 3); ++i) {
+                                U32 s = ((U8 *)screen_pixel)[i];
+                                U32 b = ((U8 *)&bitmap_pixel)[i];
+
+                                U32 l = minu32(b, s);
+                                U32 u = maxu32(b, s);
+                                U32 d = a * (u - l);
+                                U32 o = l + d;
+                                ((U8 *)&output_colour)[i] = o;
+                            }
 #endif
 
-                        *screen_pixel = output_colour;
+                            *screen_pixel = output_colour;
+                        }
                     }
                 }
             } break;
@@ -368,49 +377,54 @@ render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bit
                         U32 img_y = floor((F32)y * pct_h);
 
                         U32 *screen_pixel = image_at(screen_bitmap->memory,
-                                                     y + offset.y,
                                                      screen_bitmap->width,
-                                                     x + offset.x);
+                                                     screen_bitmap->height,
+                                                     x + offset.x,
+                                                     y + offset.y);
                         U32 *bitmap_pixel = image_at(img->pixels,
-                                                     img_rect->sprite_y + img_y,
                                                      img->width,
-                                                     img_rect->sprite_x + img_x);
+                                                     img->height,
+                                                     img_rect->sprite_x + img_x,
+                                                     img_rect->sprite_y + img_y);
 
-                        // TODO: Use off_x / off_y in here as well.
+                        if(screen_pixel && bitmap_pixel) {
+
+                            // TODO: Use off_x / off_y in here as well.
 
 #if 0
-                        // Contrinuous alpha... doesn't work :-(
-                        U8 alpha8 = ((U8 *)bitmap_pixel)[0];
+                            // Contrinuous alpha... doesn't work :-(
+                            U8 alpha8 = ((U8 *)bitmap_pixel)[0];
 
-                        F32 alphaf32 = alpha8 / 255.0f;
+                            F32 alphaf32 = alpha8 / 255.0f;
 
-                        U32 output_colour = 0xFFFFFFFF;
-                        U8 *at = (U8 *)&output_colour;
-                        for(Int i = 0; (i < 4); ++i, ++at) {
-                            U8 bitmap_pixel8 = ((U8 *)bitmap_pixel)[i];
-                            U8 screen_pixel8 = ((U8 *)screen_pixel)[i];
+                            U32 output_colour = 0xFFFFFFFF;
+                            U8 *at = (U8 *)&output_colour;
+                            for(Int i = 0; (i < 4); ++i, ++at) {
+                                U8 bitmap_pixel8 = ((U8 *)bitmap_pixel)[i];
+                                U8 screen_pixel8 = ((U8 *)screen_pixel)[i];
 
-                            U32 lower = minu32(bitmap_pixel8, screen_pixel8);
-                            U32 upper = maxu32(bitmap_pixel8, screen_pixel8);
+                                U32 lower = minu32(bitmap_pixel8, screen_pixel8);
+                                U32 upper = maxu32(bitmap_pixel8, screen_pixel8);
 
-                            U32 delta = alphaf32 * (upper - lower);
-                            U32 output_colour_tmp = lower + delta;
-                            ASSERT(output_colour_tmp <= 0xFF);
-                            U8 output_colour8 = (U8)output_colour_tmp;
+                                U32 delta = alphaf32 * (upper - lower);
+                                U32 output_colour_tmp = lower + delta;
+                                ASSERT(output_colour_tmp <= 0xFF);
+                                U8 output_colour8 = (U8)output_colour_tmp;
 
-                            *at = output_colour8;
-                        }
+                                *at = output_colour8;
+                            }
 
-                        if(alphaf32 == 0) { ASSERT(output_colour == *screen_pixel); }
-                        if(alphaf32 == 1) { ASSERT(output_colour == *bitmap_pixel); }
+                            if(alphaf32 == 0) { ASSERT(output_colour == *screen_pixel); }
+                            if(alphaf32 == 1) { ASSERT(output_colour == *bitmap_pixel); }
 #else
-                        // Binary alpha
-                        U8 alpha8 = ((U8 *)bitmap_pixel)[0]; // TODO: 0 or 3?
-                        U32 output_colour = *bitmap_pixel;
-                        if(alpha8 == 255) { output_colour = *screen_pixel; }
+                            // Binary alpha
+                            U8 alpha8 = ((U8 *)bitmap_pixel)[0]; // TODO: 0 or 3?
+                            U32 output_colour = *bitmap_pixel;
+                            if(alpha8 == 255) { output_colour = *screen_pixel; }
 #endif
 
-                        *screen_pixel = output_colour;
+                            *screen_pixel = output_colour;
+                        }
                     }
                 }
             } break;

@@ -870,7 +870,7 @@ float square_root(float a );
  static Render_Entity* find_render_entity(Render_Entity * render_entity , U64 id );
  static Render_Entity* find_render_entity(Renderer * renderer , U64 id );
  static F32 floor(F32 a );
- static U32* image_at_(U32 * base , U32 y , U32 width , U32 x );
+ static U32* image_at_(U32 * base , U32 width , U32 height , U32 x , U32 y );
  static Void render_node(Render_Entity * render_entity , Renderer * renderer , Bitmap * screen_bitmap , V2 input_offset );
  static Void render_node_and_siblings(Render_Entity * render_entity , Renderer * renderer , Bitmap * screen_bitmap , V2 offset );
  static Void render(Renderer * renderer , Bitmap * screen_bitmap );

@@ -19,14 +19,11 @@ void my_free(void *d);
 #include "../shared/stb_truetype.h"
 
 internal Image_Letter
-make_letter(U8 *file_data, U64 file_size, Char ch) {
+make_letter(stbtt_fontinfo *font, Char ch) {
     Image_Letter res = {};
 
-    stbtt_fontinfo font;
-    stbtt_InitFont(&font, file_data, stbtt_GetFontOffsetForIndex(file_data, 0));
-
     Int w, h, off_x, off_y;
-    U8 *mono_bmp = stbtt_GetCodepointBitmap(&font, 0, stbtt_ScaleForPixelHeight(&font, 128.0f), ch, &w, &h, &off_x, &off_y);
+    U8 *mono_bmp = stbtt_GetCodepointBitmap(font, 0, stbtt_ScaleForPixelHeight(font, 32.0f), ch, &w, &h, &off_x, &off_y);
     if(mono_bmp) {
 #if 1
         res.img.width = w;
@@ -67,9 +64,11 @@ create_font_data(API *api) {
 
     Image_Letter *font_images = (Image_Letter *)memory_push(memory, Memory_Index_font_data, sizeof(Image_Letter) * 256);
 
-    // TODO: This is _super_ slow. Maybe a better way than gathering each letter individually.
+    stbtt_fontinfo font;
+    stbtt_InitFont(&font, file.e, stbtt_GetFontOffsetForIndex(file.e, 0));
+
     for(U32 c = 0; (c < 128); ++c) {
-        font_images[c] = make_letter((U8 *)file.e, file.size, c);
+        font_images[c] = make_letter(&font, c);
     }
 
     return(font_images);

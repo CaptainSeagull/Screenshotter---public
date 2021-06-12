@@ -51,7 +51,7 @@ win32_read_file(Memory *memory, U32 memory_index_to_use, String fname, Bool null
                         } else {
                             res.fname = fname; // TODO: Change to full path not relative.
                             res.size = fsize32;
-                            res.e = (Char *)file_memory;
+                            res.e = (U8 *)file_memory;
                             res.e[res.size] = 0;
                         }
                     }

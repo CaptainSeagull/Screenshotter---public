@@ -40,6 +40,8 @@ enum sglg_Type {
     sglg_Type_Image,
     sglg_Type_Image_Letter,
     sglg_Type_Bitmap_Header,
+    sglg_Type___m128i,
+    sglg_Type___m128,
     sglg_Type_V2,
     sglg_Type_V3,
     sglg_Type_V4,
@@ -84,8 +86,8 @@ typedef int32_t S32 ;
 typedef int64_t S64 ;
 typedef float F32 ;
 typedef double F64 ;
-typedef uint32_t Lane_U32_Internal ;
-typedef float Lane_F32_Internal ;
+typedef __m128i Lane_U32_Internal ;
+typedef __m128 Lane_F32_Internal ;
 
 // Forward declared structs
 
@@ -711,98 +713,6 @@ Image load_image(API * api , String file_name );
  static float length_sq(V4 a );
  static float length(V4 a );
  static V4 normalise(V4 a );
-float square_root(float a );
- static Lane_U32 lane_u32(uint32_t a );
- static Lane_U32 lane_u32(uint32_t a , uint32_t b , uint32_t c , uint32_t d , uint32_t e , uint32_t f , uint32_t g , uint32_t h );
- static Lane_U32 lane_u32_from_f32(float a );
- static Lane_U32 lane_u32_from_f32(Lane_F32 a );
- static Lane_U32 operator<<(Lane_U32 a , uint32_t s );
- static Lane_U32 operator>>(Lane_U32 a , uint32_t s );
- static Lane_U32 operator^(Lane_U32 a , Lane_U32 b );
- static Lane_U32 operator|(Lane_U32 a , Lane_U32 b );
- static Lane_U32 operator&(Lane_U32 a , Lane_U32 b );
- static Lane_U32 operator*(Lane_U32 a , Lane_U32 b );
- static Lane_U32 operator+(Lane_U32 a , Lane_U32 b );
- static Lane_U32 operator-(Lane_U32 a , Lane_U32 b );
- static Lane_U32 operator-(Lane_U32 a );
- static Lane_U32 operator==(Lane_U32 a , Lane_U32 b );
- static Lane_U32 operator!=(Lane_U32 a , Lane_U32 b );
- static Lane_U32 and_not(Lane_U32 a , Lane_U32 b );
- static Lane_U32 not_zero(Lane_U32 a );
- static void conditional_assign(Lane_U32 mask , Lane_U32 * dst , Lane_U32 src );
- static int lane_mask_is_zeroed(Lane_U32 a );
- static int lane_mask_is_full(Lane_U32 a );
- static Lane_U32 operator!(Lane_U32 a );
- static Lane_U32 gather_u32_internal(void * ptr , uint64_t stride , Lane_U32 indices );
- static Lane_F32 lane_f32(float a );
- static Lane_F32 lane_f32(float a , float b , float c , float d , float e , float f , float g , float h );
- static Lane_F32 lane_f32_from_u32(uint32_t a );
- static Lane_F32 lane_f32_from_u32(Lane_U32 a );
- static Lane_F32 lane_f32_zero(void );
- static Lane_F32 lane_f32_floor(Lane_F32 a );
- static Lane_F32 operator&(Lane_U32 a , Lane_F32 b );
- static Lane_F32 operator*(Lane_F32 a , Lane_F32 b );
- static Lane_F32 operator/(Lane_F32 a , Lane_F32 b );
- static Lane_F32 operator+(Lane_F32 a , Lane_F32 b );
- static Lane_F32 operator-(Lane_F32 a , Lane_F32 b );
- static Lane_U32 operator>(Lane_F32 a , Lane_F32 b );
- static Lane_U32 operator>=(Lane_F32 a , Lane_F32 b );
- static Lane_U32 operator<(Lane_F32 a , Lane_F32 b );
- static Lane_U32 operator<=(Lane_F32 a , Lane_F32 b );
- static Lane_U32 operator==(Lane_F32 a , Lane_F32 b );
- static Lane_U32 operator!=(Lane_F32 a , Lane_F32 b );
- static void conditional_assign(Lane_U32 mask , Lane_F32 * dst , Lane_F32 src );
- static Lane_F32 square_root(Lane_F32 a );
- static Lane_F32 rsquare_root(Lane_F32 a );
- static Lane_F32 maxf32(Lane_F32 a , Lane_F32 b );
- static Lane_F32 minf32(Lane_F32 a , Lane_F32 b );
- static Lane_F32 gather_f32_internal(void * ptr , uint64_t stride , Lane_U32 indices );
-float square_root(float a );
- static Lane_U32 lane_u32(uint32_t a );
- static Lane_U32 lane_u32(uint32_t a , uint32_t b , uint32_t c , uint32_t d , uint32_t e , uint32_t f , uint32_t g , uint32_t h );
- static Lane_U32 lane_u32_from_f32(float a );
- static Lane_U32 lane_u32_from_f32(Lane_F32 a );
- static Lane_U32 operator<<(Lane_U32 a , uint32_t s );
- static Lane_U32 operator>>(Lane_U32 a , uint32_t s );
- static Lane_U32 operator^(Lane_U32 a , Lane_U32 b );
- static Lane_U32 operator|(Lane_U32 a , Lane_U32 b );
- static Lane_U32 operator&(Lane_U32 a , Lane_U32 b );
- static Lane_U32 operator*(Lane_U32 a , Lane_U32 b );
- static Lane_U32 operator+(Lane_U32 a , Lane_U32 b );
- static Lane_U32 operator-(Lane_U32 a , Lane_U32 b );
- static Lane_U32 operator-(Lane_U32 a );
- static Lane_U32 operator==(Lane_U32 a , Lane_U32 b );
- static Lane_U32 operator!=(Lane_U32 a , Lane_U32 b );
- static Lane_U32 and_not(Lane_U32 a , Lane_U32 b );
- static Lane_U32 not_zero(Lane_U32 a );
- static void conditional_assign(Lane_U32 mask , Lane_U32 * dst , Lane_U32 src );
- static int lane_mask_is_zeroed(Lane_U32 a );
- static int lane_mask_is_full(Lane_U32 a );
- static Lane_U32 operator!(Lane_U32 a );
- static Lane_U32 gather_u32_internal(void * ptr , uint64_t stride , Lane_U32 indices );
- static Lane_F32 lane_f32(float a );
- static Lane_F32 lane_f32(float a , float b , float c , float d , float e , float f , float g , float h );
- static Lane_F32 lane_f32_from_u32(uint32_t a );
- static Lane_F32 lane_f32_from_u32(Lane_U32 a );
- static Lane_F32 lane_f32_zero(void );
- static Lane_F32 lane_f32_floor(Lane_F32 a );
- static Lane_F32 operator&(Lane_U32 a , Lane_F32 b );
- static Lane_F32 operator*(Lane_F32 a , Lane_F32 b );
- static Lane_F32 operator/(Lane_F32 a , Lane_F32 b );
- static Lane_F32 operator+(Lane_F32 a , Lane_F32 b );
- static Lane_F32 operator-(Lane_F32 a , Lane_F32 b );
- static Lane_U32 operator>(Lane_F32 a , Lane_F32 b );
- static Lane_U32 operator>=(Lane_F32 a , Lane_F32 b );
- static Lane_U32 operator<(Lane_F32 a , Lane_F32 b );
- static Lane_U32 operator<=(Lane_F32 a , Lane_F32 b );
- static Lane_U32 operator==(Lane_F32 a , Lane_F32 b );
- static Lane_U32 operator!=(Lane_F32 a , Lane_F32 b );
- static void conditional_assign(Lane_U32 mask , Lane_F32 * dst , Lane_F32 src );
- static Lane_F32 square_root(Lane_F32 a );
- static Lane_F32 rsquare_root(Lane_F32 a );
- static Lane_F32 maxf32(Lane_F32 a , Lane_F32 b );
- static Lane_F32 minf32(Lane_F32 a , Lane_F32 b );
- static Lane_F32 gather_f32_internal(void * ptr , uint64_t stride , Lane_U32 indices );
 float square_root(float a );
  static Lane_U32 lane_u32(uint32_t a );
  static Lane_U32 lane_u32(uint32_t a , uint32_t b , uint32_t c , uint32_t d , uint32_t e , uint32_t f , uint32_t g , uint32_t h );

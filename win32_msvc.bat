@@ -50,7 +50,6 @@ if "%RELEASE_FLAG%"=="true" (
 
 IF NOT EXIST "build" mkdir "build"
 
-echo Running Mirror
 pushd "tools"
 mirror.exe ../src/main.cpp ../src/platform_win32.cpp
 popd

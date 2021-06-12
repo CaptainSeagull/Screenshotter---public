@@ -387,6 +387,8 @@ render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bit
                                                      img_rect->sprite_x + img_x,
                                                      img_rect->sprite_y + img_y);
 
+                        // TODO: Will bitmap_pixel ever be NULL?
+                        ASSERT(bitmap_pixel);
                         if(screen_pixel && bitmap_pixel) {
 
                             // TODO: Use off_x / off_y in here as well.

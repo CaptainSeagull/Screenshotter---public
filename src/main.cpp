@@ -7,7 +7,7 @@
 
 #include "common.cpp"
 #define LANE_PUBLIC_DEC static
-#define LANE_WIDTH 1 // TODO: Mirror isn't handling this being different correctly.
+#define LANE_WIDTH 4 // TODO: Mirror isn't handling this being different correctly.
 #include "../shared/lane/lane.cpp"
 
 #include "main_generated.h"

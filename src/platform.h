@@ -1,5 +1,5 @@
 struct File {
-    Char *e;
+    U8 *e;
     Uintptr size;
     String fname;
 };

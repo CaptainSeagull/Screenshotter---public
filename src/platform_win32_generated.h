@@ -28,6 +28,7 @@ enum sglg_Type {
     sglg_Type_String,
     sglg_Type_String_To_Int_Result,
     sglg_Type_String_To_Float_Result,
+    sglg_Type_stbsp__context,
     sglg_Type_Int,
     sglg_Type_File,
     sglg_Type_Key,
@@ -68,6 +69,7 @@ static uint64_t sglg_type_to_size(sglg_Type type);
 static sglg_Type sglg_string_to_type(char const *s, uint64_t l);
 
 // Forward declared typedefs
+typedef char * STBSP_SPRINTFCB ( char * buf , void * user , int len ) ;
 typedef int Int ;
 typedef Int Bool ;
 typedef void Void ;
@@ -96,6 +98,7 @@ struct Internal_Push_Info;
 struct String;
 struct String_To_Int_Result;
 struct String_To_Float_Result;
+struct stbsp__context;
 struct File;
 enum Key : Int;
 
@@ -179,6 +182,21 @@ int string_copy(char const * dst , char * src );
 int string_copy(char * dst , char * src , int len );
 char to_lower(char a );
 char to_upper(char a );
+int stbsp_vsprintf(char * buf , char const * fmt , va_list va );
+int stbsp_vsnprintf(char * buf , int count , char const * fmt , va_list va );
+int stbsp_sprintf(char * buf , char const * fmt , ... );
+int stbsp_snprintf(char * buf , int count , char const * fmt , ... );
+int stbsp_vsprintfcb(STBSP_SPRINTFCB * callback , void * user , char * buf , char const * fmt , va_list va );
+void stbsp_set_separators(char comma , char period );
+ static int32_t stbsp__real_to_str(char const * * start , uint32_t * len , char * out , int32_t * decimal_pos , double value , uint32_t frac_digits );
+ static int32_t stbsp__real_to_parts(int64_t * bits , int32_t * expo , double value );
+void stbsp_set_separators(char pcomma , char pperiod );
+int stbsp_vsprintfcb(STBSP_SPRINTFCB * callback , void * user , char * buf , char const * fmt , va_list va );
+ static char* stbsp__clamp_callback(char * buf , void * user , int len );
+int stbsp_vsnprintf(char * buf , int count , char const * fmt , va_list va );
+int stbsp_snprintf(char * buf , int count , char const * fmt , ... );
+int stbsp_vsprintf(char * buf , char const * fmt , va_list va );
+ static int32_t stbsp__real_to_parts(int64_t * bits , int32_t * expo , double value );
  static U32 safe_truncate_size_64(U64 v );
  static Void zero(Void * m , U64 s );
  static Void copy(Void * dst , Void * src , U64 size );

@@ -200,6 +200,7 @@ static uint64_t sglg_type_to_size(sglg_Type type) {
         case sglg_Type_String: { return(sizeof(String)); } break;
         case sglg_Type_String_To_Int_Result: { return(sizeof(String_To_Int_Result)); } break;
         case sglg_Type_String_To_Float_Result: { return(sizeof(String_To_Float_Result)); } break;
+        case sglg_Type_stbsp__context: { return(sizeof(stbsp__context)); } break;
         case sglg_Type_File: { return(sizeof(File)); } break;
         case sglg_Type_Key: { return(sizeof(Key)); } break;
         case sglg_Type_Platform_Callbacks: { return(sizeof(Platform_Callbacks)); } break;
@@ -238,6 +239,7 @@ static sglg_Type sglg_string_to_type(char const *s, uint64_t l) {
     else if(sgl_generated_string_compare("String", 6, s, l)) { return(sglg_Type_String); }
     else if(sgl_generated_string_compare("String_To_Int_Result", 20, s, l)) { return(sglg_Type_String_To_Int_Result); }
     else if(sgl_generated_string_compare("String_To_Float_Result", 22, s, l)) { return(sglg_Type_String_To_Float_Result); }
+    else if(sgl_generated_string_compare("stbsp__context", 14, s, l)) { return(sglg_Type_stbsp__context); }
     else if(sgl_generated_string_compare("File", 4, s, l)) { return(sglg_Type_File); }
     else if(sgl_generated_string_compare("Key", 3, s, l)) { return(sglg_Type_Key); }
     else if(sgl_generated_string_compare("Platform_Callbacks", 18, s, l)) { return(sglg_Type_Platform_Callbacks); }

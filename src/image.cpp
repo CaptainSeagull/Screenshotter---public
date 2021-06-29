@@ -3,11 +3,7 @@
 
 // From: https://en.wikipedia.org/wiki/BMP_file_format#Bitmap_file_header and https://www.fileformat.info/format/bmp/egff.htm
 
-struct Image {
-    Int width;
-    Int height;
-    U32 *pixels;
-};
+#include "image.h"
 
 #pragma pack(push, 1)
 struct Bitmap_Header {
@@ -34,15 +30,7 @@ struct Bitmap_Header {
     U32 colours_important;
 };
 #pragma pack(pop)
-
-internal U32
-safe_truncate_size_64(U64 v) {
-    ASSERT(v <= 0xFFFFFFFF);
-    U32 res = (U32)v;
-
-    return(res);
-}
-
+#if 0
 internal Bool
 write_file(String fname, U8 *data, U64 size) {
     // TODO: Win32 only
@@ -50,7 +38,7 @@ write_file(String fname, U8 *data, U64 size) {
 
     ASSERT(fname.len < 1024);
     Char buf[1024] = {};
-    memcpy(buf, fname.e, fname.len);
+    copy(buf, fname.e, fname.len);
 
     HANDLE fhandle = CreateFileA(buf, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, 0, CREATE_ALWAYS, 0, 0);
     if(fhandle != INVALID_HANDLE_VALUE) {
@@ -75,9 +63,9 @@ write_file(String fname, U8 *data, U64 size) {
 
     return(res);
 }
-
+#endif
 internal Void
-write_image_to_disk(Memory *memory, Image *image, String file_name) {
+write_image_to_disk(API *api, Memory *memory, Image *image, String file_name) {
     U64 output_pixel_size = image->width * image->height * sizeof(U32); // TODO: Should this not be sizeof U32...?
 
     Bitmap_Header header = {};
@@ -94,26 +82,27 @@ write_image_to_disk(Memory *memory, Image *image, String file_name) {
 
     U64 to_write_size = sizeof(Bitmap_Header) + output_pixel_size;
     U8 *to_write = (U8 *)memory_push(memory, Memory_Index_temp, to_write_size);
-    memcpy(to_write, &header, sizeof(header));
-    memcpy(to_write + sizeof(header), image->pixels, output_pixel_size);
+    copy(to_write, &header, sizeof(header));
+    copy(to_write + sizeof(header), image->pixels, output_pixel_size);
 
-    Bool success = write_file(file_name, to_write, to_write_size);
+    Bool success = api->cb.write_file(memory, file_name, to_write, to_write_size);
     ASSERT(success);
 
     memory_pop(memory, to_write);
 }
-#if 0
-Image load_image(Memory *memory, String file_name) {
+
+Image load_image(API *api, String file_name) {
+    Memory *memory = api->memory;
+
     Image img = {};
 
-    File raw_bitmap = read_file(memory, Memory_Index_temp, file_name, false);
+    File raw_bitmap = api->cb.read_file(memory, Memory_Index_temp, file_name, false);
 
     ASSERT(raw_bitmap.size > 0);
     if(raw_bitmap.size > 0) {
         Bitmap_Header *header = (Bitmap_Header *)raw_bitmap.e;
         ASSERT((header->file_type == 0x4D42) &&
-               (header->planes == 1) &&
-               (header->compression == 0));
+               (header->planes == 1));
 
         Void *data_start = (U8 *)raw_bitmap.e + header->bitmap_offset;
 
@@ -124,14 +113,14 @@ Image load_image(Memory *memory, String file_name) {
         img.pixels = (U32 *)bitmap_memory;
 
         switch(header->bits_per_pixel) {
-            case 32: { memcpy(img.pixels, data_start, raw_bitmap.size - header->bitmap_offset);  } break;
+            case 32: { copy(img.pixels, data_start, raw_bitmap.size - header->bitmap_offset);  } break;
             case 24: {
                 U8 *src_at = (U8 *)data_start;
                 U32 *dst_at = (U32 *)img.pixels;
                 for(U64 pixel_i = 0; (pixel_i < raw_bitmap.size - header->bitmap_offset); pixel_i += 3) {
-                    U8 *r = src_at + 0;
-                    U8 *g = src_at + 1;
-                    U8 *b = src_at + 2;
+                    U8 *r = &src_at[0];
+                    U8 *g = &src_at[1];
+                    U8 *b = &src_at[2];
 
                     *dst_at = (0xFF << 24) | (*b << 16) | (*g << 8) | (*r << 0);
                     dst_at += 1;
@@ -146,4 +135,3 @@ Image load_image(Memory *memory, String file_name) {
 
     return(img);
 }
-#endif

@@ -51,7 +51,7 @@ if "%RELEASE_FLAG%"=="true" (
 IF NOT EXIST "build" mkdir "build"
 
 pushd "tools"
-mirror.exe ../src/main.cpp ../src/platform_win32.cpp
+mirror.exe ../src/main.cpp ../src/platform_win32.cpp ../src/libs.cpp
 popd
 
 echo Building Screenshotter

@@ -1,5 +1,7 @@
 // Move stuff mirror doesn't currently support in here.
 
+// TODO: Now mirror works with stb_truetype can I get rid of this separate file?
+
 #include "common.h"
 #include "image.h"
 
@@ -7,7 +9,7 @@
 
 void *my_malloc(uint64_t size);
 void my_free(void *d);
-
+#define STBTT_STATIC
 #define STB_TRUETYPE_IMPLEMENTATION
 #define STBTT_malloc(x,u) ((void)(u),my_malloc(x))
 #define STBTT_free(x,u)   ((void)(u),my_free(x))
@@ -17,6 +19,8 @@ void my_free(void *d);
     #define STBTT_assert(exp) do { if(!(exp)) {*(uint64_t volatile *)0 = 0; } } while(0)
 #endif
 #include "../shared/stb_truetype.h"
+
+#include "libs_generated.h"
 
 internal Image_Letter
 make_letter(stbtt_fontinfo *font, Char ch) {
@@ -73,3 +77,5 @@ create_font_data(API *api) {
 
     return(font_images);
 }
+
+//#include "libs_generated.cpp"

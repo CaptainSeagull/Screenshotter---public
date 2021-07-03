@@ -10,9 +10,23 @@
 #define LANE_WIDTH 4 // TODO: Mirror isn't handling this being different correctly.
 #include "../shared/lane/lane.cpp"
 
+void *my_malloc(uint64_t size);
+void my_free(void *d);
+#define STBTT_STATIC
+#define STB_TRUETYPE_IMPLEMENTATION
+#define STBTT_malloc(x,u) ((void)(u),my_malloc(x))
+#define STBTT_free(x,u)   ((void)(u),my_free(x))
+#define STBTT_assert(exp) { }
+#if ALLOW_ASSERTS
+    #undef STBTT_assert
+    #define STBTT_assert(exp) do { if(!(exp)) {*(uint64_t volatile *)0 = 0; } } while(0)
+#endif
+#include "../shared/stb_truetype.h"
+
 #include "main_generated.h"
 #include "renderer.h"
 #include "renderer.cpp"
+#include "libs.cpp"
 
 struct DLL_Data {
     Renderer renderer;

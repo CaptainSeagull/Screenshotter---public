@@ -221,6 +221,10 @@ static uint64_t sglg_type_to_size(sglg_Type type) {
         case sglg_Type_Lane_V3: { return(sizeof(Lane_V3)); } break;
         case sglg_Type_Lane_V4: { return(sizeof(Lane_V4)); } break;
         case sglg_Type_Lane_M2x2: { return(sizeof(Lane_M2x2)); } break;
+        case sglg_Type_stbtt_pack_context: { return(sizeof(stbtt_pack_context)); } break;
+        case sglg_Type_stbtt_fontinfo: { return(sizeof(stbtt_fontinfo)); } break;
+        case sglg_Type_stbrp_rect: { return(sizeof(stbrp_rect)); } break;
+        case sglg_Type_stbtt_kerningentry: { return(sizeof(stbtt_kerningentry)); } break;
         case sglg_Type_V2u: { return(sizeof(V2u)); } break;
         case sglg_Type_Rect: { return(sizeof(Rect)); } break;
         case sglg_Type_Image_Rect: { return(sizeof(Image_Rect)); } break;
@@ -262,6 +266,12 @@ static sglg_Type sglg_string_to_type(char const *s, uint64_t l) {
     else if(sgl_generated_string_compare("Lane_V3", 7, s, l)) { return(sglg_Type_Lane_V3); }
     else if(sgl_generated_string_compare("Lane_V4", 7, s, l)) { return(sglg_Type_Lane_V4); }
     else if(sgl_generated_string_compare("Lane_M2x2", 9, s, l)) { return(sglg_Type_Lane_M2x2); }
+    else if(sgl_generated_string_compare("stbtt_pack_context", 18, s, l)) { return(sglg_Type_stbtt_pack_context); }
+    else if(sgl_generated_string_compare("stbtt_fontinfo", 14, s, l)) { return(sglg_Type_stbtt_fontinfo); }
+    else if(sgl_generated_string_compare("stbrp_rect", 10, s, l)) { return(sglg_Type_stbrp_rect); }
+    else if(sgl_generated_string_compare("stbtt_pack_context", 18, s, l)) { return(sglg_Type_stbtt_pack_context); }
+    else if(sgl_generated_string_compare("stbtt_fontinfo", 14, s, l)) { return(sglg_Type_stbtt_fontinfo); }
+    else if(sgl_generated_string_compare("stbtt_kerningentry", 18, s, l)) { return(sglg_Type_stbtt_kerningentry); }
     else if(sgl_generated_string_compare("V2u", 3, s, l)) { return(sglg_Type_V2u); }
     else if(sgl_generated_string_compare("Rect", 4, s, l)) { return(sglg_Type_Rect); }
     else if(sgl_generated_string_compare("Image_Rect", 10, s, l)) { return(sglg_Type_Image_Rect); }

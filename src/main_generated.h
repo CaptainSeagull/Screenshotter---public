@@ -52,6 +52,10 @@ enum sglg_Type {
     sglg_Type_Lane_V3,
     sglg_Type_Lane_V4,
     sglg_Type_Lane_M2x2,
+    sglg_Type_stbtt_pack_context,
+    sglg_Type_stbtt_fontinfo,
+    sglg_Type_stbrp_rect,
+    sglg_Type_stbtt_kerningentry,
     sglg_Type_V2u,
     sglg_Type_Rect,
     sglg_Type_Image_Rect,
@@ -90,6 +94,15 @@ typedef float F32 ;
 typedef double F64 ;
 typedef __m128i Lane_U32_Internal ;
 typedef __m128 Lane_F32_Internal ;
+typedef unsigned char stbtt_uint8 ;
+typedef signed char stbtt_int8 ;
+typedef unsigned short stbtt_uint16 ;
+typedef signed short stbtt_int16 ;
+typedef unsigned int stbtt_uint32 ;
+typedef signed int stbtt_int32 ;
+typedef char stbtt__check_size32 [ sizeof ( stbtt_int32 ) == 4 ? 1 : - 1 ] ;
+typedef char stbtt__check_size16 [ sizeof ( stbtt_int16 ) == 2 ? 1 : - 1 ] ;
+typedef int stbtt__test_oversample_pow2 [ ( 8 & ( 8 - 1 ) ) == 0 ? 1 : - 1 ] ;
 
 // Forward declared structs
 
@@ -122,6 +135,12 @@ union Lane_V2;
 union Lane_V3;
 union Lane_V4;
 struct Lane_M2x2;
+struct stbtt_pack_context;
+struct stbtt_fontinfo;
+struct stbrp_rect;
+struct stbtt_pack_context;
+struct stbtt_fontinfo;
+struct stbtt_kerningentry;
 struct V2u;
 struct Rect;
 struct Image_Rect;
@@ -771,6 +790,67 @@ float square_root(float a );
  static Lane_F32 maxf32(Lane_F32 a , Lane_F32 b );
  static Lane_F32 minf32(Lane_F32 a , Lane_F32 b );
  static Lane_F32 gather_f32_internal(void * ptr , uint64_t stride , Lane_U32 indices );
+void* my_malloc(uint64_t size );
+void my_free(void * d );
+ static void stbtt_GetScaledFontVMetrics(const stbtt_uint8 * fontdata , int index , float size , float * ascent , float * descent , float * lineGap );
+ static int stbtt_GetNumberOfFonts(const stbtt_uint8 * data );
+ static int stbtt_GetFontOffsetForIndex(const stbtt_uint8 * data , int index );
+ static int stbtt_FindGlyphIndex(const stbtt_fontinfo * info , int unicode_codepoint );
+ static float stbtt_ScaleForPixelHeight(const stbtt_fontinfo * info , float pixels );
+ static float stbtt_ScaleForMappingEmToPixels(const stbtt_fontinfo * info , float pixels );
+ static void stbtt_GetFontVMetrics(const stbtt_fontinfo * info , int * ascent , int * descent , int * lineGap );
+ static int stbtt_GetFontVMetricsOS2(const stbtt_fontinfo * info , int * typoAscent , int * typoDescent , int * typoLineGap );
+ static void stbtt_GetFontBoundingBox(const stbtt_fontinfo * info , int * x0 , int * y0 , int * x1 , int * y1 );
+ static void stbtt_GetCodepointHMetrics(const stbtt_fontinfo * info , int codepoint , int * advanceWidth , int * leftSideBearing );
+ static int stbtt_GetCodepointKernAdvance(const stbtt_fontinfo * info , int ch1 , int ch2 );
+ static int stbtt_GetCodepointBox(const stbtt_fontinfo * info , int codepoint , int * x0 , int * y0 , int * x1 , int * y1 );
+ static void stbtt_GetGlyphHMetrics(const stbtt_fontinfo * info , int glyph_index , int * advanceWidth , int * leftSideBearing );
+ static int stbtt_GetGlyphKernAdvance(const stbtt_fontinfo * info , int glyph1 , int glyph2 );
+ static int stbtt_GetGlyphBox(const stbtt_fontinfo * info , int glyph_index , int * x0 , int * y0 , int * x1 , int * y1 );
+ static int stbtt_GetKerningTableLength(const stbtt_fontinfo * info );
+ static int stbtt_IsGlyphEmpty(const stbtt_fontinfo * info , int glyph_index );
+ static int stbtt_GetCodepointSVG(const stbtt_fontinfo * info , int unicode_codepoint , const char * * svg );
+ static int stbtt_GetGlyphSVG(const stbtt_fontinfo * info , int gl , const char * * svg );
+ static void stbtt_FreeBitmap(stbtt_uint8 * bitmap , void * userdata );
+ static stbtt_uint8* stbtt_GetCodepointBitmap(const stbtt_fontinfo * info , float scale_x , float scale_y , int codepoint , int * width , int * height , int * xoff , int * yoff );
+ static stbtt_uint8* stbtt_GetCodepointBitmapSubpixel(const stbtt_fontinfo * info , float scale_x , float scale_y , float shift_x , float shift_y , int codepoint , int * width , int * height , int * xoff , int * yoff );
+ static void stbtt_MakeCodepointBitmap(const stbtt_fontinfo * info , stbtt_uint8 * output , int out_w , int out_h , int out_stride , float scale_x , float scale_y , int codepoint );
+ static void stbtt_MakeCodepointBitmapSubpixel(const stbtt_fontinfo * info , stbtt_uint8 * output , int out_w , int out_h , int out_stride , float scale_x , float scale_y , float shift_x , float shift_y , int codepoint );
+ static void stbtt_MakeCodepointBitmapSubpixelPrefilter(const stbtt_fontinfo * info , stbtt_uint8 * output , int out_w , int out_h , int out_stride , float scale_x , float scale_y , float shift_x , float shift_y , int oversample_x , int oversample_y , float * sub_x , float * sub_y , int codepoint );
+ static void stbtt_GetCodepointBitmapBox(const stbtt_fontinfo * font , int codepoint , float scale_x , float scale_y , int * ix0 , int * iy0 , int * ix1 , int * iy1 );
+ static void stbtt_GetCodepointBitmapBoxSubpixel(const stbtt_fontinfo * font , int codepoint , float scale_x , float scale_y , float shift_x , float shift_y , int * ix0 , int * iy0 , int * ix1 , int * iy1 );
+ static stbtt_uint8* stbtt_GetGlyphBitmap(const stbtt_fontinfo * info , float scale_x , float scale_y , int glyph , int * width , int * height , int * xoff , int * yoff );
+ static stbtt_uint8* stbtt_GetGlyphBitmapSubpixel(const stbtt_fontinfo * info , float scale_x , float scale_y , float shift_x , float shift_y , int glyph , int * width , int * height , int * xoff , int * yoff );
+ static void stbtt_MakeGlyphBitmap(const stbtt_fontinfo * info , stbtt_uint8 * output , int out_w , int out_h , int out_stride , float scale_x , float scale_y , int glyph );
+ static void stbtt_MakeGlyphBitmapSubpixel(const stbtt_fontinfo * info , stbtt_uint8 * output , int out_w , int out_h , int out_stride , float scale_x , float scale_y , float shift_x , float shift_y , int glyph );
+ static void stbtt_MakeGlyphBitmapSubpixelPrefilter(const stbtt_fontinfo * info , stbtt_uint8 * output , int out_w , int out_h , int out_stride , float scale_x , float scale_y , float shift_x , float shift_y , int oversample_x , int oversample_y , float * sub_x , float * sub_y , int glyph );
+ static void stbtt_GetGlyphBitmapBox(const stbtt_fontinfo * font , int glyph , float scale_x , float scale_y , int * ix0 , int * iy0 , int * ix1 , int * iy1 );
+ static void stbtt_GetGlyphBitmapBoxSubpixel(const stbtt_fontinfo * font , int glyph , float scale_x , float scale_y , float shift_x , float shift_y , int * ix0 , int * iy0 , int * ix1 , int * iy1 );
+ static void stbtt_FreeSDF(stbtt_uint8 * bitmap , void * userdata );
+ static stbtt_uint8* stbtt_GetGlyphSDF(const stbtt_fontinfo * info , float scale , int glyph , int padding , stbtt_uint8 onedge_value , float pixel_dist_scale , int * width , int * height , int * xoff , int * yoff );
+ static stbtt_uint8* stbtt_GetCodepointSDF(const stbtt_fontinfo * info , float scale , int codepoint , int padding , stbtt_uint8 onedge_value , float pixel_dist_scale , int * width , int * height , int * xoff , int * yoff );
+ static int stbtt_FindMatchingFont(const stbtt_uint8 * fontdata , const char * name , int flags );
+ static int stbtt_CompareUTF8toUTF16_bigendian(const char * s1 , int len1 , const char * s2 , int len2 );
+ static stbtt_uint16 ttUSHORT(stbtt_uint8 * p );
+ static stbtt_int16 ttSHORT(stbtt_uint8 * p );
+ static stbtt_uint32 ttULONG(stbtt_uint8 * p );
+ static stbtt_int32 ttLONG(stbtt_uint8 * p );
+ static int stbtt__isfont(stbtt_uint8 * font );
+ static stbtt_uint32 stbtt__find_table(stbtt_uint8 * data , stbtt_uint32 fontstart , const char * tag );
+ static int stbtt_GetFontOffsetForIndex_internal(stbtt_uint8 * font_collection , int index );
+ static int stbtt_GetNumberOfFonts_internal(stbtt_uint8 * font_collection );
+ static int stbtt_FindGlyphIndex(const stbtt_fontinfo * info , int unicode_codepoint );
+ static int stbtt__GetGlyfOffset(const stbtt_fontinfo * info , int glyph_index );
+ static int stbtt__GetGlyphInfoT2(const stbtt_fontinfo * info , int glyph_index , int * x0 , int * y0 , int * x1 , int * y1 );
+ static int stbtt_GetGlyphBox(const stbtt_fontinfo * info , int glyph_index , int * x0 , int * y0 , int * x1 , int * y1 );
+ static int stbtt_GetCodepointBox(const stbtt_fontinfo * info , int codepoint , int * x0 , int * y0 , int * x1 , int * y1 );
+ static int stbtt_IsGlyphEmpty(const stbtt_fontinfo * info , int glyph_index );
+ static int stbtt__GetGlyphInfoT2(const stbtt_fontinfo * info , int glyph_index , int * x0 , int * y0 , int * x1 , int * y1 );
+ static void stbtt_GetGlyphHMetrics(const stbtt_fontinfo * info , int glyph_index , int * advanceWidth , int * leftSideBearing );
+ static int stbtt_GetKerningTableLength(const stbtt_fontinfo * info );
+ static int stbtt__GetGlyphKernInfoAdvance(const stbtt_fontinfo * info , int glyph1 , int glyph2 );
+ static stbtt_int32 stbtt__GetCoverageIndex(stbtt_uint8 * coverageTable , int glyph );
+ static stbtt_int32 stbtt__GetGlyphClass(stbtt_uint8 * classDefTable , int glyph );
  static V2u v2u(V2 v );
  static V2u v2u(U32 x , U32 y );
  static V2 get_position(Render_Entity * render_entity );
@@ -795,6 +875,7 @@ float square_root(float a );
  static Void render_node(Render_Entity * render_entity , Renderer * renderer , Bitmap * screen_bitmap , V2 input_offset );
  static Void render_node_and_siblings(Render_Entity * render_entity , Renderer * renderer , Bitmap * screen_bitmap , V2 offset );
  static Void render(Renderer * renderer , Bitmap * screen_bitmap );
+Image_Letter* create_font_data(API * api );
 extern "C" Void init_platform_settings(Settings * settings );
 Image_Letter* create_font_data(API * api );
  static Void setup(API * api , DLL_Data * data , Renderer * renderer );

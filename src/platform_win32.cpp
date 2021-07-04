@@ -129,10 +129,19 @@ win32_safe_div(F32 a, F32 b) {
 }
 
 internal Void
-win32_update_window(HDC dc, RECT  *wnd_rect, Void *bitmap_memory, BITMAPINFO *bitmap_info,
+win32_update_window(Memory *memory, HDC dc, RECT  *wnd_rect, Void *input_bitmap_memory, BITMAPINFO *bitmap_info,
                     Int bitmap_width, Int bitmap_height) {
     Int wnd_w = wnd_rect->right - wnd_rect->left;
     Int wnd_h = wnd_rect->bottom - wnd_rect->top;
+
+    Void *bitmap_memory = input_bitmap_memory;
+
+    Bool should_flip_image = false;
+
+    if(should_flip_image) {
+        bitmap_memory = memory_push(memory, Memory_Index_temp, bitmap_width * bitmap_height * 4);
+        flip_image(bitmap_memory, bitmap_memory, bitmap_width, bitmap_height);
+    }
 
 #if USE_OPENGL_WINDOW
 
@@ -202,6 +211,10 @@ win32_update_window(HDC dc, RECT  *wnd_rect, Void *bitmap_memory, BITMAPINFO *bi
                   0, 0, wnd_w, wnd_h,
                   bitmap_memory, bitmap_info, DIB_RGB_COLORS, SRCCOPY);
 #endif
+
+    if(should_flip_image) {
+        memory_pop(memory, bitmap_memory);
+    }
 }
 
 // TODO: Mirror doesn't like CALLACK
@@ -245,8 +258,8 @@ win32_window_proc(HWND wnd, UINT msg, WPARAM w_param, LPARAM l_param) {
             HDC dc = BeginPaint(wnd, &ps);
             RECT cr;
             GetClientRect(wnd, &cr);
-            win32_update_window(dc, &cr, global_api->screen_bitmap.memory, &global_bmp_info,
-                                global_api->screen_bitmap.width, global_api->screen_bitmap.height);
+            //win32_update_window(dc, &cr, global_api->screen_bitmap.memory, &global_bmp_info,
+            //                    global_api->screen_bitmap.width, global_api->screen_bitmap.height);
             EndPaint(wnd, &ps);
         } break;
 
@@ -917,7 +930,7 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
                                 if(!api.init) { api.screen_image_size_change = false; }
                                 api.init = false;
 
-                                win32_update_window(dc, &cr, api.screen_bitmap.memory, &global_bmp_info,
+                                win32_update_window(&memory, dc, &cr, api.screen_bitmap.memory, &global_bmp_info,
                                                     api.screen_bitmap.width, api.screen_bitmap.height);
 
                                 ReleaseDC(wnd, dc);

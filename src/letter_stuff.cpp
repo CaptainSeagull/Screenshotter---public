@@ -1,7 +1,3 @@
-// Move stuff mirror doesn't currently support in here.
-
-#define FLIP_IMAGE 1
-
 internal Image_Letter
 make_letter(Memory *memory, stbtt_fontinfo *font, Char ch) {
     Image_Letter res = {};
@@ -13,6 +9,8 @@ make_letter(Memory *memory, stbtt_fontinfo *font, Char ch) {
         res.img.height = h;
         res.img.pixels = (U32 *)memory_push(memory, Memory_Index_permanent, w * h * 4);
         ASSERT(res.img.pixels);
+
+#define FLIP_IMAGE 1
 
 #if FLIP_IMAGE
         //res.off_x = off_x; // TODO: Do we care about this?

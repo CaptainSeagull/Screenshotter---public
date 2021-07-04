@@ -107,6 +107,7 @@ Image load_image(API *api, String file_name) {
         Void *data_start = (U8 *)raw_bitmap.e + header->bitmap_offset;
 
         Void *bitmap_memory = memory_push(memory, Memory_Index_permanent, header->width * header->height * sizeof(U32));
+        ASSERT(bitmap_memory);
 
         img.width = header->width;
         img.height = header->height;

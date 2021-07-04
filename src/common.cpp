@@ -41,4 +41,22 @@ struct Config {
     Int amount_to_sleep;
 };
 
+internal Void
+flip_image(Void *src_pixels, Void *dst_pixels, Int width, Int height) {
+    Int pitch = width * 4;
+    U8 *src_row = (U8 * )src_pixels;
+    U8 *dst_row = (U8 * )dst_pixels + (height - 1) * pitch;
+
+    for(U32 y = 0; (y < height); ++y) {
+        U32 *src = (U32 *)src_row;
+        U32 *dst = (U32 *)dst_row;
+        for(U32 x = 0; (x < width); ++x) {
+            *dst++ = *src++;
+        }
+
+        src_row += pitch;
+        dst_row -= pitch;
+    }
+}
+
 #include "image.cpp"

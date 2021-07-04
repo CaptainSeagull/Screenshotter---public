@@ -80,26 +80,30 @@ setup(API *api, DLL_Data *data, Renderer *renderer) {
 
     }
 
-    Image img = load_image(api, "arrow3.bmp");
-    U64 id_a = push_image(renderer, img);
+    Image test_img = load_image(api, "test.bmp");
+    U64 test_id = push_image(renderer, test_img);
+    push_image_rect(renderer, &yellow_window,
+                    0, 0, 128, 128,
+                    0, 0, 0, 0,
+                    test_id);
 
     Int start_x = 100;
     push_image_rect(renderer, &yellow_window,
                     start_x, 0, 32, 32,
                     64, 64, 64, 64,
-                    id_a);
+                    arrow_id);
     push_image_rect(renderer, &yellow_window,
                     start_x + 32, 0, 64, 64,
                     64, 64, 64, 64,
-                    id_a);
+                    arrow_id);
     push_image_rect(renderer, &yellow_window,
                     start_x + 32 + 64, 0, 32, 64,
                     64, 64, 64, 64,
-                    id_a);
+                    arrow_id);
     push_image_rect(renderer, &yellow_window,
                     start_x + 128, 0, 64, 32,
                     64, 64, 64, 64,
-                    id_a);
+                    arrow_id);
 #endif
 }
 

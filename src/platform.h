@@ -97,6 +97,7 @@ struct Bitmap {
 struct Settings {
     U64 dll_data_struct_size;
     Int thread_count;
+
     Int window_width;
     Int window_height;
 };

@@ -1,7 +1,5 @@
 // Move stuff mirror doesn't currently support in here.
 
-// TODO: Now mirror works with stb_truetype can I get rid of this separate file?
-
 internal Image_Letter
 make_letter(stbtt_fontinfo *font, Char ch) {
     Image_Letter res = {};
@@ -12,7 +10,7 @@ make_letter(stbtt_fontinfo *font, Char ch) {
 #if 1
         res.img.width = w;
         res.img.height = h;
-        res.img.pixels = (U32 *)my_malloc(w * h * 4);
+        res.img.pixels = (U32 *)my_malloc(w * h * 4); // TODO: Replace with memory_push now it's in the same compilation unit.
         res.off_x = off_x;
         res.off_y = off_y;
 #else
@@ -40,7 +38,7 @@ make_letter(stbtt_fontinfo *font, Char ch) {
     return(res);
 }
 
-Image_Letter *
+internal Image_Letter *
 create_font_data(API *api) {
     Memory *memory = api->memory;
 

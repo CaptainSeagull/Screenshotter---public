@@ -10,8 +10,8 @@
 #define LANE_WIDTH 4 // TODO: Mirror isn't handling this being different correctly.
 #include "../shared/lane/lane.cpp"
 
-void *my_malloc(uint64_t size);
-void my_free(void *d);
+internal void *my_malloc(uint64_t size);
+internal void my_free(void *d);
 #define STBTT_STATIC
 #define STB_TRUETYPE_IMPLEMENTATION
 #define STBTT_malloc(x,u) ((void)(u),my_malloc(x))
@@ -26,7 +26,7 @@ void my_free(void *d);
 #include "main_generated.h"
 #include "renderer.h"
 #include "renderer.cpp"
-#include "libs.cpp"
+#include "letter_stuff.cpp"
 
 struct DLL_Data {
     Renderer renderer;
@@ -40,8 +40,6 @@ init_platform_settings(Settings *settings) {
     settings->window_width = 640;
     settings->window_height = 480;
 }
-
-Image_Letter *create_font_data(API *api);
 
 internal Void
 setup(API *api, DLL_Data *data, Renderer *renderer) {
@@ -137,7 +135,7 @@ _DllMainCRTStartup(void) {
 }
 
 // Some stuff which library code can use.
-void *my_malloc(uint64_t size) { return memory_push(global_api->memory, Memory_Index_malloc_nofree_size, size); }
-void my_free(void *d) { /* Do nothing... */ }
+internal void *my_malloc(uint64_t size) { return memory_push(global_api->memory, Memory_Index_malloc_nofree_size, size); }
+internal void my_free(void *d) { /* Do nothing... */ }
 
 #include "main_generated.cpp"

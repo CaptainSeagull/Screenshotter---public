@@ -10,8 +10,9 @@
 #define LANE_WIDTH 4 // TODO: Mirror isn't handling this being different correctly.
 #include "../shared/lane/lane.cpp"
 
-internal void *my_malloc(uint64_t size);
-internal void my_free(void *d);
+internal API *global_api;
+internal void *my_malloc(uint64_t size) { return memory_push(global_api->memory, Memory_Index_malloc_nofree_size, size); }
+internal void my_free(void *d) { /* Do nothing... */ }
 #define STBTT_STATIC
 #define STB_TRUETYPE_IMPLEMENTATION
 #define STBTT_malloc(x,u) ((void)(u),my_malloc(x))
@@ -19,7 +20,7 @@ internal void my_free(void *d);
 #define STBTT_assert(exp) { }
 #if ALLOW_ASSERTS
     #undef STBTT_assert
-    #define STBTT_assert(exp) do { if(!(exp)) {*(uint64_t volatile *)0 = 0; } } while(0)
+    #define STBTT_assert ASSERT
 #endif
 #include "../shared/stb_truetype.h"
 
@@ -50,6 +51,11 @@ setup(API *api, DLL_Data *data, Renderer *renderer) {
                                                        0, 0, 640, 480,
                                                        255, 255, 255, 255);
 
+#if 0
+    Image_Letter *font_images = create_font_data(api);
+    push_font(renderer, font_images);
+    push_word(renderer, &white_window, "A.a,g", font_images, 100, 100, 40);
+#else
     Image image_arrow = load_image(api, "arrow2.bmp");
     U64 arrow_id = push_image(renderer, image_arrow);
 
@@ -62,11 +68,11 @@ setup(API *api, DLL_Data *data, Renderer *renderer) {
                                                         255, 255, 0, 0);
     data->yellow_window_id = yellow_window->id;
 
-    Int height = 20;
-    Int running_y = 0;
+    Int height = 30;
+    Int running_y = 10;
     for(Int wnd_i = 0; (wnd_i < api->top_level_window_titles_count); ++wnd_i) {
         if(api->top_level_window_titles[wnd_i].len > 0) {
-            push_word(renderer, &yellow_window,
+            push_word(renderer, &white_window,
                       api->top_level_window_titles[wnd_i],
                       font_images, 0, running_y, height);
             running_y += (height + 5);
@@ -94,9 +100,9 @@ setup(API *api, DLL_Data *data, Renderer *renderer) {
                     start_x + 128, 0, 64, 32,
                     64, 64, 64, 64,
                     id_a);
+#endif
 }
 
-internal API *global_api;
 extern "C" Void
 handle_input_and_render(API *api) {
     global_api = api;
@@ -133,9 +139,5 @@ void __stdcall
 _DllMainCRTStartup(void) {
     // TODO: Windows only... I don't think this needs to do anything
 }
-
-// Some stuff which library code can use.
-internal void *my_malloc(uint64_t size) { return memory_push(global_api->memory, Memory_Index_malloc_nofree_size, size); }
-internal void my_free(void *d) { /* Do nothing... */ }
 
 #include "main_generated.cpp"

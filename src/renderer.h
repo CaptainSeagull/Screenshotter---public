@@ -42,6 +42,10 @@ struct Render_Image {
     // TODO: Maybe an enum for how to render for scaling / tiling, etc...
 };
 
+struct Internal {
+    U64 entity_id_count;
+};
+
 struct Renderer {
     Render_Entity *root;
     Memory *memory;
@@ -49,4 +53,6 @@ struct Renderer {
     Render_Image images[256];
     Int image_count;
     U64 letter_ids[128];
+
+    Internal _internal;
 };

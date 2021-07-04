@@ -1,6 +1,4 @@
 
-internal_global U64 global_entity_id = 1; // Start at 1 so we know 0 is invalid.
-
 internal V2u
 v2u(V2 v) {
     V2u r = { (U32)v.x, (U32)v.y };
@@ -114,7 +112,7 @@ create_image_rectangle(Int x, Int y, Int width, Int height, Int sprite_x, Int sp
 
 internal U64
 push_image(Renderer *renderer, Image image) {
-    U64 id = global_entity_id++;
+    U64 id = renderer->_internal.entity_id_count++;
     ASSERT(renderer->image_count + 1 < ARRAY_COUNT(renderer->images));
     Render_Image *render_image = &renderer->images[renderer->image_count++];
     render_image->width = image.width;
@@ -144,7 +142,7 @@ push_solid_rectangle(Renderer *renderer, Render_Entity **parent,
 
     Rect *rectangle = (Rect *)render_entity;
     *rectangle = create_rectangle(start_x, start_y, width, height, r, g, b, a);
-    render_entity->id = global_entity_id++;
+    render_entity->id = renderer->_internal.entity_id_count++;
 
     return(render_entity);
 }
@@ -183,6 +181,9 @@ push_word(Renderer *renderer, Render_Entity **parent, String str, Image_Letter *
 
     Int running_x = 0, running_y = 0;
 
+    Render_Image *a_image = find_font_image(renderer, 'A');
+    F32 full_height = a_image->height;
+
     for(Int i = 0; (i < str.len); ++i) {
         if(str.e[i] == '\n') {
             running_x = 0;
@@ -197,7 +198,31 @@ push_word(Renderer *renderer, Render_Entity **parent, String str, Image_Letter *
                 running_x += height;
             } else {
                 Render_Image *image = find_font_image(renderer, c);
+#if 1
 
+                F32 char_pct_height_of_total = (F32)image->height / full_height;
+
+                Int height_to_use = (height * char_pct_height_of_total);
+                Int width_to_use = floor((F32)image->width * ((F32)height_to_use / (F32)image->height)); // TODO: Is this correct?
+
+                push_image_rect(renderer, &render_entity,
+                                running_x, running_y, width_to_use, height_to_use,
+                                0, 0, 0, 0,
+                                renderer->letter_ids[c]);
+
+                running_x += (width_to_use + padding.x + image->off_x);
+
+
+#else
+                push_image_rect(renderer, &render_entity,
+                                running_x, running_y, image->width, image->height,
+                                0, 0, 0, 0,
+                                renderer->letter_ids[c]);
+
+                running_x += (image->width + padding.x + image->off_x);
+#endif
+
+#if 0
                 Int width = floor((F32)image->width * ((F32)height / (F32)image->height)); // TODO: Is this correct?
 
                 push_image_rect(renderer, &render_entity,
@@ -206,6 +231,7 @@ push_word(Renderer *renderer, Render_Entity **parent, String str, Image_Letter *
                                 renderer->letter_ids[c]);
 
                 running_x += (width + padding.x + image->off_x);
+#endif
             }
         }
     }
@@ -225,7 +251,7 @@ push_image_rect(Renderer *renderer, Render_Entity **parent,
     Image_Rect *rectangle = (Image_Rect *)render_entity;
 
     *rectangle = create_image_rectangle(start_x, start_y, width, height, sprite_x, sprite_y, sprite_width, sprite_height, image_id);
-    render_entity->id = global_entity_id++;
+    render_entity->id = renderer->_internal.entity_id_count++;
 
     return(render_entity);
 }
@@ -371,6 +397,8 @@ render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bit
                 F32 pct_w = sprite_width_to_use  / (F32)img_rect->width;
                 F32 pct_h = sprite_height_to_use / (F32)img_rect->height;
 
+                F32 off_y_scaled = (F32)img->off_y * ((F32)img_rect->height / (F32)img->height);
+
                 for(U32 y = 0; (y < img_rect->height); ++y) {
                     for(U32 x = 0; (x < img_rect->width); ++x) {
                         U32 img_x = floor((F32)x * pct_w);
@@ -380,7 +408,7 @@ render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bit
                                                      screen_bitmap->width,
                                                      screen_bitmap->height,
                                                      x + offset.x,
-                                                     y + offset.y);
+                                                     y + offset.y + (off_y_scaled));
                         U32 *bitmap_pixel = image_at(img->pixels,
                                                      img->width,
                                                      img->height,

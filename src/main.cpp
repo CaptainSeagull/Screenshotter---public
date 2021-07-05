@@ -32,6 +32,8 @@ internal void my_free(void *d) { /* Do nothing... */ }
 struct DLL_Data {
     Renderer renderer;
 
+    U64 background_id;
+
     U64 yellow_window_ids[256];
     U32 yellow_window_count;
 };
@@ -50,27 +52,31 @@ setup(API *api, DLL_Data *data, Renderer *renderer) {
     create_renderer(renderer, api->memory);
 
     Render_Entity *white_window = push_solid_rectangle(renderer, &renderer->root,
-                                                       0, 0, 640, 480,
+                                                       0, 0, api->settings.window_width, api->settings.window_height,
                                                        255, 255, 255, 255);
+    data->background_id = white_window->id;
 
     Image_Letter *font_images = create_font_data(api);
     push_font(renderer, font_images);
 
-    Int height = 20;
-    Int running_y = 10;
-    for(Int wnd_i = 0; (wnd_i < api->top_level_window_titles_count); ++wnd_i) {
-        if(api->top_level_window_titles[wnd_i].len > 0) {
-            Render_Entity *yellow_window = push_solid_rectangle(renderer, &white_window,
-                                                                0, running_y, 640, height + 10,
-                                                                255, 255, 0, 0);
-            yellow_window->visible = false;
-            data->yellow_window_ids[data->yellow_window_count++] = yellow_window->id;
+    // Running programs text
+    {
+        Int height = 20;
+        Int running_y = 10;
+        for(Int wnd_i = 0; (wnd_i < api->top_level_window_titles_count); ++wnd_i) {
+            if(api->top_level_window_titles[wnd_i].len > 0) {
+                Render_Entity *yellow_window = push_solid_rectangle(renderer, &white_window,
+                                                                    0, running_y, 640, height + 10,
+                                                                    255, 255, 0, 0);
+                yellow_window->visible = false;
+                data->yellow_window_ids[data->yellow_window_count++] = yellow_window->id;
 
-            push_word(renderer, &yellow_window,
-                      api->top_level_window_titles[wnd_i],
-                      font_images, 10, 5, height);
+                push_word(renderer, &yellow_window,
+                          api->top_level_window_titles[wnd_i],
+                          font_images, 10, 5, height);
 
-            running_y += (height + 10);
+                running_y += (height + 10);
+            }
         }
     }
 
@@ -155,10 +161,15 @@ handle_input_and_render(API *api) {
         setup(api, data, renderer);
     } else {
 
+        // Stretch main window.
+        Render_Entity *white_window = find_render_entity(renderer, data->background_id); ASSERT(white_window);
+        white_window->_Rect.width = api->window_width;
+        white_window->_Rect.height = api->window_height;
+
+        // Yellow highlighting
         for(U32 yellow_window_i = 0; (yellow_window_i < data->yellow_window_count); ++yellow_window_i) {
 
-            Render_Entity *yellow_window_render_entity = find_render_entity(renderer, data->yellow_window_ids[yellow_window_i]);
-            ASSERT(yellow_window_render_entity);
+            Render_Entity *yellow_window_render_entity = find_render_entity(renderer, data->yellow_window_ids[yellow_window_i]); ASSERT(yellow_window_render_entity);
 
             Rect *yellow_window = (Rect *)yellow_window_render_entity;
 
@@ -166,6 +177,7 @@ handle_input_and_render(API *api) {
             if(mouse_x > yellow_window->x && mouse_x < yellow_window->x + yellow_window->width) {
                 if(mouse_y > yellow_window->y && mouse_y < yellow_window->y + yellow_window->height) {
                     yellow_window_render_entity->visible = true;
+                    yellow_window->width = api->window_width;
                 }
             }
         }

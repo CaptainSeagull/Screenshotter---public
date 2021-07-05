@@ -118,8 +118,7 @@ struct API {
     F32 mouse_pos_x;
     F32 mouse_pos_y;
 
-    Int window_width;
-    Int window_height;
+    Int window_width, window_height; // Client size
 
     Bitmap screen_bitmap;
     Bool screen_image_size_change;

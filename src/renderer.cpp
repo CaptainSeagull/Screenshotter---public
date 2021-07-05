@@ -75,6 +75,7 @@ add_child_to_node(Memory *memory, Render_Entity **parent) {
 
 internal Void
 create_renderer(Renderer *renderer, Memory *memory) {
+    ++renderer->_internal.entity_id_count; // Use 0 for invalid
     renderer->memory = memory;
     renderer->root = (Render_Entity * )memory_push(renderer->memory, Memory_Index_renderer, sizeof(Render_Entity));
     ASSERT(renderer->root);

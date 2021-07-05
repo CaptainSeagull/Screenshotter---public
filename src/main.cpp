@@ -50,14 +50,21 @@ setup(API *api, DLL_Data *data, Renderer *renderer) {
     Render_Entity *white_window = push_solid_rectangle(renderer, &renderer->root,
                                                        0, 0, 640, 480,
                                                        255, 255, 255, 255);
+    push_solid_rectangle(renderer, &white_window, 0, 0, 100, 100, 0, 255, 255, 0);
 
 #if 0
+    Void *tmp = memory_push(api->memory, Memory_Index_temp, 128 * 128 * 4);
+    memory_pop(api->memory, tmp);
+
+    Image image_arrow = load_image(api, "arrow2.bmp");
     Image_Letter *font_images = create_font_data(api);
     push_font(renderer, font_images);
     push_word(renderer, &white_window, "A.a,g", font_images, 100, 100, 40);
 #else
     Image image_arrow = load_image(api, "arrow2.bmp");
     U64 arrow_id = push_image(renderer, image_arrow);
+    push_image_rect(renderer, &white_window, 0, 0, 32, 32, 64, 64, 64, 64, arrow_id);
+
 
     Image_Letter *font_images = create_font_data(api);
 
@@ -75,9 +82,8 @@ setup(API *api, DLL_Data *data, Renderer *renderer) {
             push_word(renderer, &white_window,
                       api->top_level_window_titles[wnd_i],
                       font_images, 0, running_y, height);
-            running_y += (height + 5);
+            running_y += (height + 10);
         }
-
     }
 
     Image test_img = load_image(api, "test.bmp");
@@ -114,6 +120,9 @@ handle_input_and_render(API *api) {
     DLL_Data *data = (DLL_Data *)api->dll_data;
 
     Renderer *renderer = &data->renderer;
+
+    Memory_Group *temp_group = get_memory_group(api->memory, Memory_Index_temp);
+    ASSERT(temp_group->used == 0);
 
     Int mouse_x = (Int)(api->mouse_pos_x * (F32)api->window_width);
     Int mouse_y = (Int)((1.0f - api->mouse_pos_y) * (F32)api->window_height);

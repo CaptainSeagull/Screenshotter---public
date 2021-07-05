@@ -136,11 +136,11 @@ win32_update_window(Memory *memory, HDC dc, RECT  *wnd_rect, Void *input_bitmap_
 
     Void *bitmap_memory = input_bitmap_memory;
 
-    Bool should_flip_image = false;
+    Bool should_flip_image = true;
 
     if(should_flip_image) {
         bitmap_memory = memory_push(memory, Memory_Index_temp, bitmap_width * bitmap_height * 4);
-        flip_image(bitmap_memory, bitmap_memory, bitmap_width, bitmap_height);
+        flip_image(bitmap_memory, input_bitmap_memory, bitmap_width, bitmap_height);
     }
 
 #if USE_OPENGL_WINDOW
@@ -508,13 +508,18 @@ win32_screen_capture_thread(void *data) {
     U64 renderer_size = 0;
     U64 malloc_nofree_size = 0;
     U64 font_size = 0;
+    U64 titles_size =  0;
     U64 total_size = get_memory_base_size() + permanent_size + temp_size + internal_temp_size + bitmap_size + renderer_size +
-                     malloc_nofree_size + font_size;
+                     malloc_nofree_size + font_size + titles_size;
 
     Void *all_memory = VirtualAlloc(0, total_size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
     ASSERT(all_memory);
     if(all_memory) {
-        U64 group_inputs[] = { permanent_size, temp_size, internal_temp_size, bitmap_size, renderer_size, malloc_nofree_size, font_size };
+        zero(all_memory, total_size);
+
+        U64 group_inputs[] = { permanent_size, temp_size, internal_temp_size, bitmap_size,
+                               renderer_size, malloc_nofree_size, font_size, titles_size
+                             };
         ASSERT(SGLG_ENUM_COUNT(Memory_Index) == ARRAY_COUNT(group_inputs));
         Memory memory = create_memory_base(all_memory, group_inputs, ARRAY_COUNT(group_inputs));
 
@@ -594,13 +599,19 @@ enum_windows_proc(HWND hwnd, LPARAM param) {
     Memory *memory = api->memory;
 
     Int max_string_length = 1024;
-    Char *buf = (Char *)memory_push(memory, Memory_Index_temp, max_string_length);
+    Char *buf = (Char *)memory_push(memory, Memory_Index_window_titles, max_string_length);
+    ASSERT(buf);
 
     if(IsWindowVisible(hwnd)) {
         GetWindowText(hwnd, (LPSTR)buf, max_string_length);
-        String *s = &api->top_level_window_titles[api->top_level_window_titles_count++];
-        s->e = buf;
-        s->len = string_length(buf);
+        ASSERT(api->top_level_window_titles_count < ARRAY_COUNT(api->top_level_window_titles));
+        if(api->top_level_window_titles_count < ARRAY_COUNT(api->top_level_window_titles)) {
+            String *s = &api->top_level_window_titles[api->top_level_window_titles_count++];
+            s->e = buf;
+            s->len = string_length(buf);
+        } else {
+            memory_pop(memory, buf);
+        }
     }
 
     return(TRUE);
@@ -611,19 +622,22 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
     int res = 0xFF;
 
     // TODO: Think about these sizes more. Because this app is meant to run in the background it should be as resource-light as possible.
-    U64 permanent_size = MEGABYTES(128);
-    U64 temp_size = MEGABYTES(128);
+    U64 permanent_size = GIGABYTES(4);
+    U64 temp_size = GIGABYTES(4);
     U64 internal_temp_size = MEGABYTES(128);
     U64 bitmap_size = MAX_SCREEN_BITMAP_SIZE + 1;
     U64 renderer_size = MEGABYTES(128);
     U64 malloc_nofree_size = MEGABYTES(128);
     U32 font_size = sizeof(Image_Letter) * 256 + 1;
+    U32 titles_size = MEGABYTES(1);
     U64 total_size = get_memory_base_size() + permanent_size + temp_size + internal_temp_size + bitmap_size +
-                     renderer_size + malloc_nofree_size + font_size;
+                     renderer_size + malloc_nofree_size + font_size + titles_size;
 
     Void *all_memory = VirtualAlloc(0, total_size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
     if(all_memory) {
-        U64 group_inputs[] = { permanent_size, temp_size, internal_temp_size, bitmap_size, renderer_size, malloc_nofree_size, font_size };
+        U64 group_inputs[] = { permanent_size, temp_size, internal_temp_size, bitmap_size,
+                               renderer_size, malloc_nofree_size, font_size, titles_size
+                             };
         ASSERT(SGLG_ENUM_COUNT(Memory_Index) == ARRAY_COUNT(group_inputs));
         Memory memory = create_memory_base(all_memory, group_inputs, ARRAY_COUNT(group_inputs));
 
@@ -891,12 +905,13 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
                                 }
                             }
 
-                            /*for(Int wnd_title_i = api.top_level_window_titles_count - 1; (wnd_title_i >= 0); ++wnd_title_i) {
-                                memory_pop(api.memory, api.top_level_window_titles[wnd_title_i].e);
-                            }
+                            Memory_Group *temp_group = get_memory_group(api.memory, Memory_Index_window_titles);
+                            zero(temp_group->base, temp_group->used);
+                            temp_group->used = 0;
                             api.top_level_window_titles_count = 0;
 
-                            EnumWindows(enum_windows_proc, (LPARAM)&api);*/
+
+                            EnumWindows(enum_windows_proc, (LPARAM)&api);
 
                             // Actual rendering
                             {

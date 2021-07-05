@@ -173,13 +173,13 @@ internal Render_Entity *
 push_word(Renderer *renderer, Render_Entity **parent, String str, Image_Letter *font_images, Int start_x, Int start_y, Int height) {
     Render_Entity *render_entity = create_render_entity(renderer->memory, parent, sglg_Type_Word);
 
-    V2u padding = v2u(0, 10);
+    V2u padding = v2u(0, 0);
 
     Word *word = (Word *)render_entity;
     word->x = start_x;
     word->y = start_y;
 
-    Int running_x = 0, running_y = 0;
+    Int running_x = 0, running_y = height;
 
     Render_Image *a_image = find_font_image(renderer, 'A');
     F32 full_height = a_image->height;

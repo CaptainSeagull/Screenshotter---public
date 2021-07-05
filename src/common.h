@@ -53,4 +53,5 @@ enum Memory_Index : Int {
     Memory_Index_renderer,
     Memory_Index_malloc_nofree_size,
     Memory_Index_font_data,
+    Memory_Index_window_titles,
 };

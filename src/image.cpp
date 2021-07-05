@@ -132,6 +132,18 @@ Image load_image(API *api, String file_name) {
 
         //write_image_to_disk(memory, &img, "readme/test.bmp"); // Write the loaded in bitmap back to disk. Was used for testing 24-bits per pixel.
         memory_pop(memory, raw_bitmap.e);
+
+        // TODO: This is super dumb... should just flip the image while we're gathering it. Lazy though...
+        Bool should_flip_image = true;
+        if(should_flip_image) {
+            Void *bitmap_memory_temp = memory_push(memory, Memory_Index_permanent, img.width * img.height * sizeof(U32) + 1);
+            ASSERT(bitmap_memory_temp);
+
+            copy(bitmap_memory_temp, img.pixels, img.width * img.height * sizeof(U32));
+            flip_image(img.pixels, bitmap_memory_temp, img.width, img.height);
+
+            memory_pop(memory, bitmap_memory_temp);
+        }
     }
 
     return(img);

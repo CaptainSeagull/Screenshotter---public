@@ -10,7 +10,7 @@ make_letter(Memory *memory, stbtt_fontinfo *font, Char ch) {
         res.img.pixels = (U32 *)memory_push(memory, Memory_Index_permanent, w * h * 4);
         ASSERT(res.img.pixels);
 
-#define FLIP_IMAGE 1
+#define FLIP_IMAGE 0
 
 #if FLIP_IMAGE
         //res.off_x = off_x; // TODO: Do we care about this?

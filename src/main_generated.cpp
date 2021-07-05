@@ -95,6 +95,7 @@ static char const *sglg_Memory_Index_to_string(Memory_Index e) {
         case Memory_Index_renderer: { return("Memory_Index_renderer"); } break;
         case Memory_Index_malloc_nofree_size: { return("Memory_Index_malloc_nofree_size"); } break;
         case Memory_Index_font_data: { return("Memory_Index_font_data"); } break;
+        case Memory_Index_window_titles: { return("Memory_Index_window_titles"); } break;
     }
     return(0);
 }
@@ -180,6 +181,7 @@ static Memory_Index sglg_Memory_Index_from_string(char const *s, uint32_t l) {
     else if(sgl_generated_string_compare("Memory_Index_renderer", 21, s, l)) { return(Memory_Index_renderer); }
     else if(sgl_generated_string_compare("Memory_Index_malloc_nofree_size", 31, s, l)) { return(Memory_Index_malloc_nofree_size); }
     else if(sgl_generated_string_compare("Memory_Index_font_data", 22, s, l)) { return(Memory_Index_font_data); }
+    else if(sgl_generated_string_compare("Memory_Index_window_titles", 26, s, l)) { return(Memory_Index_window_titles); }
     return((Memory_Index)0);
 }
 // sglg_Type
@@ -187,7 +189,7 @@ static uint64_t sglg_get_enum_count(sglg_Type type) {
     switch(type) {
         case sglg_Type_Memory_Arena_Error: { return(7); } break;
         case sglg_Type_Key: { return(58); } break;
-        case sglg_Type_Memory_Index: { return(7); } break;
+        case sglg_Type_Memory_Index: { return(8); } break;
     }
     return(0);
 }

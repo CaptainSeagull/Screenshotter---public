@@ -23,50 +23,17 @@ struct Bitmap_Header {
     U32 compression; // NOTE: This is NOT compression... if this is 3 we need to use the colour mask to determine the RGBA slots...
     U32 size_of_bitmap;
 
-    // TODO: Unused.
+    // Unused stuff
     S32 horz_resolution;
     S32 vert_resolution;
     U32 colours_used;
     U32 colours_important;
 };
 #pragma pack(pop)
-#if 0
-internal Bool
-write_file(String fname, U8 *data, U64 size) {
-    // TODO: Win32 only
-    Bool res = false;
 
-    ASSERT(fname.len < 1024);
-    Char buf[1024] = {};
-    copy(buf, fname.e, fname.len);
-
-    HANDLE fhandle = CreateFileA(buf, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, 0, CREATE_ALWAYS, 0, 0);
-    if(fhandle != INVALID_HANDLE_VALUE) {
-
-        DWORD fsize32;
-#if ENVIRONMENT32
-        fsize32 = file.size;
-#else
-        fsize32 = safe_truncate_size_64(size);
-#endif
-        DWORD bytes_written = 0;
-        if(WriteFile(fhandle, data, fsize32, &bytes_written, 0)) {
-            if(bytes_written != fsize32) {
-                ASSERT(0);
-            } else {
-                res = true;
-            }
-        }
-
-        CloseHandle(fhandle);
-    }
-
-    return(res);
-}
-#endif
 internal Void
 write_image_to_disk(API *api, Memory *memory, Image *image, String file_name) {
-    U64 output_pixel_size = image->width * image->height * sizeof(U32); // TODO: Should this not be sizeof U32...?
+    U64 output_pixel_size = image->width * image->height * sizeof(U32);
 
     Bitmap_Header header = {};
     header.file_type = 0x4D42;

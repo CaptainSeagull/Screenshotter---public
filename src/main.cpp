@@ -68,7 +68,7 @@ setup(API *api, DLL_Data *data, Renderer *renderer) {
 
             push_word(renderer, &yellow_window,
                       api->top_level_window_titles[wnd_i],
-                      font_images, 0, 5, height);
+                      font_images, 10, 5, height);
 
             running_y += (height + 10);
         }

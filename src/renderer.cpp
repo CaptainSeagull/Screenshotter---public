@@ -168,7 +168,6 @@ find_font_image(Renderer *renderer, Char c) {
     return(image);
 }
 
-// TODO: The start_x / start_y stuff doesn't seem to be working...
 internal Render_Entity *
 push_word(Renderer *renderer, Render_Entity **parent, String str, Image_Letter *font_images, Int start_x, Int start_y, Int height) {
     Render_Entity *render_entity = create_render_entity(renderer->memory, parent, sglg_Type_Word);
@@ -189,16 +188,12 @@ push_word(Renderer *renderer, Render_Entity **parent, String str, Image_Letter *
             running_x = 0;
             running_y -= (height + padding.y);
         } else {
-#if 0
-            Char c = to_upper(str.e[i]); // TODO: Temp, while we're rendering all text at the same height.
-#else
             Char c = str.e[i];
-#endif
+
             if(c == ' ') {
                 running_x += height;
             } else {
                 Render_Image *image = find_font_image(renderer, c);
-#if 1
 
                 F32 char_pct_height_of_total = (F32)image->height / full_height;
 
@@ -210,28 +205,7 @@ push_word(Renderer *renderer, Render_Entity **parent, String str, Image_Letter *
                                 0, 0, 0, 0,
                                 renderer->letter_ids[c]);
 
-                running_x += (width_to_use + padding.x + image->off_x);
-
-
-#else
-                push_image_rect(renderer, &render_entity,
-                                running_x, running_y, image->width, image->height,
-                                0, 0, 0, 0,
-                                renderer->letter_ids[c]);
-
-                running_x += (image->width + padding.x + image->off_x);
-#endif
-
-#if 0
-                Int width = floor((F32)image->width * ((F32)height / (F32)image->height)); // TODO: Is this correct?
-
-                push_image_rect(renderer, &render_entity,
-                                running_x, running_y, width, height,
-                                0, 0, 0, 0,
-                                renderer->letter_ids[c]);
-
-                running_x += (width + padding.x + image->off_x);
-#endif
+                running_x += (width_to_use + padding.x + image->off_x); // TODO: This should be a scaled off_x
             }
         }
     }

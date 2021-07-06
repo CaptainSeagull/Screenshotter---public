@@ -34,8 +34,9 @@ struct DLL_Data {
 
     U64 background_id;
 
+    U64 green_window_ids[256];
     U64 yellow_window_ids[256];
-    U32 yellow_window_count;
+    U32 list_count;
 };
 
 extern "C" Void
@@ -68,8 +69,15 @@ setup(API *api, DLL_Data *data, Renderer *renderer) {
                 Render_Entity *yellow_window = push_solid_rectangle(renderer, &white_window,
                                                                     0, running_y, 640, height + 10,
                                                                     255, 255, 0, 0);
+                Render_Entity *green_window = push_solid_rectangle(renderer, &white_window,
+                                                                   0, running_y, 640, height + 10,
+                                                                   0, 255, 0, 0);
                 yellow_window->visible = false;
-                data->yellow_window_ids[data->yellow_window_count++] = yellow_window->id;
+                green_window->visible = false;
+
+                data->yellow_window_ids[data->list_count] = yellow_window->id;
+                data->green_window_ids[data->list_count] = green_window->id;
+                ++data->list_count;
 
                 push_word(renderer, &yellow_window,
                           api->top_level_window_titles[wnd_i],
@@ -167,17 +175,30 @@ handle_input_and_render(API *api) {
         white_window->_Rect.height = api->window_height;
 
         // Yellow highlighting
-        for(U32 yellow_window_i = 0; (yellow_window_i < data->yellow_window_count); ++yellow_window_i) {
+        for(U32 list_i = 0; (list_i < data->list_count); ++list_i) {
 
-            Render_Entity *yellow_window_render_entity = find_render_entity(renderer, data->yellow_window_ids[yellow_window_i]); ASSERT(yellow_window_render_entity);
+            // TODO: The API of having to get the root and actual entity separately is crappy...
 
+            Render_Entity *yellow_window_render_entity = find_render_entity(renderer, data->yellow_window_ids[list_i]); ASSERT(yellow_window_render_entity);
             Rect *yellow_window = (Rect *)yellow_window_render_entity;
+
+            Render_Entity *green_window_render_entity = find_render_entity(renderer, data->green_window_ids[list_i]); ASSERT(green_window_render_entity);
+            Rect *green_window = (Rect *)green_window_render_entity;
+
+            yellow_window->width = api->window_width;
+            green_window->width = api->window_width;
 
             yellow_window_render_entity->visible = false;
             if(mouse_x > yellow_window->x && mouse_x < yellow_window->x + yellow_window->width) {
                 if(mouse_y > yellow_window->y && mouse_y < yellow_window->y + yellow_window->height) {
-                    yellow_window_render_entity->visible = true;
-                    yellow_window->width = api->window_width;
+                    if(api->key[key_mouse_left] && !api->previous_key[key_mouse_left]) {
+                        green_window_render_entity->visible = !green_window_render_entity->visible;
+                    }
+
+                    if(!green_window_render_entity->visible) {
+                        yellow_window_render_entity->visible = true;
+                    }
+
                 }
             }
         }

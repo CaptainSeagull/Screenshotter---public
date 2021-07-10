@@ -35,6 +35,7 @@ enum sglg_Type {
     sglg_Type_Platform_Callbacks,
     sglg_Type_Bitmap,
     sglg_Type_Settings,
+    sglg_Type_Window_Info,
     sglg_Type_API,
     sglg_Type_Memory_Index,
     sglg_Type_Config,
@@ -64,6 +65,7 @@ enum sglg_Type {
     sglg_Type_Render_Image,
     sglg_Type_Internal,
     sglg_Type_Renderer,
+    sglg_Type_Entry,
     sglg_Type_DLL_Data,
 };
 
@@ -114,6 +116,7 @@ enum Key : Int;
 struct Platform_Callbacks;
 struct Bitmap;
 struct Settings;
+struct Window_Info;
 struct API;
 enum Memory_Index : Int;
 
@@ -144,6 +147,7 @@ struct Render_Entity;
 struct Render_Image;
 struct Internal;
 struct Renderer;
+struct Entry;
 struct DLL_Data;
 
 // Forward declaration of functions

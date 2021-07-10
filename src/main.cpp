@@ -29,13 +29,19 @@ internal void my_free(void *d) { /* Do nothing... */ }
 #include "renderer.cpp"
 #include "letter_stuff.cpp"
 
+struct Entry {
+    U64 green_window_id;
+    U64 yellow_window_id;
+    Bool highlighted;
+    String class_name;
+};
+
 struct DLL_Data {
     Renderer renderer;
 
     U64 background_id;
 
-    U64 green_window_ids[256];
-    U64 yellow_window_ids[256];
+    Entry windows[256];
     U32 list_count;
 };
 
@@ -60,12 +66,20 @@ setup(API *api, DLL_Data *data, Renderer *renderer) {
     Image_Letter *font_images = create_font_data(api);
     push_font(renderer, font_images);
 
+    push_word(renderer, &white_window,
+              "Screenshotter!",
+              font_images, 10, 5, 30);
+
     // Running programs text
     {
+        // TODO: Something goes wrong if you open Brave and have this tab open (making it the window title).
+        //   https://devblogs.microsoft.com/cppblog/data-breakpoints-15-8-update/
+        // Investigate!
+
         Int height = 20;
-        Int running_y = 10;
-        for(Int wnd_i = 0; (wnd_i < api->top_level_window_titles_count); ++wnd_i) {
-            if(api->top_level_window_titles[wnd_i].len > 0) {
+        Int running_y = 40;
+        for(Int wnd_i = 0; (wnd_i < api->window_count); ++wnd_i) {
+            if(api->windows[wnd_i].title.len > 0 && api->windows[wnd_i].class_name.len > 0) {
                 Render_Entity *yellow_window = push_solid_rectangle(renderer, &white_window,
                                                                     0, running_y, 640, height + 10,
                                                                     255, 255, 0, 0);
@@ -75,13 +89,23 @@ setup(API *api, DLL_Data *data, Renderer *renderer) {
                 yellow_window->visible = false;
                 green_window->visible = false;
 
-                data->yellow_window_ids[data->list_count] = yellow_window->id;
-                data->green_window_ids[data->list_count] = green_window->id;
+                data->windows[data->list_count].yellow_window_id = yellow_window->id;
+                data->windows[data->list_count].green_window_id = green_window->id;
+                data->windows[data->list_count].class_name = api->windows[wnd_i].class_name;
+                ASSERT(data->windows[data->list_count].class_name.len > 0);
+
                 ++data->list_count;
 
+                // Useful for debugging
+#if 1
                 push_word(renderer, &yellow_window,
-                          api->top_level_window_titles[wnd_i],
+                          api->windows[wnd_i].title,
                           font_images, 10, 5, height);
+#else
+                push_word(renderer, &yellow_window,
+                          api->windows[wnd_i].class_name,
+                          font_images, 10, 5, height);
+#endif
 
                 running_y += (height + 10);
             }
@@ -156,6 +180,8 @@ handle_input_and_render(API *api) {
     global_api = api;
 
     DLL_Data *data = (DLL_Data *)api->dll_data;
+    Config *config = api->config;
+    config->target_window_count = 0;
 
     Renderer *renderer = &data->renderer;
 
@@ -179,18 +205,20 @@ handle_input_and_render(API *api) {
 
             // TODO: The API of having to get the root and actual entity separately is crappy...
 
-            Render_Entity *yellow_window_render_entity = find_render_entity(renderer, data->yellow_window_ids[list_i]); ASSERT(yellow_window_render_entity);
+            Render_Entity *yellow_window_render_entity = find_render_entity(renderer, data->windows[list_i].yellow_window_id); ASSERT(yellow_window_render_entity);
             Rect *yellow_window = (Rect *)yellow_window_render_entity;
 
-            Render_Entity *green_window_render_entity = find_render_entity(renderer, data->green_window_ids[list_i]); ASSERT(green_window_render_entity);
+            Render_Entity *green_window_render_entity = find_render_entity(renderer, data->windows[list_i].green_window_id); ASSERT(green_window_render_entity);
             Rect *green_window = (Rect *)green_window_render_entity;
 
             yellow_window->width = api->window_width;
             green_window->width = api->window_width;
 
+            data->windows[list_i].highlighted = false;
             yellow_window_render_entity->visible = false;
             if(mouse_x > yellow_window->x && mouse_x < yellow_window->x + yellow_window->width) {
                 if(mouse_y > yellow_window->y && mouse_y < yellow_window->y + yellow_window->height) {
+                    data->windows[list_i].highlighted = true;
                     if(api->key[key_mouse_left] && !api->previous_key[key_mouse_left]) {
                         green_window_render_entity->visible = !green_window_render_entity->visible;
                     }
@@ -198,8 +226,14 @@ handle_input_and_render(API *api) {
                     if(!green_window_render_entity->visible) {
                         yellow_window_render_entity->visible = true;
                     }
-
                 }
+            }
+
+            if(green_window_render_entity->visible) {
+                config->target_window_names[config->target_window_count] = data->windows[list_i].class_name;
+                ASSERT(config->target_window_names[config->target_window_count].len > 0);
+                ASSERT(config->target_window_names[config->target_window_count].e[0] != 0);
+                ++config->target_window_count;
             }
         }
     }

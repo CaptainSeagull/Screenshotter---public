@@ -470,19 +470,15 @@ win32_load_code(Char *source_fname, Char *temp_fname) {
 }
 
 internal HWND
-win32_find_window_from_name(Memory *memory, String window_title) {
+win32_find_window_from_class_name(Memory *memory, String window_title) {
     HWND window = 0;
 
     Char *window_title_raw = (Char *)memory_push(memory, Memory_Index_temp, window_title.len + 1); // Nul-terminate
     ASSERT(window_title_raw);
-    if(!window_title_raw) {
-        // TODO: Error handling
-    } else {
+    if(window_title_raw) {
         string_copy(window_title_raw, window_title.e, window_title.len);
-        window = FindWindowA(TEXT(window_title_raw), NULL);
-        if(!window) {
-            // TODO: Report error finding target window
-        }
+        window = FindWindowExA(0, 0, TEXT(window_title_raw), 0);
+        ASSERT(window);
 
         memory_pop(memory, window_title_raw);
     }
@@ -523,70 +519,76 @@ win32_screen_capture_thread(void *data) {
         ASSERT(SGLG_ENUM_COUNT(Memory_Index) == ARRAY_COUNT(group_inputs));
         Memory memory = create_memory_base(all_memory, group_inputs, ARRAY_COUNT(group_inputs));
 
-        U64 iteration_count = 0;
+        U64 iteration_count = 0; // TODO: Shared between all
         while(true) {
-            HWND window = win32_find_window_from_name(&memory, config->target_window_name);
-            RECT rect = {};
-            GetClientRect(window, &rect);
-            Int width = rect.right - rect.left;
-            Int height = rect.bottom - rect.top;
+            for(Int window_i = 0; (window_i < config->target_window_count); ++window_i) {
+                ASSERT(config->target_window_names[window_i].len > 0);
+                HWND window = win32_find_window_from_class_name(&memory, config->target_window_names[window_i]);
 
-            // TODO: If the window is minified then the width/height will be 0
-            //       See https://www.codeproject.com/Articles/20651/Capturing-Minimized-Window-A-Kid-s-Trick for how to handle.
-            if(width > 0 && height > 0) {
-                HDC dc = GetDC(0);
-                HDC capture_dc = CreateCompatibleDC(dc);
-                HBITMAP bitmap = CreateCompatibleBitmap(dc, rect.right - rect.left, rect.bottom - rect.top);
+                RECT rect = {};
+                GetClientRect(window, &rect);
+                Int width = rect.right - rect.left;
+                Int height = rect.bottom - rect.top;
 
-                HGDIOBJ gdiObj = SelectObject(capture_dc, bitmap);
+                // TODO: If the window is minified then the width/height will be 0
+                //       See https://www.codeproject.com/Articles/20651/Capturing-Minimized-Window-A-Kid-s-Trick for how to handle.
+                if(width > 0 && height > 0) {
+                    HDC dc = GetDC(0);
+                    HDC capture_dc = CreateCompatibleDC(dc);
+                    HBITMAP bitmap = CreateCompatibleBitmap(dc, rect.right - rect.left, rect.bottom - rect.top);
 
-                PrintWindow(window, capture_dc, (config->include_title_bar) ? 0 : PW_CLIENTONLY);
+                    HGDIOBJ gdiObj = SelectObject(capture_dc, bitmap);
 
-                // TODO: This sometimes captures the current window, not the target for some reason...
-                //BitBlt(capture_dc, 0, 0, width, height, dc, 0, 0, SRCCOPY | CAPTUREBLT);
-                //SelectObject(capture_dc, gdiObj);
+                    PrintWindow(window, capture_dc, (config->include_title_bar) ? 0 : PW_CLIENTONLY);
 
-                if(config->copy_to_clipboard) {
-                    OpenClipboard(0);
-                    EmptyClipboard();
-                    SetClipboardData(CF_BITMAP, bitmap);
-                    CloseClipboard();
+                    // TODO: This sometimes captures the current window, not the target for some reason...
+                    //BitBlt(capture_dc, 0, 0, width, height, dc, 0, 0, SRCCOPY | CAPTUREBLT);
+                    //SelectObject(capture_dc, gdiObj);
+
+                    if(config->copy_to_clipboard) {
+                        OpenClipboard(0);
+                        EmptyClipboard();
+                        SetClipboardData(CF_BITMAP, bitmap);
+                        CloseClipboard();
+                    }
+
+                    BITMAPINFO bmp_infp = {};
+                    bmp_infp.bmiHeader.biSize = sizeof(bmp_infp.bmiHeader);
+
+                    BITMAPINFOHEADER bmp_header = {};
+                    bmp_header.biSize = sizeof(BITMAPINFOHEADER);
+                    bmp_header.biWidth = width;
+                    bmp_header.biHeight = height;
+                    bmp_header.biPlanes = 1;
+                    bmp_header.biBitCount = 32;
+
+                    U32 image_size = ((width * bmp_header.biBitCount + 31) / 32) * 4 * height; // TODO: Why 31 / 32?? Why not just width * height * 4?
+                    U8 *image_data = (U8 *)memory_push(&memory, Memory_Index_permanent, image_size);
+                    GetDIBits(dc, bitmap, 0, height, image_data, (BITMAPINFO *)&bmp_header, DIB_RGB_COLORS);
+
+                    // TODO: As well as saving the file, we should create an output directory per-program per-session.
+
+                    Int output_filename_size = config->target_output_directory.len + 256; // 256 is padding
+                    Char *output_filename = (Char *)memory_push(&memory, Memory_Index_temp, output_filename_size);
+                    Int bytes_written = stbsp_snprintf(output_filename, output_filename_size, "%.*s/%.*s_output_%I64d.bmp", // TODO: %d prints S32 not U64
+                                                       config->target_output_directory.len, config->target_output_directory.e,
+                                                       config->target_window_names[window_i].len, config->target_window_names[window_i].e,
+                                                       iteration_count);
+                    ASSERT(bytes_written < output_filename_size);
+
+                    Image image = {};
+                    image.width = width;
+                    image.height = height;
+                    image.pixels = (U32 * )image_data;
+                    write_image_to_disk(api, &memory, &image, output_filename);
+
+                    memory_pop(&memory, output_filename);
                 }
-
-                BITMAPINFO bmp_infp = {};
-                bmp_infp.bmiHeader.biSize = sizeof(bmp_infp.bmiHeader);
-
-                BITMAPINFOHEADER bmp_header = {};
-                bmp_header.biSize = sizeof(BITMAPINFOHEADER);
-                bmp_header.biWidth = width;
-                bmp_header.biHeight = height;
-                bmp_header.biPlanes = 1;
-                bmp_header.biBitCount = 32;
-
-                U32 image_size = ((width * bmp_header.biBitCount + 31) / 32) * 4 * height; // TODO: Why 31 / 32?? Why not just width * height * 4?
-                U8 *image_data = (U8 *)memory_push(&memory, Memory_Index_permanent, image_size);
-                GetDIBits(dc, bitmap, 0, height, image_data, (BITMAPINFO *)&bmp_header, DIB_RGB_COLORS);
-
-                // TODO: As well as saving the file, we should create an output directory per-session.
-
-                Int output_filename_size = config->target_output_directory.len + 256; // 256 is padding
-                Char *output_filename = (Char *)memory_push(&memory, Memory_Index_temp, output_filename_size);
-                Int bytes_written = stbsp_snprintf(output_filename, output_filename_size, "%.*s/file_%I64d.bmp", // TODO: %d prints S32 not U64
-                                                   config->target_output_directory.len, config->target_output_directory.e,
-                                                   iteration_count);
-                ASSERT(bytes_written < output_filename_size);
-
-                Image image = {};
-                image.width = width;
-                image.height = height;
-                image.pixels = (U32 * )image_data;
-                write_image_to_disk(api, &memory, &image, output_filename);
-
-                memory_pop(&memory, output_filename);
-
-                Sleep(config->amount_to_sleep);
-                ++iteration_count;
             }
+
+            Sleep(config->amount_to_sleep);
+            ASSERT(iteration_count < 0xFFFFFFFFFFFFFFFF);
+            ++iteration_count;
         }
     }
 
@@ -599,18 +601,28 @@ enum_windows_proc(HWND hwnd, LPARAM param) {
     Memory *memory = api->memory;
 
     Int max_string_length = 1024;
-    Char *buf = (Char *)memory_push(memory, Memory_Index_window_titles, max_string_length);
-    ASSERT(buf);
+    Char *title = (Char *)memory_push(memory, Memory_Index_window_titles, max_string_length);
+    Char *class_name = (Char *)memory_push(memory, Memory_Index_window_titles, max_string_length);
+    ASSERT(title && class_name);
+    if(title && class_name) {
+        if(IsWindowVisible(hwnd)) {
+            GetWindowText(hwnd, (LPSTR)title, max_string_length);
+            GetClassName(hwnd, (LPSTR)class_name, max_string_length);
 
-    if(IsWindowVisible(hwnd)) {
-        GetWindowText(hwnd, (LPSTR)buf, max_string_length);
-        ASSERT(api->top_level_window_titles_count < ARRAY_COUNT(api->top_level_window_titles));
-        if(api->top_level_window_titles_count < ARRAY_COUNT(api->top_level_window_titles)) {
-            String *s = &api->top_level_window_titles[api->top_level_window_titles_count++];
-            s->e = buf;
-            s->len = string_length(buf);
-        } else {
-            memory_pop(memory, buf);
+            Int title_len = string_length(title);
+            Int class_name_len = string_length(class_name);
+
+            if(title_len > 0 && class_name_len > 0) {
+                ASSERT(api->window_count < ARRAY_COUNT(api->windows));
+                if(api->window_count < ARRAY_COUNT(api->windows)) {
+                    Window_Info *wi = &api->windows[api->window_count++];
+                    wi->title = create_string(title, title_len);
+                    wi->class_name = create_string(class_name, class_name_len);
+                } else {
+                    memory_pop(memory, class_name);
+                    memory_pop(memory, title);
+                }
+            }
         }
     }
 
@@ -760,7 +772,7 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
                 WNDCLASS wnd_class = {};
                 wnd_class.style = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
                 wnd_class.hInstance = hInstance;
-                wnd_class.lpszClassName = TEXT("Some text or something?");
+                wnd_class.lpszClassName = TEXT("Screenshotter");
                 wnd_class.lpfnWndProc = win32_window_proc;
 
                 // TODO: Is this part correct?
@@ -830,10 +842,14 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
 
                         // TODO: Load config from settings on disk.
                         Config config = {};
-                        config.target_window_name = "Notepad";
+                        api.config = &config;
+
+                        //config.target_window_names[config.target_window_count++] = "Notepad";
+                        //config.target_window_names[config.target_window_count++] = "Notepad";
+                        //config.target_window_names[config.target_window_count++] = "Screenshotter";
                         config.include_title_bar = true;
                         config.target_output_directory = "C:/tmp";
-                        config.amount_to_sleep = 5000;
+                        config.amount_to_sleep = 1000;
 
                         Win32_Screen_Capture_Thread_Parameters thread_params = {};
                         thread_params.config = &config;
@@ -905,13 +921,16 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
                                 }
                             }
 
-                            Memory_Group *temp_group = get_memory_group(api.memory, Memory_Index_window_titles);
-                            zero(temp_group->base, temp_group->used);
-                            temp_group->used = 0;
-                            api.top_level_window_titles_count = 0;
+                            // TODO: Zero-ing this memory to re-read it means we actually have to do more work to:
+                            //         1. Regenerate the text in the renderer
+                            //         2. Make sure we're not reading zero'd memory in win32_find_window_from_class_name.
+                            //       Commenting out until I've fixed this bug.
+                            /*Memory_Group *window_title_group = get_memory_group(api.memory, Memory_Index_window_titles);
+                            zero(window_title_group->base, window_title_group->used);
+                            window_title_group->used = 0;
+                            api.window_count = 0;
 
-
-                            EnumWindows(enum_windows_proc, (LPARAM)&api);
+                            EnumWindows(enum_windows_proc, (LPARAM)&api);*/
 
                             // Actual rendering
                             {
@@ -942,6 +961,7 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
                                 api.window_height = cr.bottom - cr.top;;
 
                                 loaded_code.handle_input_and_render(&api);
+
                                 if(!api.init) { api.screen_image_size_change = false; }
                                 api.init = false;
 

@@ -102,6 +102,12 @@ struct Settings {
     Int window_height;
 };
 
+struct Window_Info {
+    String title;
+    String class_name;
+};
+
+struct Config;
 // TODO: Tidy API struct
 struct API {
     F32 previous_key[256];
@@ -133,7 +139,9 @@ struct API {
     Settings settings;
     Void *dll_data;
 
-    Int top_level_window_titles_count;
-    String top_level_window_titles[256];
+    Int window_count;
+    Window_Info windows[256];
+
+    Config *config;
 };
 

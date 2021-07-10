@@ -33,9 +33,13 @@ set(Void *dst, U8 v, U64 size) {
     }
 }
 
+// TODO: I'm storing the window list here, in API, and in main.cpp (for rendering). I think this is causing a bug, so try to collapse these
+//       three lists down into one.
 struct Config {
-    String target_window_name;
-    Bool copy_to_clipboard;
+    String target_window_names[256];
+    Int target_window_count;
+
+    Bool copy_to_clipboard; // TODO: Only really makes sense for one window
     Bool include_title_bar;
     String target_output_directory;
     Int amount_to_sleep;
@@ -60,3 +64,5 @@ flip_image(Void *dst_pixels, Void *src_pixels, Int width, Int height) {
 }
 
 #include "image.cpp"
+
+

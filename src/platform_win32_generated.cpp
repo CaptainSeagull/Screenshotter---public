@@ -208,6 +208,7 @@ static uint64_t sglg_type_to_size(sglg_Type type) {
         case sglg_Type_Platform_Callbacks: { return(sizeof(Platform_Callbacks)); } break;
         case sglg_Type_Bitmap: { return(sizeof(Bitmap)); } break;
         case sglg_Type_Settings: { return(sizeof(Settings)); } break;
+        case sglg_Type_Window_Info: { return(sizeof(Window_Info)); } break;
         case sglg_Type_API: { return(sizeof(API)); } break;
         case sglg_Type_Memory_Index: { return(sizeof(Memory_Index)); } break;
         case sglg_Type_Config: { return(sizeof(Config)); } break;
@@ -247,6 +248,7 @@ static sglg_Type sglg_string_to_type(char const *s, uint64_t l) {
     else if(sgl_generated_string_compare("Platform_Callbacks", 18, s, l)) { return(sglg_Type_Platform_Callbacks); }
     else if(sgl_generated_string_compare("Bitmap", 6, s, l)) { return(sglg_Type_Bitmap); }
     else if(sgl_generated_string_compare("Settings", 8, s, l)) { return(sglg_Type_Settings); }
+    else if(sgl_generated_string_compare("Window_Info", 11, s, l)) { return(sglg_Type_Window_Info); }
     else if(sgl_generated_string_compare("API", 3, s, l)) { return(sglg_Type_API); }
     else if(sgl_generated_string_compare("Memory_Index", 12, s, l)) { return(sglg_Type_Memory_Index); }
     else if(sgl_generated_string_compare("Config", 6, s, l)) { return(sglg_Type_Config); }

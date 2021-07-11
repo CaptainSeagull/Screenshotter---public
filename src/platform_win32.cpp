@@ -486,12 +486,90 @@ win32_find_window_from_class_name(Memory *memory, String window_title) {
     return(window);
 }
 
+struct Win32_Create_Directory_Result {
+    String directory;
+    Bool success;
+};
+internal Win32_Create_Directory_Result
+win32_create_directory(Memory *memory, String root, String dir, Bool save_directory_string = false) {
+    Win32_Create_Directory_Result res = {};
+
+    // Create the per-app directories
+    Int max_size = root.len + 256; // 256 is padding
+    Char *output_file_directory = (Char *)memory_push(memory, (save_directory_string) ? Memory_Index_permanent : Memory_Index_temp, max_size);
+    ASSERT(output_file_directory);
+    if(output_file_directory) {
+        Int bytes_written = stbsp_snprintf(output_file_directory, max_size, "%.*s/%.*s",
+                                           root.len, root.e,
+                                           dir.len, dir.e);
+        ASSERT(bytes_written < max_size);
+
+        Bool success = CreateDirectory(output_file_directory, NULL) != 0;
+        if(!success) {
+            success = (GetLastError() == ERROR_ALREADY_EXISTS);
+        }
+
+        if(success) {
+            res.success = true;
+            if(save_directory_string) {
+                res.directory = output_file_directory;
+            }
+        }
+
+        if(!save_directory_string) {
+            memory_pop(memory, output_file_directory);
+        }
+    }
+
+    return(res);
+}
+
+internal Char *
+memory_push_string(Memory *mem, Memory_Index idx, String s, Int padding = 0) {
+    Char *res = (Char *)memory_push(mem, idx, s.len + 1 + padding);
+    ASSERT(res);
+    if(res) {
+        memcpy(res, s.e, s.len);
+    }
+
+    return(res);
+}
+
+internal Int
+win32_directory_index_to_use(Memory *mem, String session_prefix, String input_target_directory) {
+    Int res = 0;
+
+    Char *target_directory = memory_push_string(mem, Memory_Index_temp, input_target_directory, 3); // Padding for "\\*"
+    ASSERT(target_directory);
+    if(target_directory) {
+        target_directory[input_target_directory.len + 0] = '\\';
+        target_directory[input_target_directory.len + 1] = '*';
+        target_directory[input_target_directory.len + 2] = 0;
+
+        WIN32_FIND_DATA find_data = {};
+        HANDLE handle = FindFirstFile(target_directory, &find_data);
+
+        if(handle != INVALID_HANDLE_VALUE) {
+            do {
+                String fname = find_data.cFileName + session_prefix.len;
+                String_To_Int_Result r = string_to_int(fname);
+                if(r.success) {
+                    res = maxu32(res, r.v + 1);
+                }
+            } while(FindNextFile(handle, &find_data));
+        }
+
+        memory_pop(mem, target_directory);
+    }
+
+    return(res);
+}
+
 // Done on a separate thread so when we have a UI and Window it can handle window-messages without interuption.
+// TODO: Maybe have a threaded version and single-threaded version? See if it's actually an issue.
 internal DWORD
 win32_screen_capture_thread(void *data) {
     Win32_Screen_Capture_Thread_Parameters *tp = (Win32_Screen_Capture_Thread_Parameters *)data;
-
-    // TODO: Should open a new directory each time screenshotter is fun.
 
     Config *config = tp->config;
     API *api = tp->api;
@@ -519,8 +597,33 @@ win32_screen_capture_thread(void *data) {
         ASSERT(SGLG_ENUM_COUNT(Memory_Index) == ARRAY_COUNT(group_inputs));
         Memory memory = create_memory_base(all_memory, group_inputs, ARRAY_COUNT(group_inputs));
 
-        U64 iteration_count = 0; // TODO: Shared between all
+        // Create the session directory
+        String root_directory = {};
+        {
+            String prefix = "Screenshotter_";
+
+            Int idx = win32_directory_index_to_use(&memory, prefix, config->target_output_directory);
+            Int size = config->target_output_directory.len + prefix.len + 32; // TODO: 32 is padding for number
+            Char *directory = (Char *)memory_push(&memory, Memory_Index_permanent, size);
+            Int written = stbsp_snprintf(directory, size, "%.*s%d",
+                                         prefix.len, prefix.e,
+                                         idx);
+            ASSERT(written < size);
+
+            Win32_Create_Directory_Result create_directory_result = win32_create_directory(&memory, config->target_output_directory,
+                                                                                           directory, true);
+            ASSERT(create_directory_result.success);
+            root_directory = create_directory_result.directory;
+        }
+        ASSERT(root_directory.len > 0);
+
+        U64 iteration_count = 0; // TODO: Shared between all apps right now.
         while(true) {
+            Bool successfully_wrote_something = false;
+
+            Memory_Group *temp_group = get_memory_group(&memory, Memory_Index_temp);
+            ASSERT(temp_group->used == 0);
+
             for(Int window_i = 0; (window_i < config->target_window_count); ++window_i) {
                 ASSERT(config->target_window_names[window_i].len > 0);
                 HWND window = win32_find_window_from_class_name(&memory, config->target_window_names[window_i]);
@@ -566,29 +669,39 @@ win32_screen_capture_thread(void *data) {
                     U8 *image_data = (U8 *)memory_push(&memory, Memory_Index_permanent, image_size);
                     GetDIBits(dc, bitmap, 0, height, image_data, (BITMAPINFO *)&bmp_header, DIB_RGB_COLORS);
 
-                    // TODO: As well as saving the file, we should create an output directory per-program per-session.
+                    // TODO: As well as saving the file, we should create an output directory per-session.
 
-                    Int output_filename_size = config->target_output_directory.len + 256; // 256 is padding
+                    // TODO: It'd be better if the directory name was the window title name, not the class name.
+                    win32_create_directory(&memory, root_directory, config->target_window_names[window_i]);
+
+                    Int output_filename_size = root_directory.len + 256; // 256 is padding
                     Char *output_filename = (Char *)memory_push(&memory, Memory_Index_temp, output_filename_size);
-                    Int bytes_written = stbsp_snprintf(output_filename, output_filename_size, "%.*s/%.*s_output_%I64d.bmp", // TODO: %d prints S32 not U64
-                                                       config->target_output_directory.len, config->target_output_directory.e,
-                                                       config->target_window_names[window_i].len, config->target_window_names[window_i].e,
-                                                       iteration_count);
-                    ASSERT(bytes_written < output_filename_size);
+                    ASSERT(output_filename);
+                    if(output_filename) {
+                        Int bytes_written = stbsp_snprintf(output_filename, output_filename_size, "%.*s/%.*s/%I64d.bmp", // TODO: %d prints S32 not U64
+                                                           root_directory.len, root_directory.e,
+                                                           config->target_window_names[window_i].len, config->target_window_names[window_i].e,
+                                                           iteration_count);
+                        ASSERT(bytes_written < output_filename_size);
 
-                    Image image = {};
-                    image.width = width;
-                    image.height = height;
-                    image.pixels = (U32 * )image_data;
-                    write_image_to_disk(api, &memory, &image, output_filename);
+                        Image image = {};
+                        image.width = width;
+                        image.height = height;
+                        image.pixels = (U32 * )image_data;
+                        write_image_to_disk(api, &memory, &image, output_filename);
 
-                    memory_pop(&memory, output_filename);
+                        successfully_wrote_something = true;
+
+                        memory_pop(&memory, output_filename);
+                    }
                 }
             }
 
             Sleep(config->amount_to_sleep);
             ASSERT(iteration_count < 0xFFFFFFFFFFFFFFFF);
-            ++iteration_count;
+            if(successfully_wrote_something) {
+                ++iteration_count;
+            }
         }
     }
 
@@ -600,7 +713,10 @@ enum_windows_proc(HWND hwnd, LPARAM param) {
     API *api = (API *)param;
     Memory *memory = api->memory;
 
+    Bool success = false;
+
     Int max_string_length = 1024;
+
     Char *title = (Char *)memory_push(memory, Memory_Index_window_titles, max_string_length);
     Char *class_name = (Char *)memory_push(memory, Memory_Index_window_titles, max_string_length);
     ASSERT(title && class_name);
@@ -618,12 +734,15 @@ enum_windows_proc(HWND hwnd, LPARAM param) {
                     Window_Info *wi = &api->windows[api->window_count++];
                     wi->title = create_string(title, title_len);
                     wi->class_name = create_string(class_name, class_name_len);
-                } else {
-                    memory_pop(memory, class_name);
-                    memory_pop(memory, title);
+                    success = true;
                 }
             }
         }
+    }
+
+    if(!success) {
+        if(class_name) { memory_pop(memory, class_name); }
+        if(title)      { memory_pop(memory, title); }
     }
 
     return(TRUE);
@@ -705,7 +824,7 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
                             ++cur;
                             ++argc;
                         } else {
-                            WIN32_FIND_DATA find_data = {0};
+                            WIN32_FIND_DATA find_data = {};
                             HANDLE fhandle = FindFirstFile(str, &find_data);
 
                             if(fhandle != INVALID_HANDLE_VALUE) {
@@ -844,11 +963,8 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
                         Config config = {};
                         api.config = &config;
 
-                        //config.target_window_names[config.target_window_count++] = "Notepad";
-                        //config.target_window_names[config.target_window_count++] = "Notepad";
-                        //config.target_window_names[config.target_window_count++] = "Screenshotter";
                         config.include_title_bar = true;
-                        config.target_output_directory = "C:/tmp";
+                        config.target_output_directory = "C:/tmp"; // TODO: Hardcoded
                         config.amount_to_sleep = 1000;
 
                         Win32_Screen_Capture_Thread_Parameters thread_params = {};

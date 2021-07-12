@@ -625,8 +625,9 @@ win32_screen_capture_thread(void *data) {
             ASSERT(temp_group->used == 0);
 
             for(Int window_i = 0; (window_i < config->target_window_count); ++window_i) {
-                ASSERT(config->target_window_names[window_i].len > 0);
-                HWND window = win32_find_window_from_class_name(&memory, config->target_window_names[window_i]);
+                ASSERT(config->windows[window_i].class_name.len > 0 &&
+                       config->windows[window_i].title.len > 0);
+                HWND window = win32_find_window_from_class_name(&memory, config->windows[window_i].class_name);
 
                 RECT rect = {};
                 GetClientRect(window, &rect);
@@ -655,9 +656,6 @@ win32_screen_capture_thread(void *data) {
                         CloseClipboard();
                     }
 
-                    BITMAPINFO bmp_infp = {};
-                    bmp_infp.bmiHeader.biSize = sizeof(bmp_infp.bmiHeader);
-
                     BITMAPINFOHEADER bmp_header = {};
                     bmp_header.biSize = sizeof(BITMAPINFOHEADER);
                     bmp_header.biWidth = width;
@@ -666,37 +664,55 @@ win32_screen_capture_thread(void *data) {
                     bmp_header.biBitCount = 32;
 
                     U32 image_size = ((width * bmp_header.biBitCount + 31) / 32) * 4 * height; // TODO: Why 31 / 32?? Why not just width * height * 4?
-                    U8 *image_data = (U8 *)memory_push(&memory, Memory_Index_permanent, image_size);
-                    GetDIBits(dc, bitmap, 0, height, image_data, (BITMAPINFO *)&bmp_header, DIB_RGB_COLORS);
+                    U8 *image_data = (U8 *)memory_push(&memory, Memory_Index_temp, image_size);
+                    ASSERT(image_data);
+                    if(image_data) {
+                        GetDIBits(dc, bitmap, 0, height, image_data, (BITMAPINFO *)&bmp_header, DIB_RGB_COLORS);
 
-                    // TODO: As well as saving the file, we should create an output directory per-session.
+                        // Try and create using the Window title. And if that fails use the classname.
+                        Bool created_directory = false;
+                        String program_title = config->windows[window_i].title;
+                        Win32_Create_Directory_Result create_dir_r = win32_create_directory(&memory, root_directory, program_title);
+                        created_directory = create_dir_r.success;
+                        if(!created_directory) {
+                            program_title = config->windows[window_i].class_name;
+                            create_dir_r = win32_create_directory(&memory, root_directory, program_title);
+                            created_directory = create_dir_r.success;
+                        }
 
-                    // TODO: It'd be better if the directory name was the window title name, not the class name.
-                    win32_create_directory(&memory, root_directory, config->target_window_names[window_i]);
+                        if(created_directory) {
 
-                    Int output_filename_size = root_directory.len + 256; // 256 is padding
-                    Char *output_filename = (Char *)memory_push(&memory, Memory_Index_temp, output_filename_size);
-                    ASSERT(output_filename);
-                    if(output_filename) {
-                        Int bytes_written = stbsp_snprintf(output_filename, output_filename_size, "%.*s/%.*s/%I64d.bmp", // TODO: %d prints S32 not U64
-                                                           root_directory.len, root_directory.e,
-                                                           config->target_window_names[window_i].len, config->target_window_names[window_i].e,
-                                                           iteration_count);
-                        ASSERT(bytes_written < output_filename_size);
+                            Int output_filename_size = root_directory.len + 256; // 256 is padding
+                            Char *output_filename = (Char *)memory_push(&memory, Memory_Index_temp, output_filename_size);
+                            ASSERT(output_filename);
+                            if(output_filename) {
 
-                        Image image = {};
-                        image.width = width;
-                        image.height = height;
-                        image.pixels = (U32 * )image_data;
-                        write_image_to_disk(api, &memory, &image, output_filename);
+                                // TODO: Instead of using iteration_count it'd be better to read the previous highest-number in the file and
+                                //       just +1 to that.
+                                Int bytes_written = stbsp_snprintf(output_filename, output_filename_size, "%.*s/%.*s/%I64d.bmp",
+                                                                   root_directory.len, root_directory.e,
+                                                                   program_title.len, program_title.e,
+                                                                   iteration_count);
+                                ASSERT(bytes_written < output_filename_size);
 
-                        successfully_wrote_something = true;
+                                Image image = {};
+                                image.width = width;
+                                image.height = height;
+                                image.pixels = (U32 * )image_data;
+                                write_image_to_disk(api, &memory, &image, output_filename);
 
-                        memory_pop(&memory, output_filename);
+                                successfully_wrote_something = true;
+
+                                memory_pop(&memory, output_filename);
+                            }
+                        }
+
+                        memory_pop(&memory, image_data);
                     }
                 }
             }
 
+            // TODO: Having a semaphore woken up by the UI thread and a backup timer would be better.
             Sleep(config->amount_to_sleep);
             ASSERT(iteration_count < 0xFFFFFFFFFFFFFFFF);
             if(successfully_wrote_something) {

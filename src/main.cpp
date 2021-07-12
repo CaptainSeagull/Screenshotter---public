@@ -33,7 +33,8 @@ struct Entry {
     U64 green_window_id;
     U64 yellow_window_id;
     Bool highlighted;
-    String class_name;
+
+    Window_Info info;
 };
 
 struct DLL_Data {
@@ -91,8 +92,7 @@ setup(API *api, DLL_Data *data, Renderer *renderer) {
 
                 data->windows[data->list_count].yellow_window_id = yellow_window->id;
                 data->windows[data->list_count].green_window_id = green_window->id;
-                data->windows[data->list_count].class_name = api->windows[wnd_i].class_name;
-                ASSERT(data->windows[data->list_count].class_name.len > 0);
+                data->windows[data->list_count].info = api->windows[wnd_i];
 
                 ++data->list_count;
 
@@ -230,10 +230,7 @@ handle_input_and_render(API *api) {
             }
 
             if(green_window_render_entity->visible) {
-                config->target_window_names[config->target_window_count] = data->windows[list_i].class_name;
-                ASSERT(config->target_window_names[config->target_window_count].len > 0);
-                ASSERT(config->target_window_names[config->target_window_count].e[0] != 0);
-                ++config->target_window_count;
+                config->windows[config->target_window_count++] = data->windows[list_i].info;
             }
         }
     }

@@ -36,7 +36,7 @@ set(Void *dst, U8 v, U64 size) {
 // TODO: I'm storing the window list here, in API, and in main.cpp (for rendering). I think this is causing a bug, so try to collapse these
 //       three lists down into one.
 struct Config {
-    String target_window_names[256];
+    Window_Info windows[256];
     Int target_window_count;
 
     Bool copy_to_clipboard; // TODO: Only really makes sense for one window

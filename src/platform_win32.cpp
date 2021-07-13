@@ -886,15 +886,17 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
             Win32_Loaded_Code loaded_code = win32_load_code(src_dll_path, tmp_dll_path);
 
             API api = {};
+            Settings settings = {};
 
-            SYSTEM_INFO info = {};
+            SYSTEM_INFO info;
             GetSystemInfo(&info);
-            api.settings.thread_count = info.dwNumberOfProcessors;
 
-            api.settings.window_width = 1920 / 2;
-            api.settings.window_width = 1080 / 2;
+            // Initial sizes
+            settings.thread_count = info.dwNumberOfProcessors;
+            settings.window_width = 1920 / 2;
+            settings.window_width = 1080 / 2;
 
-            loaded_code.init_platform_settings(&api.settings);
+            loaded_code.init_platform_settings(&settings);
             api.screen_bitmap.memory = memory_push(&memory, Memory_Index_bitmap, MAX_SCREEN_BITMAP_SIZE);
             ASSERT(api.screen_bitmap.memory);
             if(api.screen_bitmap.memory) {
@@ -907,16 +909,16 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
                 WNDCLASS wnd_class = {};
                 wnd_class.style = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
                 wnd_class.hInstance = hInstance;
-                wnd_class.lpszClassName = TEXT("Screenshotter");
+                wnd_class.lpszClassName = TEXT("Screenshotter Window Class");
                 wnd_class.lpfnWndProc = win32_window_proc;
 
                 // TODO: Is this part correct?
-                Int frame_rate = 30; // TODO: Make configurable.
+                Int frame_rate = 60; // TODO: Make configurable.
                 Int game_update_hz = frame_rate;
                 F32 target_seconds_per_frame = 1.0f / (F32)game_update_hz;
                 F32 target_ms_per_frame = 16.66f; //(1.0f / (F32)frame_rate) * 1000.0f;
 
-                // To make the frame rate more granular.
+                // Make the frame rate more granular.
                 {
                     HMODULE winmmdll = LoadLibraryA("winmm.dll");
                     if(winmmdll) {
@@ -933,14 +935,13 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
                 if(RegisterClassA(&wnd_class)) {
                     HWND wnd = CreateWindowExA(0, wnd_class.lpszClassName, "Screenshotter",
                                                WS_OVERLAPPEDWINDOW | WS_VISIBLE | WS_POPUP, CW_USEDEFAULT, CW_USEDEFAULT,
-                                               api.settings.window_width, api.settings.window_height, 0, 0, hInstance, 0);
+                                               settings.window_width, settings.window_height, 0, 0, hInstance, 0);
 
 #if USE_OPENGL_WINDOW
                     win32_init_opengl(wnd);
 #endif
 
-                    Int wnd_width = 0, wnd_height = 0;
-                    win32_get_window_dimension(wnd, &wnd_width, &wnd_height);
+                    win32_get_window_dimension(wnd, &api.window_width, &api.window_height);
 
                     if((wnd) && (wnd != INVALID_HANDLE_VALUE)) {
                         LARGE_INTEGER last_counter = win32_get_wall_clock();
@@ -953,8 +954,8 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
                         win32_api.queue.entries = (Win32_Work_Queue_Entry *)memory_push(&memory, Memory_Index_permanent,
                                                                                         sizeof(Win32_Work_Queue_Entry) * win32_api.queue.entry_count);
                         ASSERT(win32_api.queue.entries);
-                        if(api.settings.dll_data_struct_size) {
-                            api.dll_data = memory_push(&memory, Memory_Index_permanent, api.settings.dll_data_struct_size);
+                        if(settings.dll_data_struct_size) {
+                            api.dll_data = memory_push(&memory, Memory_Index_permanent, settings.dll_data_struct_size);
                             ASSERT(api.dll_data); // TODO: Error handling.
                         }
                         api.platform_specific = (Void *)&win32_api;
@@ -994,7 +995,7 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
 
                         // TODO: Read core_count from settings. Maybe pass in actual core_count to settings but let
                         //       DLL overwrite it.
-                        for(Int i = 0; (i < api.settings.thread_count - 1); ++i) {
+                        for(Int i = 0; (i < settings.thread_count - 1); ++i) {
                             HANDLE h = CreateThread(0, 0, win32_thread_proc, &win32_api.queue, 0, 0);
                             ASSERT(h && h != INVALID_HANDLE_VALUE);
                             CloseHandle(h);
@@ -1079,8 +1080,8 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
                                     api.previous_mouse_pos_x = api.mouse_pos_x;
                                     api.previous_mouse_pos_y = api.mouse_pos_y;
 
-                                    F32 pos_x = (F32)pt.x / (F32)wnd_width;
-                                    F32 pos_y = (F32)pt.y / (F32)wnd_height;
+                                    F32 pos_x = (F32)pt.x / (F32)api.window_width;
+                                    F32 pos_y = (F32)pt.y / (F32)api.window_height;
 
                                     // Only store this if we're inside the window
                                     if((pos_x >= 0 && pos_x <= 1) && (pos_y >= 0 && pos_y <= 1)) {

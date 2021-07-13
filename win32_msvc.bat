@@ -3,7 +3,7 @@
 set RELEASE_FLAG=false
 set INTERNAL_FLAG=true
 set ALLOW_ASSERTS_FLAG=true
-set USE_OPENGL_WINDOW_FLAG=true
+set USE_OPENGL_WINDOW_FLAG=false
 
 cd %~dp0
 

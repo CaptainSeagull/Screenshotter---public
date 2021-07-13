@@ -108,6 +108,7 @@ struct Window_Info {
 };
 
 struct Config;
+
 // TODO: Tidy API struct
 struct API {
     F32 previous_key[256];
@@ -136,7 +137,7 @@ struct API {
     Platform_Callbacks cb;
     Void *platform_specific;
 
-    Settings settings;
+    //Settings settings;
     Void *dll_data;
 
     Int window_count;

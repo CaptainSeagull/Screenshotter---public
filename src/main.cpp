@@ -60,7 +60,7 @@ setup(API *api, DLL_Data *data, Renderer *renderer) {
     create_renderer(renderer, api->memory);
 
     Render_Entity *white_window = push_solid_rectangle(renderer, &renderer->root,
-                                                       0, 0, api->settings.window_width, api->settings.window_height,
+                                                       0, 0, api->window_width, api->window_height,
                                                        255, 255, 255, 255);
     data->background_id = white_window->id;
 

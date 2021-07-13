@@ -253,15 +253,16 @@ win32_window_proc(HWND wnd, UINT msg, WPARAM w_param, LPARAM l_param) {
             global_api->screen_image_size_change = true;
         } break;
 
-        case WM_PAINT: {
+        // TODO: This never seems to be called. Is it nessessary?
+        /*case WM_PAINT: {
             PAINTSTRUCT ps;
             HDC dc = BeginPaint(wnd, &ps);
             RECT cr;
             GetClientRect(wnd, &cr);
-            //win32_update_window(dc, &cr, global_api->screen_bitmap.memory, &global_bmp_info,
-            //                    global_api->screen_bitmap.width, global_api->screen_bitmap.height);
+            win32_update_window(global_api->memory, dc, &cr, global_api->screen_bitmap.memory, &global_bmp_info,
+                                global_api->screen_bitmap.width, global_api->screen_bitmap.height);
             EndPaint(wnd, &ps);
-        } break;
+        } break;*/
 
         default: {
             res = DefWindowProcA(wnd, msg, w_param, l_param);
@@ -271,7 +272,8 @@ win32_window_proc(HWND wnd, UINT msg, WPARAM w_param, LPARAM l_param) {
     return(res);
 };
 
-internal Key win32_key_to_our_key(WPARAM k) {
+internal Key
+win32_key_to_our_key(WPARAM k) {
     Key res = key_unknown;
     switch(k) {
         case VK_CONTROL: { res = key_ctrl;   } break;
@@ -306,26 +308,30 @@ internal Key win32_key_to_our_key(WPARAM k) {
     return(res);
 }
 
-internal F32 win32_get_seconds_elapsed(LARGE_INTEGER start, LARGE_INTEGER end, int64_t perf_cnt_freq) {
+internal F32
+win32_get_seconds_elapsed(LARGE_INTEGER start, LARGE_INTEGER end, int64_t perf_cnt_freq) {
     F32 r = (F32)(end.QuadPart - start.QuadPart) / (F32)perf_cnt_freq;
     return(r);
 }
 
-internal LARGE_INTEGER win32_get_wall_clock(Void) {
-    LARGE_INTEGER res = {};
+internal LARGE_INTEGER
+win32_get_wall_clock(Void) {
+    LARGE_INTEGER res;
     QueryPerformanceCounter(&res);
 
     return(res);
 }
 
-internal Void win32_get_window_dimension(HWND wnd, Int *w, Int *h) {
+internal Void
+win32_get_window_dimension(HWND wnd, Int *w, Int *h) {
     RECT cr;
     GetClientRect(wnd, &cr);
     *w = (cr.right - cr.left);
     *h = (cr.bottom - cr.top);
 }
 
-internal Void win32_init_opengl(HWND window) {
+internal Void
+win32_init_opengl(HWND window) {
     HDC dc = GetDC(window);
 
     PIXELFORMATDESCRIPTOR desired_pfd = {};
@@ -998,7 +1004,9 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
                         for(Int i = 0; (i < settings.thread_count - 1); ++i) {
                             HANDLE h = CreateThread(0, 0, win32_thread_proc, &win32_api.queue, 0, 0);
                             ASSERT(h && h != INVALID_HANDLE_VALUE);
-                            CloseHandle(h);
+                            if(h && h != INVALID_HANDLE_VALUE) {
+                                CloseHandle(h);
+                            }
                         }
 
                         EnumWindows(enum_windows_proc, (LPARAM)&api);
@@ -1067,11 +1075,7 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
 
                             // Actual rendering
                             {
-                                HDC dc = GetDC(wnd);
-
-                                RECT cr;
-                                GetClientRect(wnd, &cr);
-
+                                // Get mouse position
                                 {
                                     POINT pt;
                                     GetCursorPos(&pt);
@@ -1090,13 +1094,18 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
                                     }
                                 }
 
-                                api.window_width = cr.right - cr.left;;
-                                api.window_height = cr.bottom - cr.top;;
+                                RECT cr;
+                                GetClientRect(wnd, &cr);
+
+                                api.window_width = cr.right - cr.left;
+                                api.window_height = cr.bottom - cr.top;
 
                                 loaded_code.handle_input_and_render(&api);
 
                                 if(!api.init) { api.screen_image_size_change = false; }
                                 api.init = false;
+
+                                HDC dc = GetDC(wnd);
 
                                 win32_update_window(&memory, dc, &cr, api.screen_bitmap.memory, &global_bmp_info,
                                                     api.screen_bitmap.width, api.screen_bitmap.height);
@@ -1106,7 +1115,7 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
 
                             // TODO: If the windows isn't in focus have an option to go to sleep here until it is in focus.
 
-                            // Frame rate stuff, not that we ever hit a frame...
+                            // Frame rate stuff.
                             {
                                 F32 seconds_elapsed_for_frame = win32_get_seconds_elapsed(last_counter,
                                                                                           win32_get_wall_clock(),
@@ -1155,7 +1164,8 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
 
 // TODO: Putting methods in extern "C" ruins mirror. Mirror forward declares them without the extern "C" so the linkage is different.
 extern "C" {int _fltused = 0; }
-void __stdcall WinMainCRTStartup() {
+void __stdcall
+WinMainCRTStartup(Void) {
     int Result = WinMain(GetModuleHandle(0), 0, 0, 0);
     ExitProcess(Result);
 }

@@ -137,7 +137,6 @@ struct API {
     Platform_Callbacks cb;
     Void *platform_specific;
 
-    //Settings settings;
     Void *dll_data;
 
     Int window_count;

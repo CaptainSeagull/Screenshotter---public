@@ -317,7 +317,8 @@ win32_get_seconds_elapsed(LARGE_INTEGER start, LARGE_INTEGER end, int64_t perf_c
 internal LARGE_INTEGER
 win32_get_wall_clock(Void) {
     LARGE_INTEGER res;
-    QueryPerformanceCounter(&res);
+    Bool s = QueryPerformanceCounter(&res); // Apparently can't fail post XP... not that I trust the docs :-)
+    ASSERT(s);
 
     return(res);
 }
@@ -325,7 +326,8 @@ win32_get_wall_clock(Void) {
 internal Void
 win32_get_window_dimension(HWND wnd, Int *w, Int *h) {
     RECT cr;
-    GetClientRect(wnd, &cr);
+    Bool s = GetClientRect(wnd, &cr);
+    ASSERT(s);
     *w = (cr.right - cr.left);
     *h = (cr.bottom - cr.top);
 }
@@ -636,7 +638,7 @@ win32_screen_capture_thread(void *data) {
                 HWND window = win32_find_window_from_class_name(&memory, config->windows[window_i].class_name);
 
                 RECT rect = {};
-                GetClientRect(window, &rect);
+                1GetClientRect(window, &rect);
                 Int width = rect.right - rect.left;
                 Int height = rect.bottom - rect.top;
 

@@ -120,10 +120,8 @@ struct API {
     F32 dt;
     F32 seconds_elapsed_for_last_frame;
 
-    F32 previous_mouse_pos_x;
-    F32 previous_mouse_pos_y;
-    F32 mouse_pos_x;
-    F32 mouse_pos_y;
+    F32 previous_mouse_pos_x, previous_mouse_pos_y;
+    F32 mouse_pos_x, mouse_pos_y;
 
     Int window_width, window_height; // Client size
 

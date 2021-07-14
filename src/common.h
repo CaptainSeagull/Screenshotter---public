@@ -42,6 +42,8 @@ typedef double F64;
 #define MEGABYTES(v) ((KILOBYTES(v)) * (1024LL))
 #define GIGABYTES(v) ((MEGABYTES(v)) * (1024LL))
 
+#define CONCAT(a, b) a##b
+
 #include "platform.h"
 
 // TODO: None of these are shared between the UI and "screenshooting" threads. May be useful to have some way to pass memory back-and-forth.

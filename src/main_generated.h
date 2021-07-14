@@ -58,10 +58,11 @@ enum sglg_Type {
     sglg_Type_stbrp_rect,
     sglg_Type_stbtt_kerningentry,
     sglg_Type_V2u,
+    sglg_Type_Render_Entity,
     sglg_Type_Rect,
     sglg_Type_Image_Rect,
     sglg_Type_Word,
-    sglg_Type_Render_Entity,
+    sglg_Type_Render_Entity_For_Size,
     sglg_Type_Render_Image,
     sglg_Type_Internal,
     sglg_Type_Renderer,
@@ -140,10 +141,11 @@ struct stbtt_pack_context;
 struct stbtt_fontinfo;
 struct stbtt_kerningentry;
 struct V2u;
+struct Render_Entity;
 struct Rect;
 struct Image_Rect;
 struct Word;
-struct Render_Entity;
+struct Render_Entity_For_Size;
 struct Render_Image;
 struct Internal;
 struct Renderer;
@@ -855,23 +857,20 @@ float square_root(float a );
  static int32_t stbtt__GetGlyphClass(uint8_t * classDefTable , int glyph );
  static V2u v2u(V2 v );
  static V2u v2u(U32 x , U32 y );
- static V2 get_position(Render_Entity * render_entity );
  static Render_Entity* new_node(Memory * memory );
  static Render_Entity* find_end_node(Render_Entity * node );
  static Void internal_add_new_node(Render_Entity * * parent , Render_Entity * child );
  static Render_Entity* add_child_to_node(Memory * memory , Render_Entity * * parent );
  static Void create_renderer(Renderer * renderer , Memory * memory );
- static Rect create_rectangle(Int x , Int y , Int width , Int height , U8 r , U8 g , U8 b , U8 a );
  static Image_Rect create_image_rectangle(Int x , Int y , Int width , Int height , Int sprite_x , Int sprite_y , Int sprite_width , Int sprite_height , U64 image_id );
  static U64 push_image(Renderer * renderer , Image image );
- static Render_Entity* push_solid_rectangle(Renderer * renderer , Render_Entity * * parent , Int start_x , Int start_y , Int width , Int height , U8 r , U8 g , U8 b , U8 a );
+ static Rect* push_solid_rectangle_(Renderer * renderer , Render_Entity * * parent , Int start_x , Int start_y , Int width , Int height , U8 r , U8 g , U8 b , U8 a );
  static Void push_font(Renderer * renderer , Image_Letter * font_images );
  static Render_Image* find_font_image(Renderer * renderer , Char c );
- static Render_Entity* push_word(Renderer * renderer , Render_Entity * * parent , String str , Image_Letter * font_images , Int start_x , Int start_y , Int height );
- static Render_Entity* push_image_rect(Renderer * renderer , Render_Entity * * parent , Int start_x , Int start_y , Int width , Int height , Int sprite_x , Int sprite_y , Int sprite_width , Int sprite_height , U64 image_id );
+ static Word* push_word_(Renderer * renderer , Render_Entity * * parent , String str , Image_Letter * font_images , Int start_x , Int start_y , Int height );
+ static Image_Rect* push_image_rect(Renderer * renderer , Render_Entity * * parent , Int start_x , Int start_y , Int width , Int height , Int sprite_x , Int sprite_y , Int sprite_width , Int sprite_height , U64 image_id );
  static Render_Image* find_image_from_id(Renderer * renderer , U64 id );
- static Render_Entity* find_render_entity(Render_Entity * render_entity , U64 id );
- static Render_Entity* find_render_entity(Renderer * renderer , U64 id );
+ static Render_Entity* find_render_entity_internal(Render_Entity * render_entity , U64 id );
  static F32 floor(F32 a );
  static U32* image_at_(U32 * base , U32 width , U32 height , U32 x , U32 y );
  static Void render_node(Render_Entity * render_entity , Renderer * renderer , Bitmap * screen_bitmap , V2 input_offset );
@@ -880,6 +879,7 @@ float square_root(float a );
  static Image_Letter* create_font_data(API * api );
 extern "C" Void init_platform_settings(Settings * settings );
  static Void setup(API * api , DLL_Data * data , Renderer * renderer );
+ static Void update(API * api , Renderer * renderer );
 extern "C" Void handle_input_and_render(API * api );
 void  __stdcall _DllMainCRTStartup(void );
 static char const *sglg_Memory_Arena_Error_to_string(Memory_Arena_Error e);

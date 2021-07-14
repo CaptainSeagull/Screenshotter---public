@@ -11,34 +11,9 @@ v2u(U32 x, U32 y) {
     return(r);
 }
 
-internal V2
-get_position(Render_Entity *render_entity) {
-    // TODO: I don't really like this... maybe move the X, Y to the Render_Image struct?
-
-    V2 res = {};
-    switch(render_entity->type) {
-        case sglg_Type_Rect: {
-            Rect *rect = (Rect *)render_entity;
-            res = v2(rect->x, rect->y);
-        } break;
-
-        case sglg_Type_Image_Rect: {
-            Image_Rect *rect = (Image_Rect *)render_entity;
-            res = v2(rect->x, rect->y);
-        } break;
-
-        case sglg_Type_Word: {
-            Word *word = (Word *)render_entity;
-            res = v2(word->x, word->y);
-        } break;
-    }
-
-    return(res);
-}
-
 internal Render_Entity *
 new_node(Memory *memory) {
-    Render_Entity *render_entity = (Render_Entity *)memory_push(memory, Memory_Index_renderer, sizeof(Render_Entity));
+    Render_Entity *render_entity = (Render_Entity *)memory_push(memory, Memory_Index_renderer, sizeof(Render_Entity_For_Size));
     ASSERT(render_entity);
 
     return(render_entity);
@@ -83,18 +58,6 @@ create_renderer(Renderer *renderer, Memory *memory) {
     add_child_to_node(memory, &renderer->root);
 }
 
-internal Rect
-create_rectangle(Int x, Int y, Int width, Int height, U8 r, U8 g, U8 b, U8 a) {
-    Rect res = {};
-    res.x = x;
-    res.y = y;
-    res.width = width;
-    res.height = height;
-    res.output_colour = (a << 24 | r << 16 | g << 8 | b << 0);
-
-    return(res);
-}
-
 internal Image_Rect
 create_image_rectangle(Int x, Int y, Int width, Int height, Int sprite_x, Int sprite_y, Int sprite_width, Int sprite_height, U64 image_id) {
     Image_Rect res = {};
@@ -125,27 +88,32 @@ push_image(Renderer *renderer, Image image) {
 }
 
 internal Render_Entity *
-create_render_entity(Memory *memory, Render_Entity **parent, sglg_Type type) {
-    Render_Entity *render_entity = add_child_to_node(memory, parent);
+create_render_entity(Renderer *renderer, Render_Entity **parent, sglg_Type type) {
+    Render_Entity *render_entity = add_child_to_node(renderer->memory, parent);
     ASSERT(render_entity);
 
     render_entity->visible = true;
     render_entity->type = type;
+    render_entity->id = renderer->_internal.entity_id_count++;
 
     return(render_entity);
 }
 
-internal Render_Entity *
-push_solid_rectangle(Renderer *renderer, Render_Entity **parent,
-                     Int start_x, Int start_y, Int width, Int height,
-                     U8 r, U8 g, U8 b, U8 a) {
-    Render_Entity *render_entity = create_render_entity(renderer->memory, parent, sglg_Type_Rect);
+#define push_solid_rectangle(renderer, parent, start_x, start_y, width, height, r, g, b, a) \
+    push_solid_rectangle_(renderer, (Render_Entity **)parent, start_x, start_y, width, height, r, g, b, a)
+internal Rect *
+push_solid_rectangle_(Renderer *renderer, Render_Entity **parent,
+                      Int start_x, Int start_y, Int width, Int height,
+                      U8 r, U8 g, U8 b, U8 a) {
+    Rect *rect = (Rect *)create_render_entity(renderer, parent, sglg_Type_Rect);
 
-    Rect *rectangle = (Rect *)render_entity;
-    *rectangle = create_rectangle(start_x, start_y, width, height, r, g, b, a);
-    render_entity->id = renderer->_internal.entity_id_count++;
+    rect->x = start_x;
+    rect->y = start_y;
+    rect->width = width;
+    rect->height = height;
+    rect->output_colour = (a << 24 | r << 16 | g << 8 | b << 0);
 
-    return(render_entity);
+    return(rect);
 }
 
 internal Void
@@ -169,13 +137,18 @@ find_font_image(Renderer *renderer, Char c) {
     return(image);
 }
 
-internal Render_Entity *
-push_word(Renderer *renderer, Render_Entity **parent, String str, Image_Letter *font_images, Int start_x, Int start_y, Int height) {
-    Render_Entity *render_entity = create_render_entity(renderer->memory, parent, sglg_Type_Word);
+#define push_word(renderer, parent, str, font_images, start_x, start_y, height) \
+    push_word_(renderer, (Render_Entity **)parent, str, font_images, start_x, start_y, height)
+
+internal Word *
+push_word_(Renderer *renderer, Render_Entity **parent, String str, Image_Letter *font_images, Int start_x, Int start_y, Int height) {
+    Word *word = (Word *)create_render_entity(renderer, parent, sglg_Type_Word);
+    ASSERT(word);
+
+    word->string = str;
 
     V2u padding = v2u(0, 0);
 
-    Word *word = (Word *)render_entity;
     word->x = start_x;
     word->y = start_y;
 
@@ -201,7 +174,7 @@ push_word(Renderer *renderer, Render_Entity **parent, String str, Image_Letter *
                 Int height_to_use = (height * char_pct_height_of_total);
                 Int width_to_use = floor((F32)image->width * ((F32)height_to_use / (F32)image->height)); // TODO: Is this correct?
 
-                push_image_rect(renderer, &render_entity,
+                push_image_rect(renderer, (Render_Entity **)&word,
                                 running_x, running_y, width_to_use, height_to_use,
                                 0, 0, 0, 0,
                                 renderer->letter_ids[c]);
@@ -211,24 +184,30 @@ push_word(Renderer *renderer, Render_Entity **parent, String str, Image_Letter *
         }
     }
 
-    return(render_entity);
+    return(word);
 }
 
-internal Render_Entity *
+internal Image_Rect *
 push_image_rect(Renderer *renderer, Render_Entity **parent,
                 Int start_x, Int start_y, Int width, Int height,
                 Int sprite_x, Int sprite_y, Int sprite_width, Int sprite_height,
                 U64 image_id) {
     ASSERT(find_image_from_id(renderer, image_id));
 
-    Render_Entity *render_entity = create_render_entity(renderer->memory, parent, sglg_Type_Image_Rect);
+    Image_Rect *image_rect = (Image_Rect *)create_render_entity(renderer, parent, sglg_Type_Image_Rect);
+    ASSERT(image_rect);
 
-    Image_Rect *rectangle = (Image_Rect *)render_entity;
+    image_rect->x = start_x;
+    image_rect->y = start_y;
+    image_rect->width = width;
+    image_rect->height = height;
+    image_rect->sprite_x = sprite_x;
+    image_rect->sprite_y = sprite_y;
+    image_rect->sprite_width = sprite_width;
+    image_rect->sprite_height = sprite_height;
+    image_rect->image_id = image_id;
 
-    *rectangle = create_image_rectangle(start_x, start_y, width, height, sprite_x, sprite_y, sprite_width, sprite_height, image_id);
-    render_entity->id = renderer->_internal.entity_id_count++;
-
-    return(render_entity);
+    return(image_rect);
 }
 
 internal Render_Image *
@@ -245,7 +224,7 @@ find_image_from_id(Renderer *renderer, U64 id) {
 }
 
 internal Render_Entity *
-find_render_entity(Render_Entity *render_entity, U64 id) {
+find_render_entity_internal(Render_Entity *render_entity, U64 id) {
     Render_Entity *res = 0;
 
     Render_Entity *next = render_entity;
@@ -262,7 +241,7 @@ find_render_entity(Render_Entity *render_entity, U64 id) {
         next = render_entity;
         while(next) {
             if(next->child) {
-                res = find_render_entity(next->child, id);
+                res = find_render_entity_internal(next->child, id);
                 if(res) {
                     break; // while
                 }
@@ -275,9 +254,11 @@ find_render_entity(Render_Entity *render_entity, U64 id) {
     return(res);
 }
 
+#define find_render_entity(Renderer, id, Type) (Type *)find_render_entity_(renderer, id, CONCAT(sglg_Type_, Type))
 internal Render_Entity *
-find_render_entity(Renderer *renderer, U64 id) {
-    Render_Entity *r = find_render_entity(renderer->root, id);
+find_render_entity_(Renderer *renderer, U64 id, sglg_Type expected_type) {
+    Render_Entity *r = find_render_entity_internal(renderer->root, id);
+    ASSERT(r && r->type == expected_type);
     return(r);
 }
 
@@ -289,7 +270,6 @@ floor(F32 a) {
     return(r);
 }
 
-// TODO: Have this return 0 if we're accessing outside the image.
 #define image_at(base,w,h,x,y) image_at_((U32 *)base,w,h,x,y)
 internal U32 *
 image_at_(U32 *base, U32 width, U32 height, U32 x, U32 y) {
@@ -298,12 +278,14 @@ image_at_(U32 *base, U32 width, U32 height, U32 x, U32 y) {
         U32 accessor = ((y * width) + x);
         res = &base[accessor];
     }
+
     return(res);
 }
 
 internal Void
 render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bitmap, V2 input_offset) {
-    V2u offset = v2u(input_offset + get_position(render_entity));
+    V2u offset = v2u(input_offset.x + render_entity->x,
+                     input_offset.y + render_entity->y);
 
     // TODO: Most of the renderers are reading the screen pixels for y,x. However it'd probably be faster to just read for the y then
     //       ++ iterate through to write the X. Wouldn't be able to ASSERT as nicely though...
@@ -454,7 +436,7 @@ render_node_and_siblings(Render_Entity *render_entity, Renderer *renderer, Bitma
     next = render_entity;
     while(next) {
         if(next->child) {
-            render_node_and_siblings(next->child, renderer, screen_bitmap, offset + get_position(next));
+            render_node_and_siblings(next->child, renderer, screen_bitmap, offset + v2(next->x, next->y));
         }
         next = next->next;
     }

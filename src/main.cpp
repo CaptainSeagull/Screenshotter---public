@@ -56,12 +56,11 @@ init_platform_settings(Settings *settings) {
 
 internal Void
 setup(API *api, DLL_Data *data, Renderer *renderer) {
-
     create_renderer(renderer, api->memory);
 
-    Render_Entity *white_window = push_solid_rectangle(renderer, &renderer->root,
-                                                       0, 0, api->window_width, api->window_height,
-                                                       255, 255, 255, 255);
+    Rect *white_window = push_solid_rectangle(renderer, &renderer->root,
+                                              0, 0, api->window_width, api->window_height,
+                                              255, 255, 255, 255);
     data->background_id = white_window->id;
 
     Image_Letter *font_images = create_font_data(api);
@@ -81,12 +80,12 @@ setup(API *api, DLL_Data *data, Renderer *renderer) {
         Int running_y = 40;
         for(Int wnd_i = 0; (wnd_i < api->window_count); ++wnd_i) {
             if(api->windows[wnd_i].title.len > 0 && api->windows[wnd_i].class_name.len > 0) {
-                Render_Entity *yellow_window = push_solid_rectangle(renderer, &white_window,
-                                                                    0, running_y, 640, height + 10,
-                                                                    255, 255, 0, 0);
-                Render_Entity *green_window = push_solid_rectangle(renderer, &white_window,
-                                                                   0, running_y, 640, height + 10,
-                                                                   0, 255, 0, 0);
+                Rect *yellow_window = push_solid_rectangle(renderer, &white_window,
+                                                           0, running_y, 640, height + 10,
+                                                           255, 255, 0, 0);
+                Rect *green_window = push_solid_rectangle(renderer, &white_window,
+                                                          0, running_y, 640, height + 10,
+                                                          0, 255, 0, 0);
                 yellow_window->visible = false;
                 green_window->visible = false;
 
@@ -111,68 +110,51 @@ setup(API *api, DLL_Data *data, Renderer *renderer) {
             }
         }
     }
+}
 
-#if 0
-#if 0
-    Void *tmp = memory_push(api->memory, Memory_Index_temp, 128 * 128 * 4);
-    memory_pop(api->memory, tmp);
+internal Void
+update(API *api, Renderer *renderer) {
+    DLL_Data *data = (DLL_Data *)api->dll_data;
+    Config *config = api->config;
 
-    Image image_arrow = load_image(api, "arrow2.bmp");
-    Image_Letter *font_images = create_font_data(api);
-    push_font(renderer, font_images);
-    push_word(renderer, &white_window, "A.a,g", font_images, 100, 100, 40);
-#else
-    Image image_arrow = load_image(api, "arrow2.bmp");
-    U64 arrow_id = push_image(renderer, image_arrow);
-    push_image_rect(renderer, &white_window, 0, 0, 32, 32, 64, 64, 64, 64, arrow_id);
+    Int mouse_x = (Int)(api->mouse_pos_x * (F32)api->window_width);
+    Int mouse_y = (Int)(api->mouse_pos_y * (F32)api->window_height);
 
 
-    Image_Letter *font_images = create_font_data(api);
+    // Stretch main window.
+    Rect *white_window = find_render_entity(renderer, data->background_id, Rect); ASSERT(white_window);
+    white_window->width = api->window_width;
+    white_window->height = api->window_height;
 
-    push_font(renderer, font_images);
+    // Yellow highlighting
+    for(U32 list_i = 0; (list_i < data->list_count); ++list_i) {
+        Rect *yellow_window = find_render_entity(renderer, data->windows[list_i].yellow_window_id, Rect);
+        Rect *green_window = find_render_entity(renderer, data->windows[list_i].green_window_id, Rect);
 
-    Render_Entity *yellow_window = push_solid_rectangle(renderer, &white_window,
-                                                        0, 100, 640, 128,
-                                                        255, 255, 0, 0);
-    data->yellow_window_ids = yellow_window->id;
+        yellow_window->width = api->window_width;
+        green_window->width = api->window_width;
 
-    Int height = 30;
-    Int running_y = 10;
-    for(Int wnd_i = 0; (wnd_i < api->top_level_window_titles_count); ++wnd_i) {
-        if(api->top_level_window_titles[wnd_i].len > 0) {
-            push_word(renderer, &white_window,
-                      api->top_level_window_titles[wnd_i],
-                      font_images, 0, running_y, height);
-            running_y += (height + 10);
+        data->windows[list_i].highlighted = false;
+        yellow_window->visible = false;
+        if(mouse_x > yellow_window->x && mouse_x < yellow_window->x + yellow_window->width) {
+            if(mouse_y > yellow_window->y && mouse_y < yellow_window->y + yellow_window->height) {
+                data->windows[list_i].highlighted = true;
+                if(api->key[key_mouse_left] && !api->previous_key[key_mouse_left]) {
+                    green_window->visible = !green_window->visible;
+                }
+
+                if(!green_window->visible) {
+                    yellow_window->visible = true;
+                }
+            }
+        }
+
+        if(green_window->visible) {
+            config->windows[config->target_window_count++] = data->windows[list_i].info;
         }
     }
 
-    Image test_img = load_image(api, "test.bmp");
-    U64 test_id = push_image(renderer, test_img);
-    push_image_rect(renderer, &yellow_window,
-                    0, 0, 128, 128,
-                    0, 0, 0, 0,
-                    test_id);
-
-    Int start_x = 100;
-    push_image_rect(renderer, &yellow_window,
-                    start_x, 0, 32, 32,
-                    64, 64, 64, 64,
-                    arrow_id);
-    push_image_rect(renderer, &yellow_window,
-                    start_x + 32, 0, 64, 64,
-                    64, 64, 64, 64,
-                    arrow_id);
-    push_image_rect(renderer, &yellow_window,
-                    start_x + 32 + 64, 0, 32, 64,
-                    64, 64, 64, 64,
-                    arrow_id);
-    push_image_rect(renderer, &yellow_window,
-                    start_x + 128, 0, 64, 32,
-                    64, 64, 64, 64,
-                    arrow_id);
-#endif
-#endif
+    render(renderer, &api->screen_bitmap);
 }
 
 extern "C" Void
@@ -185,57 +167,16 @@ handle_input_and_render(API *api) {
 
     Renderer *renderer = &data->renderer;
 
+#if INTERNAL
     Memory_Group *temp_group = get_memory_group(api->memory, Memory_Index_temp);
     ASSERT(temp_group->used == 0);
-
-    Int mouse_x = (Int)(api->mouse_pos_x * (F32)api->window_width);
-    Int mouse_y = (Int)(api->mouse_pos_y * (F32)api->window_height);
+#endif
 
     if(api->init) {
         setup(api, data, renderer);
     } else {
-
-        // Stretch main window.
-        Render_Entity *white_window = find_render_entity(renderer, data->background_id); ASSERT(white_window);
-        white_window->_Rect.width = api->window_width;
-        white_window->_Rect.height = api->window_height;
-
-        // Yellow highlighting
-        for(U32 list_i = 0; (list_i < data->list_count); ++list_i) {
-
-            // TODO: The API of having to get the root and actual entity separately is crappy...
-
-            Render_Entity *yellow_window_render_entity = find_render_entity(renderer, data->windows[list_i].yellow_window_id); ASSERT(yellow_window_render_entity);
-            Rect *yellow_window = (Rect *)yellow_window_render_entity;
-
-            Render_Entity *green_window_render_entity = find_render_entity(renderer, data->windows[list_i].green_window_id); ASSERT(green_window_render_entity);
-            Rect *green_window = (Rect *)green_window_render_entity;
-
-            yellow_window->width = api->window_width;
-            green_window->width = api->window_width;
-
-            data->windows[list_i].highlighted = false;
-            yellow_window_render_entity->visible = false;
-            if(mouse_x > yellow_window->x && mouse_x < yellow_window->x + yellow_window->width) {
-                if(mouse_y > yellow_window->y && mouse_y < yellow_window->y + yellow_window->height) {
-                    data->windows[list_i].highlighted = true;
-                    if(api->key[key_mouse_left] && !api->previous_key[key_mouse_left]) {
-                        green_window_render_entity->visible = !green_window_render_entity->visible;
-                    }
-
-                    if(!green_window_render_entity->visible) {
-                        yellow_window_render_entity->visible = true;
-                    }
-                }
-            }
-
-            if(green_window_render_entity->visible) {
-                config->windows[config->target_window_count++] = data->windows[list_i].info;
-            }
-        }
+        update(api, renderer);
     }
-
-    render(renderer, &api->screen_bitmap);
 }
 
 

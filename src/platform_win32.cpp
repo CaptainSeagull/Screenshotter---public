@@ -31,11 +31,9 @@ internal File
 win32_read_file(Memory *memory, U32 memory_index_to_use, String fname, Bool null_terminate) {
     File res = {};
 
-    Char *fname_copy = (Char *)memory_push(memory, Memory_Index_internal_temp, fname.len + 1);
+    Char *fname_copy = (Char *)memory_push_string(memory, Memory_Index_internal_temp, fname);
     ASSERT(fname_copy);
     if(fname_copy) {
-        memcpy(fname_copy, fname.e, fname.len);
-
         HANDLE fhandle = CreateFileA(fname_copy, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);
         if(fhandle != INVALID_HANDLE_VALUE) {
             LARGE_INTEGER fsize;
@@ -71,11 +69,9 @@ internal Bool
 win32_write_file(Memory *memory, String fname, U8 *data, U64 size) {
     Bool res = false;
 
-    Char *fname_copy = (Char *)memory_push(memory, Memory_Index_internal_temp, fname.len + 1);
+    Char *fname_copy = (Char *)memory_push_string(memory, Memory_Index_internal_temp, fname);
     ASSERT(fname_copy);
     if(fname_copy) {
-        memcpy(fname_copy, fname.e, fname.len);
-
         HANDLE fhandle = CreateFileA(fname_copy, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, 0, CREATE_ALWAYS, 0, 0);
         if(fhandle != INVALID_HANDLE_VALUE) {
 
@@ -532,17 +528,6 @@ win32_create_directory(Memory *memory, String root, String dir, Bool save_direct
     return(res);
 }
 
-internal Char *
-memory_push_string(Memory *mem, Memory_Index idx, String s, Int padding = 0) {
-    Char *res = (Char *)memory_push(mem, idx, s.len + 1 + padding);
-    ASSERT(res);
-    if(res) {
-        memcpy(res, s.e, s.len);
-    }
-
-    return(res);
-}
-
 internal Int
 win32_directory_index_to_use(Memory *mem, String session_prefix, String input_target_directory) {
     Int res = 0;
@@ -638,7 +623,7 @@ win32_screen_capture_thread(void *data) {
                 HWND window = win32_find_window_from_class_name(&memory, config->windows[window_i].class_name);
 
                 RECT rect = {};
-                1GetClientRect(window, &rect);
+                GetClientRect(window, &rect);
                 Int width = rect.right - rect.left;
                 Int height = rect.bottom - rect.top;
 

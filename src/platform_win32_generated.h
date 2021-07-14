@@ -198,6 +198,7 @@ int stbsp_snprintf(char * buf , int count , char const * fmt , ... );
  static Void copy(Void * dst , Void * src , U64 size );
  static Void set(Void * dst , U8 v , U64 size );
  static Void flip_image(Void * dst_pixels , Void * src_pixels , Int width , Int height );
+ static Char* memory_push_string(Memory * mem , Memory_Index idx , String s , Int padding  );
  static Void write_image_to_disk(API * api , Memory * memory , Image * image , String file_name );
 Image load_image(API * api , String file_name );
  static float lane_max(float a , float b );

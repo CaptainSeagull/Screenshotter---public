@@ -866,7 +866,7 @@ float square_root(float a );
  static Void create_renderer(Renderer * renderer , Memory * memory );
  static Image_Rect create_image_rectangle(Int x , Int y , Int width , Int height , Int sprite_x , Int sprite_y , Int sprite_width , Int sprite_height , U64 image_id );
  static U64 push_image(Renderer * renderer , Image image );
- static Rect* push_solid_rectangle_(Renderer * renderer , Render_Entity * * parent , Int x , Int y , Int width , Int height , U8 r , U8 g , U8 b , U8 a );
+ static Rect* push_solid_rectangle_(Renderer * renderer , Render_Entity * * parent , Int x , Int y , Int width , Int height , U32 inner_colour );
  static Line* push_line_(Renderer * renderer , Render_Entity * * parent , Int x1 , Int y1 , Int x2 , Int y2 , F32 thickness );
  static Void push_font(Renderer * renderer , Image_Letter * font_images );
  static Render_Image* find_font_image(Renderer * renderer , Char c );

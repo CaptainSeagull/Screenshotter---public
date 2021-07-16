@@ -975,6 +975,7 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
 
                         config.include_title_bar = true;
                         config.target_output_directory = "C:/tmp"; // TODO: Hardcoded
+                        // TODO: Create directory here if it doesn't already exist?
                         config.amount_to_sleep = 1000;
 
                         Win32_Screen_Capture_Thread_Parameters thread_params = {};

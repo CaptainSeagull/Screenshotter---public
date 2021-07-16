@@ -1,4 +1,6 @@
 
+#define RGBA(r,g,b,a) (U32)(a << 24 | r << 16 | g << 8 | b << 0)
+
 struct V2u {
     U32 x, y;
 };
@@ -14,7 +16,9 @@ struct Render_Entity {
 // TODO: Instead of prefixing with SGLG_ENTITY_PATTERN, can I generate this just based on inheritance?
 SGLG_ENTITY_PATTERN(Render_Entity) struct Rect : public Render_Entity {
     Int width, height;
-    U32 output_colour;
+    F32 outline_thickness;
+    U32 inner_colour;
+    U32 outer_colour;
 };
 
 // TODO: Make a sprite-sheet version.

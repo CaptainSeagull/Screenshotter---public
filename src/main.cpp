@@ -41,6 +41,7 @@ struct DLL_Data {
     Renderer renderer;
 
     U64 background_id;
+    U64 button_id;
 
     Entry windows[256];
     U32 list_count;
@@ -62,7 +63,8 @@ setup(API *api, DLL_Data *data, Renderer *renderer) {
 
     Rect *white_background = push_solid_rectangle(renderer, &renderer->root,
                                                   0, 0, api->window_width, api->window_height,
-                                                  255, 255, 255, 255);
+                                                  RGBA(255, 255, 255, 255));
+
     data->background_id = white_background->id;
 
     Image_Letter *font_images = create_font_data(api);
@@ -80,13 +82,20 @@ setup(API *api, DLL_Data *data, Renderer *renderer) {
                            };
 
         push_words(renderer, &white_background,
-                   font_images, 10, 60, 20,
+                   font_images, 40, 60, 20,
                    strings, ARRAY_COUNT(strings));
     } else {
         push_word(renderer, &white_background,
-                  font_images, 10, 60, 20,
+                  font_images, 40, 60, 20,
                   "Please select an output directory");
     }
+
+    Rect *button = push_solid_rectangle(renderer, &white_background,
+                                        5, 58, 30, 30,
+                                        RGBA(255, 255, 255, 255));
+    button->outline_thickness = 3.0f;
+    button->outer_colour = 0xFF000000;
+    data->button_id = button->id;
 
     push_line(renderer, &renderer->root, 0, 95, api->window_width, 95, 3.0f);
 
@@ -102,10 +111,10 @@ setup(API *api, DLL_Data *data, Renderer *renderer) {
             if(api->windows[wnd_i].title.len > 0 && api->windows[wnd_i].class_name.len > 0) {
                 Rect *yellow_window = push_solid_rectangle(renderer, &white_background,
                                                            0, running_y, 640, height + 10,
-                                                           255, 255, 0, 0);
+                                                           RGBA(255, 255, 0, 0));
                 Rect *green_window = push_solid_rectangle(renderer, &white_background,
                                                           0, running_y, 640, height + 10,
-                                                          0, 255, 0, 0);
+                                                          RGBA(0, 255, 0, 0));
                 yellow_window->visible = false;
                 green_window->visible = false;
 
@@ -145,6 +154,20 @@ update(API *api, Renderer *renderer) {
     Rect *white_window = find_render_entity(renderer, data->background_id, Rect); ASSERT(white_window);
     white_window->width = api->window_width;
     white_window->height = api->window_height;
+
+    // Button
+    Rect *button = find_render_entity(renderer, data->button_id, Rect); ASSERT(button);
+    button->inner_colour = 0xFFFFFFFF;
+    if(mouse_x > button->x && mouse_x < button->x + button->width) {
+        if(mouse_y > button->y && mouse_y < button->y + button->height) {
+            button->inner_colour = 0x0000FFFF;
+            if(api->key[key_mouse_left]) {
+                button->inner_colour = 0xFFFF0000;
+
+                // TODO: Launch the directory selector here!
+            }
+        }
+    }
 
     // Yellow highlighting
     for(U32 list_i = 0; (list_i < data->list_count); ++list_i) {

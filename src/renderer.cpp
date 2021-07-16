@@ -99,19 +99,19 @@ create_render_entity(Renderer *renderer, Render_Entity **parent, sglg_Type type)
     return(render_entity);
 }
 
-#define push_solid_rectangle(renderer, parent, x, y, width, height, r, g, b, a) \
-    push_solid_rectangle_(renderer, (Render_Entity **)parent, x, y, width, height, r, g, b, a)
+#define push_solid_rectangle(renderer, parent, x, y, width, height, inner_colour) \
+    push_solid_rectangle_(renderer, (Render_Entity **)parent, x, y, width, height, inner_colour)
 internal Rect *
 push_solid_rectangle_(Renderer *renderer, Render_Entity **parent,
                       Int x, Int y, Int width, Int height,
-                      U8 r, U8 g, U8 b, U8 a) {
+                      U32 inner_colour) {
     Rect *rect = (Rect *)create_render_entity(renderer, parent, sglg_Type_Rect);
 
     rect->x = x;
     rect->y = y;
     rect->width = width;
     rect->height = height;
-    rect->output_colour = (a << 24 | r << 16 | g << 8 | b << 0);
+    rect->inner_colour = inner_colour;
 
     return(rect);
 }
@@ -334,8 +334,11 @@ render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bit
                 U32 width = rect->width;
                 U32 height = rect->height;
 
-                for(U32 iter_y = 0; (iter_y < height); ++iter_y) {
-                    for(U32 iter_x = 0; (iter_x < width); ++iter_x) {
+                F32 line_thickness = rect->outline_thickness;
+                F32 half_line_thickness = (line_thickness * 0.5f);
+
+                for(Int iter_y = 0; (iter_y < height); ++iter_y) {
+                    for(Int iter_x = 0; (iter_x < width); ++iter_x) {
                         U32 *screen_pixel = image_at(screen_bitmap->memory,
                                                      screen_bitmap->width,
                                                      screen_bitmap->height,
@@ -346,16 +349,27 @@ render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bit
 
                             // TODO: Is the order actually swapped? Would alpha be index 0?
 #if 0
-                            F64 a = (F64)((U8 *)&rect->output_colour)[3] / 255.0;
+                            F64 a = (F64)((U8 *)&rect->inner_colour)[3] / 255.0;
 
-                            U32 l = minu32(rect->output_colour, *screen_pixel);
-                            U32 u = maxu32(rect->output_colour, *screen_pixel);
+                            U32 l = minu32(rect->inner_colour, *screen_pixel);
+                            U32 u = maxu32(rect->inner_colour, *screen_pixel);
                             U32 d = a * (u - l);
-                            U32 output_colour = l + d;
+                            U32 inner_colour = l + d;
 #else
-                            U32 bitmap_pixel = rect->output_colour;
+
+                            Bool on_outline = false;
+                            if(iter_y < line_thickness || iter_x < line_thickness) {
+                                on_outline = true;
+                            } else if(iter_y > height - line_thickness || iter_x > width - line_thickness) {
+                                on_outline = true;
+                            }
+
+                            U32 bitmap_pixel = (on_outline) ? rect->outer_colour : rect->inner_colour;
+#if 1
+                            U32 colour = bitmap_pixel;
+#else
                             F64 a = (F64)((U8 *)&bitmap_pixel)[3] / 255.0;
-                            U32 output_colour = 0xFFFFFFFF;
+                            U32 colour = 0xFFFFFFFF;
                             for(Int i = 0; (i < 3); ++i) {
                                 U32 s = ((U8 *)screen_pixel)[i];
                                 U32 b = ((U8 *)&bitmap_pixel)[i];
@@ -364,11 +378,12 @@ render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bit
                                 U32 u = maxu32(b, s);
                                 U32 d = a * (u - l);
                                 U32 o = l + d;
-                                ((U8 *)&output_colour)[i] = o;
+                                ((U8 *)&colour)[i] = o;
                             }
 #endif
+#endif
 
-                            *screen_pixel = output_colour;
+                            *screen_pixel = colour;
                         }
                     }
                 }
@@ -463,8 +478,8 @@ render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bit
 
                             F32 alphaf32 = alpha8 / 255.0f;
 
-                            U32 output_colour = 0xFFFFFFFF;
-                            U8 *at = (U8 *)&output_colour;
+                            U32 inner_colour = 0xFFFFFFFF;
+                            U8 *at = (U8 *)&inner_colour;
                             for(Int i = 0; (i < 4); ++i, ++at) {
                                 U8 bitmap_pixel8 = ((U8 *)bitmap_pixel)[i];
                                 U8 screen_pixel8 = ((U8 *)screen_pixel)[i];
@@ -480,16 +495,16 @@ render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bit
                                 *at = output_colour8;
                             }
 
-                            if(alphaf32 == 0) { ASSERT(output_colour == *screen_pixel); }
-                            if(alphaf32 == 1) { ASSERT(output_colour == *bitmap_pixel); }
+                            if(alphaf32 == 0) { ASSERT(inner_colour == *screen_pixel); }
+                            if(alphaf32 == 1) { ASSERT(inner_colour == *bitmap_pixel); }
 #else
                             // Binary alpha
                             U8 alpha8 = ((U8 *)bitmap_pixel)[0]; // TODO: 0 or 3?
-                            U32 output_colour = *bitmap_pixel;
-                            if(alpha8 == 255) { output_colour = *screen_pixel; }
+                            U32 inner_colour = *bitmap_pixel;
+                            if(alpha8 == 255) { inner_colour = *screen_pixel; }
 #endif
 
-                            *screen_pixel = output_colour;
+                            *screen_pixel = inner_colour;
                         }
                     }
                 }

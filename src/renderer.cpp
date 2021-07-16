@@ -153,15 +153,24 @@ find_font_image(Renderer *renderer, Char c) {
     return(image);
 }
 
-#define push_word(renderer, parent, str, font_images, start_x, start_y, height) \
-    push_word_(renderer, (Render_Entity **)parent, str, font_images, start_x, start_y, height)
+#define push_word(renderer, parent, font_images, start_x, start_y, height, string) \
+    push_word_(renderer, (Render_Entity **)parent, font_images, start_x, start_y, height, string)
 
 internal Word *
-push_word_(Renderer *renderer, Render_Entity **parent, String str, Image_Letter *font_images, Int start_x, Int start_y, Int height) {
+push_word_(Renderer *renderer, Render_Entity **parent, Image_Letter *font_images, Int start_x, Int start_y, Int height, String string) {
+    Word *r = push_words_(renderer, parent, font_images, start_x, start_y, height, &string, 1);
+    return(r);
+}
+
+#define push_words(renderer, parent, font_images, start_x, start_y, height, strings, string_count) \
+    push_words_(renderer, (Render_Entity **)parent, font_images, start_x, start_y, height, strings, string_count)
+
+internal Word *
+push_words_(Renderer *renderer, Render_Entity **parent, Image_Letter *font_images, Int start_x, Int start_y, Int height, String *strings, Int str_count) {
     Word *word = (Word *)create_render_entity(renderer, parent, sglg_Type_Word);
     ASSERT(word);
 
-    word->string = str;
+    //word->string = str;
 
     V2u padding = v2u(0, 0);
 
@@ -173,29 +182,34 @@ push_word_(Renderer *renderer, Render_Entity **parent, String str, Image_Letter 
     Render_Image *a_image = find_font_image(renderer, 'A');
     F32 full_height = a_image->height;
 
-    for(Int i = 0; (i < str.len); ++i) {
-        if(str.e[i] == '\n') {
-            running_x = 0;
-            running_y -= (height + padding.y);
-        } else {
-            Char c = str.e[i];
 
-            if(c == ' ') {
-                running_x += height;
+    for(Int str_i = 0; (str_i < str_count); ++str_i) {
+        String *str = &strings[str_i];
+
+        for(Int letter_i = 0; (letter_i < str->len); ++letter_i) {
+            if(str->e[letter_i] == '\n') {
+                running_x = 0;
+                running_y -= (height + padding.y);
             } else {
-                Render_Image *image = find_font_image(renderer, c);
+                Char c = str->e[letter_i];
 
-                F32 char_pct_height_of_total = (F32)image->height / full_height;
+                if(c == ' ') {
+                    running_x += height;
+                } else {
+                    Render_Image *image = find_font_image(renderer, c);
 
-                Int height_to_use = (height * char_pct_height_of_total);
-                Int width_to_use = floor((F32)image->width * ((F32)height_to_use / (F32)image->height)); // TODO: Is this correct?
+                    F32 char_pct_height_of_total = (F32)image->height / full_height;
 
-                push_image_rect(renderer, (Render_Entity **)&word,
-                                running_x, running_y, width_to_use, height_to_use,
-                                0, 0, 0, 0,
-                                renderer->letter_ids[c]);
+                    Int height_to_use = (height * char_pct_height_of_total);
+                    Int width_to_use = floor((F32)image->width * ((F32)height_to_use / (F32)image->height)); // TODO: Is this correct?
 
-                running_x += (width_to_use + padding.x + image->off_x); // TODO: This should be a scaled off_x
+                    push_image_rect(renderer, (Render_Entity **)&word,
+                                    running_x, running_y, width_to_use, height_to_use,
+                                    0, 0, 0, 0,
+                                    renderer->letter_ids[c]);
+
+                    running_x += (width_to_use + padding.x + image->off_x); // TODO: This should be a scaled off_x
+                }
             }
         }
     }

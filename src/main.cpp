@@ -56,6 +56,8 @@ init_platform_settings(Settings *settings) {
 
 internal Void
 setup(API *api, DLL_Data *data, Renderer *renderer) {
+    Config *config = api->config;
+
     create_renderer(renderer, api->memory);
 
     Rect *white_background = push_solid_rectangle(renderer, &renderer->root,
@@ -67,15 +69,24 @@ setup(API *api, DLL_Data *data, Renderer *renderer) {
     push_font(renderer, font_images);
 
     push_word(renderer, &white_background,
-              "Screenshotter!",
-              font_images, 10, 5, 30);
+              font_images, 10, 5, 30,
+              "Screenshotter!");
 
     push_line(renderer, &renderer->root, 0, 50, api->window_width, 50, 3.0f);
 
+    if(config->target_output_directory.len > 0) {
+        String strings[] = { "Output Directory: "
+                             "\"C:\\tmp\""
+                           };
 
-    push_word(renderer, &white_background,
-              "Output Directory: \"C:\\tmp\"",
-              font_images, 10, 60, 20);
+        push_words(renderer, &white_background,
+                   font_images, 10, 60, 20,
+                   strings, ARRAY_COUNT(strings));
+    } else {
+        push_word(renderer, &white_background,
+                  font_images, 10, 60, 20,
+                  "Please select an output directory");
+    }
 
     push_line(renderer, &renderer->root, 0, 95, api->window_width, 95, 3.0f);
 
@@ -107,8 +118,8 @@ setup(API *api, DLL_Data *data, Renderer *renderer) {
                 // Useful for debugging
 #if 1
                 push_word(renderer, &yellow_window,
-                          api->windows[wnd_i].title,
-                          font_images, 10, 5, height);
+                          font_images, 10, 5, height,
+                          api->windows[wnd_i].title);
 #else
                 push_word(renderer, &yellow_window,
                           api->windows[wnd_i].class_name,

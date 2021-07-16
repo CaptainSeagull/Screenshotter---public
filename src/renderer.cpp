@@ -320,13 +320,13 @@ render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bit
                 U32 width = rect->width;
                 U32 height = rect->height;
 
-                for(U32 y = 0; (y < height); ++y) {
-                    for(U32 x = 0; (x < width); ++x) {
+                for(U32 iter_y = 0; (iter_y < height); ++iter_y) {
+                    for(U32 iter_x = 0; (iter_x < width); ++iter_x) {
                         U32 *screen_pixel = image_at(screen_bitmap->memory,
                                                      screen_bitmap->width,
                                                      screen_bitmap->height,
-                                                     x + offset.x,
-                                                     y + offset.y);
+                                                     iter_x + offset.x,
+                                                     iter_y + offset.y);
 
                         if(screen_pixel) {
 
@@ -366,8 +366,10 @@ render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bit
                 F32 rise = maxf32(absolute(line->y2 - line->y), absolute(line->y - line->y2));
                 F32 run = maxf32(absolute(line->x2 - line->x), absolute(line->x - line->x2));
 
-                F32 m = rise / run; // slope // TODO: Need to test for a divide-by-zero for vertical lines
-                F32 c = line->y - m * line->x; // y-intercept of axis
+                F32 m = (run != 0) ? rise / run : 0;
+                F32 y_intercept = line->y - (m * line->x);
+                F32 x_intercept = line->x - (m * line->y);
+
                 F32 thickness = line->thickness;
                 F32 thickness_x2 = (line->thickness * 2.0f);
                 F32 rise_test = (rise + thickness_x2);
@@ -384,11 +386,17 @@ render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bit
                         if(screen_pixel) {
                             F32 x = iter_x + offset.x;
                             F32 y = iter_y + offset.y;
-                            F32 t = ((m * x) + c);
-
-                            if(absolute(y - t) < thickness) {
-                                *screen_pixel = 0;
+                            if(run != 0) {
+                                F32 t = ((m * x) + y_intercept);
+                                if(absolute(y - t) < thickness) {
+                                    *screen_pixel = 0;
+                                }
+                            } else {
+                                if(absolute(x - x_intercept) < thickness) {
+                                    *screen_pixel = 0;
+                                }
                             }
+
                         }
                     }
                 }
@@ -413,16 +421,16 @@ render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bit
 
                 F32 off_y_scaled = (F32)img->off_y * ((F32)img_rect->height / (F32)img->height);
 
-                for(U32 y = 0; (y < img_rect->height); ++y) {
-                    for(U32 x = 0; (x < img_rect->width); ++x) {
-                        U32 img_x = floor((F32)x * pct_w);
-                        U32 img_y = floor((F32)y * pct_h);
+                for(U32 iter_y = 0; (iter_y < img_rect->height); ++iter_y) {
+                    for(U32 iter_x = 0; (iter_x < img_rect->width); ++iter_x) {
+                        U32 img_x = floor((F32)iter_x * pct_w);
+                        U32 img_y = floor((F32)iter_y * pct_h);
 
                         U32 *screen_pixel = image_at(screen_bitmap->memory,
                                                      screen_bitmap->width,
                                                      screen_bitmap->height,
-                                                     x + offset.x,
-                                                     y + offset.y + (off_y_scaled));
+                                                     iter_x + offset.x,
+                                                     iter_y + offset.y + (off_y_scaled));
                         U32 *bitmap_pixel = image_at(img->pixels,
                                                      img->width,
                                                      img->height,

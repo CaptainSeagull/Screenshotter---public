@@ -66,12 +66,12 @@ setup(API *api, DLL_Data *data, Renderer *renderer) {
     Image_Letter *font_images = create_font_data(api);
     push_font(renderer, font_images);
 
-
     push_word(renderer, &white_background,
               "Screenshotter!",
               font_images, 10, 5, 30);
 
     push_line(renderer, &renderer->root, 0, 50, api->window_width, 50, 3.0f);
+
 
     push_word(renderer, &white_background,
               "Output Directory: \"C:\\tmp\"",

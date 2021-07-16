@@ -145,10 +145,10 @@ internal Void
 update(API *api, Renderer *renderer) {
     DLL_Data *data = (DLL_Data *)api->dll_data;
     Config *config = api->config;
+    Memory *memory = api->memory;
 
     Int mouse_x = (Int)(api->mouse_pos_x * (F32)api->window_width);
     Int mouse_y = (Int)(api->mouse_pos_y * (F32)api->window_height);
-
 
     // Stretch main window.
     Rect *white_window = find_render_entity(renderer, data->background_id, Rect); ASSERT(white_window);
@@ -163,6 +163,14 @@ update(API *api, Renderer *renderer) {
             button->inner_colour = 0x0000FFFF;
             if(api->key[key_mouse_left]) {
                 button->inner_colour = 0xFFFF0000;
+                if(!api->previous_key[key_mouse_left]) {
+                    String new_directory = api->cb.browse_for_directory(memory, config->target_output_directory);
+                    if(new_directory.len > 0) {
+                        // TODO: No way to update a word currently.
+                        // TODO: When we update the config we don't update the threaded screenshotting loop. Need to also do that.
+                        //config->target_output_directory = new_directory;
+                    }
+                }
 
                 // TODO: Launch the directory selector here!
             }

@@ -12,6 +12,7 @@
 #include "../shared/lane/lane.cpp"
 
 #include <windows.h>
+#include <shlobj.h>
 #include <gl/gl.h>
 #include <intrin.h>
 #include "platform_win32.h"
@@ -757,6 +758,48 @@ enum_windows_proc(HWND hwnd, LPARAM param) {
     return(TRUE);
 }
 
+internal int CALLBACK
+win32_directory_browse_callback(HWND hwnd, UINT uMsg, LPARAM lParam, LPARAM lpData) {
+    if(uMsg == BFFM_INITIALIZED) {
+        SendMessage(hwnd, BFFM_SETSELECTION, TRUE, lpData);
+    }
+
+    return 0;
+}
+
+internal String
+win32_browse_for_directory(Memory *memory, String input_path) {
+    String res = {};
+
+    Char *input_path_copy = (Char *)memory_push_string(memory, Memory_Index_internal_temp, input_path);
+    ASSERT(input_path_copy);
+    if(input_path_copy) {
+        BROWSEINFO bi = { };
+        bi.lpszTitle = "Select directory...";
+        bi.ulFlags   = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE;
+        bi.lpfn      = win32_directory_browse_callback;
+        bi.lParam    = (LPARAM)input_path_copy;
+
+        LPITEMIDLIST pidl = SHBrowseForFolder(&bi);
+        if(pidl) {
+            TCHAR path[MAX_PATH];
+            SHGetPathFromIDList(pidl, path);
+
+            IMalloc *imalloc = 0;
+            if(SUCCEEDED(SHGetMalloc(&imalloc))) {
+                imalloc->Free(pidl);
+                imalloc->Release();
+            }
+
+            res = path; // TODO: Do I need to copy the memory?
+        }
+
+        memory_pop(memory, input_path_copy);
+    }
+
+    return(res);
+}
+
 int CALLBACK
 WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd) {
     int res = 0xFF;
@@ -965,6 +1008,8 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
 
                         api.cb.add_work_queue_entry = win32_add_work_queue_entry;
                         api.cb.complete_all_work = win32_complete_all_work;
+
+                        api.cb.browse_for_directory = win32_browse_for_directory;
 
                         api.randomish_seed = win32_get_wall_clock().QuadPart;
                         //api.randomish_seed = xorshift64(&api.randomish_seed); // TODO: Copy over xorshift64

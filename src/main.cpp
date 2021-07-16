@@ -75,8 +75,8 @@ setup(API *api, DLL_Data *data, Renderer *renderer) {
     push_line(renderer, &renderer->root, 0, 50, api->window_width, 50, 3.0f);
 
     if(config->target_output_directory.len > 0) {
-        String strings[] = { "Output Directory: "
-                             "\"C:\\tmp\""
+        String strings[] = { "Output Directory: ",
+                             config->target_output_directory
                            };
 
         push_words(renderer, &white_background,

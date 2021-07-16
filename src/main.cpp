@@ -58,17 +58,26 @@ internal Void
 setup(API *api, DLL_Data *data, Renderer *renderer) {
     create_renderer(renderer, api->memory);
 
-    Rect *white_window = push_solid_rectangle(renderer, &renderer->root,
-                                              0, 0, api->window_width, api->window_height,
-                                              255, 255, 255, 255);
-    data->background_id = white_window->id;
+    Rect *white_background = push_solid_rectangle(renderer, &renderer->root,
+                                                  0, 0, api->window_width, api->window_height,
+                                                  255, 255, 255, 255);
+    data->background_id = white_background->id;
 
     Image_Letter *font_images = create_font_data(api);
     push_font(renderer, font_images);
 
-    push_word(renderer, &white_window,
+
+    push_word(renderer, &white_background,
               "Screenshotter!",
               font_images, 10, 5, 30);
+
+    push_line(renderer, &renderer->root, 0, 50, api->window_width, 50, 3.0f);
+
+    push_word(renderer, &white_background,
+              "Output Directory: \"C:\\tmp\"",
+              font_images, 10, 60, 20);
+
+    push_line(renderer, &renderer->root, 0, 95, api->window_width, 95, 3.0f);
 
     // Running programs text
     {
@@ -77,13 +86,13 @@ setup(API *api, DLL_Data *data, Renderer *renderer) {
         // Investigate!
 
         Int height = 20;
-        Int running_y = 40;
+        Int running_y = 110;
         for(Int wnd_i = 0; (wnd_i < api->window_count); ++wnd_i) {
             if(api->windows[wnd_i].title.len > 0 && api->windows[wnd_i].class_name.len > 0) {
-                Rect *yellow_window = push_solid_rectangle(renderer, &white_window,
+                Rect *yellow_window = push_solid_rectangle(renderer, &white_background,
                                                            0, running_y, 640, height + 10,
                                                            255, 255, 0, 0);
-                Rect *green_window = push_solid_rectangle(renderer, &white_window,
+                Rect *green_window = push_solid_rectangle(renderer, &white_background,
                                                           0, running_y, 640, height + 10,
                                                           0, 255, 0, 0);
                 yellow_window->visible = false;

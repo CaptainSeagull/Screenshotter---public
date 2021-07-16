@@ -31,6 +31,11 @@ SGLG_ENTITY_PATTERN(Render_Entity) struct Word : public Render_Entity {
     String string;
 };
 
+SGLG_ENTITY_PATTERN(Render_Entity) struct Line : public Render_Entity {
+    Int x2, y2;
+    F32 thickness;
+};
+
 struct Render_Entity_For_Size {
     SGLG_ENTITY_OUTPUT_INTERNAL_Render_Entity;
 };

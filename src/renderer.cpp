@@ -99,21 +99,37 @@ create_render_entity(Renderer *renderer, Render_Entity **parent, sglg_Type type)
     return(render_entity);
 }
 
-#define push_solid_rectangle(renderer, parent, start_x, start_y, width, height, r, g, b, a) \
-    push_solid_rectangle_(renderer, (Render_Entity **)parent, start_x, start_y, width, height, r, g, b, a)
+#define push_solid_rectangle(renderer, parent, x, y, width, height, r, g, b, a) \
+    push_solid_rectangle_(renderer, (Render_Entity **)parent, x, y, width, height, r, g, b, a)
 internal Rect *
 push_solid_rectangle_(Renderer *renderer, Render_Entity **parent,
-                      Int start_x, Int start_y, Int width, Int height,
+                      Int x, Int y, Int width, Int height,
                       U8 r, U8 g, U8 b, U8 a) {
     Rect *rect = (Rect *)create_render_entity(renderer, parent, sglg_Type_Rect);
 
-    rect->x = start_x;
-    rect->y = start_y;
+    rect->x = x;
+    rect->y = y;
     rect->width = width;
     rect->height = height;
     rect->output_colour = (a << 24 | r << 16 | g << 8 | b << 0);
 
     return(rect);
+}
+
+#define push_line(renderer, parent, x1, y1, x2, y2, thickness) push_line_(renderer, (Render_Entity **)parent, x1, y1, x2, y2, thickness)
+internal Line *
+push_line_(Renderer *renderer, Render_Entity **parent,
+           Int x1, Int y1, Int x2, Int y2,
+           F32 thickness) {
+    Line *line = (Line *)create_render_entity(renderer, parent, sglg_Type_Line);
+
+    line->x = x1;
+    line->y = y1;
+    line->x2 = x2;
+    line->y2 = y2;
+    line->thickness = thickness;
+
+    return(line);
 }
 
 internal Void
@@ -270,6 +286,12 @@ floor(F32 a) {
     return(r);
 }
 
+internal F32
+absolute(F32 a) {
+    F32 r = (a > 0) ? a : -a;
+    return(r);
+}
+
 #define image_at(base,w,h,x,y) image_at_((U32 *)base,w,h,x,y)
 internal U32 *
 image_at_(U32 *base, U32 width, U32 height, U32 x, U32 y) {
@@ -336,6 +358,41 @@ render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bit
                         }
                     }
                 }
+            } break;
+
+            case sglg_Type_Line: {
+                Line *line = (Line *)render_entity;
+
+                F32 rise = maxf32(absolute(line->y2 - line->y), absolute(line->y - line->y2));
+                F32 run = maxf32(absolute(line->x2 - line->x), absolute(line->x - line->x2));
+
+                F32 m = rise / run; // slope // TODO: Need to test for a divide-by-zero for vertical lines
+                F32 c = line->y - m * line->x; // y-intercept of axis
+                F32 thickness = line->thickness;
+                F32 thickness_x2 = (line->thickness * 2.0f);
+                F32 rise_test = (rise + thickness_x2);
+                F32 run_test = (run + thickness_x2);
+
+                for(Int iter_y = -thickness_x2; (iter_y < rise_test); ++iter_y) {
+                    for(Int iter_x = -thickness_x2; (iter_x < run_test); ++iter_x) {
+                        U32 *screen_pixel = image_at(screen_bitmap->memory,
+                                                     screen_bitmap->width,
+                                                     screen_bitmap->height,
+                                                     iter_x + offset.x,
+                                                     iter_y + offset.y);
+
+                        if(screen_pixel) {
+                            F32 x = iter_x + offset.x;
+                            F32 y = iter_y + offset.y;
+                            F32 t = ((m * x) + c);
+
+                            if(absolute(y - t) < thickness) {
+                                *screen_pixel = 0;
+                            }
+                        }
+                    }
+                }
+
             } break;
 
             case sglg_Type_Image_Rect: {

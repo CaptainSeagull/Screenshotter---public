@@ -62,6 +62,7 @@ enum sglg_Type {
     sglg_Type_Rect,
     sglg_Type_Image_Rect,
     sglg_Type_Word,
+    sglg_Type_Line,
     sglg_Type_Render_Entity_For_Size,
     sglg_Type_Render_Image,
     sglg_Type_Internal,
@@ -145,6 +146,7 @@ struct Render_Entity;
 struct Rect;
 struct Image_Rect;
 struct Word;
+struct Line;
 struct Render_Entity_For_Size;
 struct Render_Image;
 struct Internal;
@@ -864,7 +866,8 @@ float square_root(float a );
  static Void create_renderer(Renderer * renderer , Memory * memory );
  static Image_Rect create_image_rectangle(Int x , Int y , Int width , Int height , Int sprite_x , Int sprite_y , Int sprite_width , Int sprite_height , U64 image_id );
  static U64 push_image(Renderer * renderer , Image image );
- static Rect* push_solid_rectangle_(Renderer * renderer , Render_Entity * * parent , Int start_x , Int start_y , Int width , Int height , U8 r , U8 g , U8 b , U8 a );
+ static Rect* push_solid_rectangle_(Renderer * renderer , Render_Entity * * parent , Int x , Int y , Int width , Int height , U8 r , U8 g , U8 b , U8 a );
+ static Line* push_line_(Renderer * renderer , Render_Entity * * parent , Int x1 , Int y1 , Int x2 , Int y2 , F32 thickness );
  static Void push_font(Renderer * renderer , Image_Letter * font_images );
  static Render_Image* find_font_image(Renderer * renderer , Char c );
  static Word* push_word_(Renderer * renderer , Render_Entity * * parent , String str , Image_Letter * font_images , Int start_x , Int start_y , Int height );
@@ -872,6 +875,7 @@ float square_root(float a );
  static Render_Image* find_image_from_id(Renderer * renderer , U64 id );
  static Render_Entity* find_render_entity_internal(Render_Entity * render_entity , U64 id );
  static F32 floor(F32 a );
+ static F32 absolute(F32 a );
  static U32* image_at_(U32 * base , U32 width , U32 height , U32 x , U32 y );
  static Void render_node(Render_Entity * render_entity , Renderer * renderer , Bitmap * screen_bitmap , V2 input_offset );
  static Void render_node_and_siblings(Render_Entity * render_entity , Renderer * renderer , Bitmap * screen_bitmap , V2 offset );
@@ -893,4 +897,4 @@ static Int sglg_Memory_Index_count(Memory_Index e);
 #define sglg_internal_enum_Memory_Arena_Error (7)
 #define sglg_internal_enum_Key (58)
 #define sglg_internal_enum_Memory_Index (8)
-#define SGLG_ENTITY_OUTPUT_INTERNAL_Render_Entity union { Rect _Rect; Image_Rect _Image_Rect; Word _Word; }; 
+#define SGLG_ENTITY_OUTPUT_INTERNAL_Render_Entity union { Rect _Rect; Image_Rect _Image_Rect; Word _Word; Line _Line; }; 

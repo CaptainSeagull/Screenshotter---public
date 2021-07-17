@@ -13,7 +13,13 @@ struct Render_Entity {
     Render_Entity *next, *child;
 };
 
+struct Image_Letter {
+    Image img;
+    Int off_x, off_y;
+};
+
 // TODO: Instead of prefixing with SGLG_ENTITY_PATTERN, can I generate this just based on inheritance?
+
 SGLG_ENTITY_PATTERN(Render_Entity) struct Rect : public Render_Entity {
     Int width, height;
     F32 outline_thickness;
@@ -32,7 +38,9 @@ SGLG_ENTITY_PATTERN(Render_Entity) struct Image_Rect : public Render_Entity {
 };
 
 SGLG_ENTITY_PATTERN(Render_Entity) struct Word : public Render_Entity {
-    String string;
+    String string; // TODO: Not used
+    Int height;
+    U64 font_id;
 };
 
 SGLG_ENTITY_PATTERN(Render_Entity) struct Line : public Render_Entity {
@@ -65,6 +73,7 @@ struct Renderer {
     Render_Image images[256];
     Int image_count;
     U64 letter_ids[128];
+    Image_Letter *font_images;
 
     Internal _internal;
 };

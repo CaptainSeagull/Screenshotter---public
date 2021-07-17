@@ -50,7 +50,7 @@ add_child_to_node(Memory *memory, Render_Entity **parent) {
 
 internal Void
 create_renderer(Renderer *renderer, Memory *memory) {
-    ++renderer->_internal.entity_id_count; // Use 0 for invalid
+    renderer->_internal.entity_id_count = 1; // Use 0 for invalid
     renderer->memory = memory;
     renderer->root = (Render_Entity * )memory_push(renderer->memory, Memory_Index_renderer, sizeof(Render_Entity));
     ASSERT(renderer->root);
@@ -74,17 +74,33 @@ create_image_rectangle(Int x, Int y, Int width, Int height, Int sprite_x, Int sp
     return(res);
 }
 
+
 internal U64
 push_image(Renderer *renderer, Image image) {
-    U64 id = renderer->_internal.entity_id_count++;
-    ASSERT(renderer->image_count + 1 < ARRAY_COUNT(renderer->images));
-    Render_Image *render_image = &renderer->images[renderer->image_count++];
-    render_image->width = image.width;
-    render_image->height = image.height;
-    render_image->pixels = image.pixels;
-    render_image->id = id;
+    U64 id = 0;
+    Render_Image *ri = push_image_internal(renderer, image);
+    ASSERT(ri);
+    if(ri) {
+        id = ri->id;
+    }
 
     return(id);
+}
+
+internal Render_Image *
+push_image_internal(Renderer *renderer, Image image) {
+    Render_Image *render_image = 0;
+
+    ASSERT(renderer->image_count + 1 < ARRAY_COUNT(renderer->images));
+    if(renderer->image_count + 1 < ARRAY_COUNT(renderer->images)) {
+        render_image = &renderer->images[renderer->image_count++];
+        render_image->width = image.width;
+        render_image->height = image.height;
+        render_image->pixels = image.pixels;
+        render_image->id = renderer->_internal.entity_id_count++;
+    }
+
+    return(render_image);
 }
 
 internal Render_Entity *
@@ -132,17 +148,127 @@ push_line_(Renderer *renderer, Render_Entity **parent,
     return(line);
 }
 
-internal Void
-push_font(Renderer *renderer, Image_Letter *font_images) {
-    for(Int i = 0; (i < 128); ++i) {
-        U64 image_id = push_image(renderer, font_images[i].img);
-        Render_Image *image = find_image_from_id(renderer, image_id);
-        ASSERT(image);
+struct Image_Letter_Result {
+    Image_Letter image_letter;
+    Bool success;
+};
+internal Image_Letter_Result
+make_letter_image(Memory *memory, stbtt_fontinfo *font, Char ch) {
+    Image_Letter_Result res = {};
 
-        image->off_x = font_images[i].off_x;
-        image->off_y = font_images[i].off_y;
-        renderer->letter_ids[i] = image_id;
+    Int w, h, off_x, off_y;
+    U8 *mono_bmp = stbtt_GetCodepointBitmap(font, 0, stbtt_ScaleForPixelHeight(font, 64.0f), ch, &w, &h, &off_x, &off_y);
+    if(mono_bmp) {
+        Image_Letter image_letter = {};
+        image_letter.img.width = w;
+        image_letter.img.height = h;
+        image_letter.img.pixels = (U32 *)memory_push(memory, Memory_Index_permanent, w * h * 4);
+        ASSERT(image_letter.img.pixels);
+        if(image_letter.img.pixels) {
+
+#define FLIP_IMAGE 0
+
+#if FLIP_IMAGE
+            //image_letter.off_x = off_x; // TODO: Do we care about this?
+            image_letter.off_y = -off_y - h;
+#else
+            image_letter.off_x = off_x;
+            image_letter.off_y = off_y;
+#endif
+
+            Int pitch = (w * 4);
+
+            U8 *src = mono_bmp;
+#if FLIP_IMAGE
+            U8 *dst_row = (U8 * )image_letter.img.pixels + (h - 1) * pitch;
+#else
+            U8 *dst_row = (U8 * )image_letter.img.pixels;
+#endif
+            for(U32 y = 0; (y < h); ++y) {
+                U32 *dst = (U32 *)dst_row;
+                for(U32 x = 0; (x < w); ++x) {
+                    U8 alpha = 0xFF - *src++;
+                    *dst++ = ((alpha << 24) | (alpha << 16) | (alpha << 8) | (alpha << 0));
+                }
+
+#if FLIP_IMAGE
+                dst_row -= pitch;
+#else
+                dst_row += pitch;
+#endif
+            }
+
+            stbtt_FreeBitmap(mono_bmp, 0);
+
+            res.image_letter = image_letter;
+            res.success = true;
+        }
     }
+
+    return(res);
+}
+
+internal U64
+push_font(API *api, Renderer *renderer, String font_file) {
+    U64 font_id = 0;
+
+    Memory *memory = api->memory;
+
+    File file = api->cb.read_file(memory, Memory_Index_temp, font_file, false);
+    ASSERT(file.size > 0);
+    if(file.size > 0) {
+        stbtt_fontinfo font_info = {};
+        Bool success = stbtt_InitFont(&font_info, file.e, stbtt_GetFontOffsetForIndex(file.e, 0));
+        if(success) {
+            for(Int letter_i = 0; (letter_i < 128); ++letter_i) {
+                Image_Letter_Result ilr = make_letter_image(memory, &font_info, letter_i);
+                if(ilr.success) {
+                    Image_Letter *image_letter = &ilr.image_letter;
+
+                    Render_Image *image = push_image_internal(renderer, image_letter->img);
+                    ASSERT(image);
+                    if(image) {
+                        image->off_x = image_letter->off_x;
+                        image->off_y = image_letter->off_y;
+                        renderer->letter_ids[letter_i] = image->id;
+                    }
+                }
+            }
+
+            memory_pop(memory, file.e);
+            font_id = renderer->_internal.entity_id_count++;
+        }
+    }
+
+    return(font_id);
+}
+
+#define push_word(renderer, parent, font_id, start_x, start_y, height, string) \
+    push_word_(renderer, (Render_Entity **)parent, font_id, start_x, start_y, height, string)
+
+internal Word *
+push_word_(Renderer *renderer, Render_Entity **parent, U64 font_id, Int start_x, Int start_y, Int height, String string) {
+    Word *r = push_words_(renderer, parent, font_id, start_x, start_y, height, &string, 1);
+    return(r);
+}
+
+#define push_words(renderer, parent, font_id, start_x, start_y, height, strings, string_count) \
+    push_words_(renderer, (Render_Entity **)parent, font_id, start_x, start_y, height, strings, string_count)
+
+internal Word *
+push_words_(Renderer *renderer, Render_Entity **parent, U64 font_id, Int start_x, Int start_y, Int height, String *strings, Int str_count) {
+    Word *word = (Word *)create_render_entity(renderer, parent, sglg_Type_Word);
+    ASSERT(word);
+    if(word) {
+        word->x = start_x;
+        word->y = start_y;
+        word->height = height;
+        word->font_id = font_id;
+
+        internal_set_words(renderer, word, strings, str_count);
+    }
+
+    return(word);
 }
 
 internal Render_Image *
@@ -153,35 +279,14 @@ find_font_image(Renderer *renderer, Char c) {
     return(image);
 }
 
-#define push_word(renderer, parent, font_images, start_x, start_y, height, string) \
-    push_word_(renderer, (Render_Entity **)parent, font_images, start_x, start_y, height, string)
+internal Void
+internal_set_words(Renderer *renderer, Word *word, String *strings, Int str_count) {
+    Int running_x = 0, running_y = word->height;
 
-internal Word *
-push_word_(Renderer *renderer, Render_Entity **parent, Image_Letter *font_images, Int start_x, Int start_y, Int height, String string) {
-    Word *r = push_words_(renderer, parent, font_images, start_x, start_y, height, &string, 1);
-    return(r);
-}
-
-#define push_words(renderer, parent, font_images, start_x, start_y, height, strings, string_count) \
-    push_words_(renderer, (Render_Entity **)parent, font_images, start_x, start_y, height, strings, string_count)
-
-internal Word *
-push_words_(Renderer *renderer, Render_Entity **parent, Image_Letter *font_images, Int start_x, Int start_y, Int height, String *strings, Int str_count) {
-    Word *word = (Word *)create_render_entity(renderer, parent, sglg_Type_Word);
-    ASSERT(word);
-
-    //word->string = str;
-
-    V2u padding = v2u(0, 0);
-
-    word->x = start_x;
-    word->y = start_y;
-
-    Int running_x = 0, running_y = height;
+    U64 font_id = word->font_id;
 
     Render_Image *a_image = find_font_image(renderer, 'A');
     F32 full_height = a_image->height;
-
 
     for(Int str_i = 0; (str_i < str_count); ++str_i) {
         String *str = &strings[str_i];
@@ -189,18 +294,18 @@ push_words_(Renderer *renderer, Render_Entity **parent, Image_Letter *font_image
         for(Int letter_i = 0; (letter_i < str->len); ++letter_i) {
             if(str->e[letter_i] == '\n') {
                 running_x = 0;
-                running_y -= (height + padding.y);
+                running_y -= word->height;
             } else {
                 Char c = str->e[letter_i];
 
                 if(c == ' ') {
-                    running_x += height;
+                    running_x += word->height;
                 } else {
                     Render_Image *image = find_font_image(renderer, c);
 
                     F32 char_pct_height_of_total = (F32)image->height / full_height;
 
-                    Int height_to_use = (height * char_pct_height_of_total);
+                    Int height_to_use = (word->height * char_pct_height_of_total);
                     Int width_to_use = floor((F32)image->width * ((F32)height_to_use / (F32)image->height)); // TODO: Is this correct?
 
                     push_image_rect(renderer, (Render_Entity **)&word,
@@ -208,13 +313,22 @@ push_words_(Renderer *renderer, Render_Entity **parent, Image_Letter *font_image
                                     0, 0, 0, 0,
                                     renderer->letter_ids[c]);
 
-                    running_x += (width_to_use + padding.x + image->off_x); // TODO: This should be a scaled off_x
+                    running_x += (width_to_use + image->off_x); // TODO: This should be a scaled off_x
                 }
             }
         }
     }
+}
 
-    return(word);
+internal Void
+update_word(Renderer *renderer, Word *word, String string) {
+    update_words(renderer, word, &string, 1);
+}
+
+internal Void
+update_words(Renderer *renderer, Word *word, String *strings, Int string_count) {
+    word->child = 0; // TODO: Should copy to a freelist
+    internal_set_words(renderer, word, strings, string_count);
 }
 
 internal Image_Rect *
@@ -284,7 +398,7 @@ find_render_entity_internal(Render_Entity *render_entity, U64 id) {
     return(res);
 }
 
-#define find_render_entity(Renderer, id, Type) (Type *)find_render_entity_(renderer, id, CONCAT(sglg_Type_, Type))
+#define find_render_entity(renderer, id, Type) (Type *)find_render_entity_(renderer, id, CONCAT(sglg_Type_, Type))
 internal Render_Entity *
 find_render_entity_(Renderer *renderer, U64 id, sglg_Type expected_type) {
     Render_Entity *r = find_render_entity_internal(renderer->root, id);

@@ -27,7 +27,6 @@ internal void my_free(void *d) { /* Do nothing... */ }
 #include "main_generated.h"
 #include "renderer.h"
 #include "renderer.cpp"
-#include "letter_stuff.cpp"
 
 struct Entry {
     U64 green_window_id;
@@ -42,6 +41,7 @@ struct DLL_Data {
 
     U64 background_id;
     U64 button_id;
+    U64 directory_word_id;
 
     Entry windows[256];
     U32 list_count;
@@ -67,28 +67,30 @@ setup(API *api, DLL_Data *data, Renderer *renderer) {
 
     data->background_id = white_background->id;
 
-    Image_Letter *font_images = create_font_data(api);
-    push_font(renderer, font_images);
+    U64 font_id = push_font(api, renderer, "c:/windows/fonts/arial.ttf");
+    ASSERT(font_id);
 
     push_word(renderer, &white_background,
-              font_images, 10, 5, 30,
+              font_id, 10, 5, 30,
               "Screenshotter!");
 
     push_line(renderer, &renderer->root, 0, 50, api->window_width, 50, 3.0f);
 
+    Word *directory_word = 0;
     if(config->target_output_directory.len > 0) {
-        String strings[] = { "Output Directory: ",
-                             config->target_output_directory
-                           };
+        String strings[] = { "Output Directory: ", config->target_output_directory };
 
-        push_words(renderer, &white_background,
-                   font_images, 40, 60, 20,
-                   strings, ARRAY_COUNT(strings));
+        directory_word = push_words(renderer, &white_background,
+                                    font_id, 40, 60, 20,
+                                    strings, ARRAY_COUNT(strings));
     } else {
-        push_word(renderer, &white_background,
-                  font_images, 40, 60, 20,
-                  "Please select an output directory");
+        directory_word = push_word(renderer, &white_background,
+                                   font_id, 40, 60, 20,
+                                   "Please select an output directory");
     }
+
+    ASSERT(directory_word);
+    data->directory_word_id = directory_word->id;
 
     Rect *button = push_solid_rectangle(renderer, &white_background,
                                         5, 58, 30, 30,
@@ -127,12 +129,12 @@ setup(API *api, DLL_Data *data, Renderer *renderer) {
                 // Useful for debugging
 #if 1
                 push_word(renderer, &yellow_window,
-                          font_images, 10, 5, height,
+                          font_id, 10, 5, height,
                           api->windows[wnd_i].title);
 #else
                 push_word(renderer, &yellow_window,
-                          api->windows[wnd_i].class_name,
-                          font_images, 10, 5, height);
+                          font_id, 10, 5, height,
+                          api->windows[wnd_i].class_name);
 #endif
 
                 running_y += (height + 10);
@@ -162,17 +164,23 @@ update(API *api, Renderer *renderer) {
         if(mouse_y > button->y && mouse_y < button->y + button->height) {
             button->inner_colour = 0x0000FFFF;
             if(api->key[key_mouse_left]) {
+                // TODO: Calling "browse_for_directory" is blocking, so because we call it before "render" we don't see the red "click". Maybe
+                //       make a delayed version?
                 button->inner_colour = 0xFFFF0000;
                 if(!api->previous_key[key_mouse_left]) {
                     String new_directory = api->cb.browse_for_directory(memory, config->target_output_directory);
                     if(new_directory.len > 0) {
-                        // TODO: No way to update a word currently.
-                        // TODO: When we update the config we don't update the threaded screenshotting loop. Need to also do that.
-                        //config->target_output_directory = new_directory;
+                        Word *directory_word = find_render_entity(renderer, data->directory_word_id, Word);
+                        ASSERT(directory_word);
+
+                        config->new_target_output_directory = new_directory;
+                        config->target_directory_changed = true;
+
+                        String strings[] = { "Output Directory: ", new_directory };
+
+                        update_words(renderer, directory_word, strings, ARRAY_COUNT(strings));
                     }
                 }
-
-                // TODO: Launch the directory selector here!
             }
         }
     }

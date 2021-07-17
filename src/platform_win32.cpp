@@ -15,9 +15,10 @@
 #include <shlobj.h>
 #include <gl/gl.h>
 #include <intrin.h>
-#include "platform_win32.h"
 
+#include "platform_win32.h"
 #include "platform_win32_generated.h"
+#include "renderer.h"
 
 #define MAX_SCREEN_BITMAP_SIZE (1920 * 1080 * 4) // TODO: Change to 4k?
 
@@ -559,6 +560,121 @@ win32_directory_index_to_use(Memory *mem, String session_prefix, String input_ta
     return(res);
 }
 
+internal Bool
+run_screenshotting(API *api, Memory *memory, Config *config, String root_directory, U64 iteration_count) {
+    Bool res = false;
+
+    for(Int window_i = 0; (window_i < config->target_window_count); ++window_i) {
+        ASSERT(config->windows[window_i].class_name.len > 0 &&
+               config->windows[window_i].title.len > 0);
+        HWND window = win32_find_window_from_class_name(memory, config->windows[window_i].class_name);
+
+        RECT rect = {};
+        GetClientRect(window, &rect);
+        Int width = rect.right - rect.left;
+        Int height = rect.bottom - rect.top;
+
+        // TODO: If the window is minified then the width/height will be 0
+        //       See https://www.codeproject.com/Articles/20651/Capturing-Minimized-Window-A-Kid-s-Trick for how to handle.
+        if(width > 0 && height > 0) {
+            HDC dc = GetDC(0);
+            HDC capture_dc = CreateCompatibleDC(dc);
+            HBITMAP bitmap = CreateCompatibleBitmap(dc, rect.right - rect.left, rect.bottom - rect.top);
+
+            HGDIOBJ gdiObj = SelectObject(capture_dc, bitmap);
+
+            PrintWindow(window, capture_dc, (config->include_title_bar) ? 0 : PW_CLIENTONLY);
+
+            // TODO: This sometimes captures the current window, not the target for some reason...
+            //BitBlt(capture_dc, 0, 0, width, height, dc, 0, 0, SRCCOPY | CAPTUREBLT);
+            //SelectObject(capture_dc, gdiObj);
+
+            if(config->copy_to_clipboard) {
+                OpenClipboard(0);
+                EmptyClipboard();
+                SetClipboardData(CF_BITMAP, bitmap);
+                CloseClipboard();
+            }
+
+            BITMAPINFOHEADER bmp_header = {};
+            bmp_header.biSize = sizeof(BITMAPINFOHEADER);
+            bmp_header.biWidth = width;
+            bmp_header.biHeight = height;
+            bmp_header.biPlanes = 1;
+            bmp_header.biBitCount = 32;
+
+            U32 image_size = ((width * bmp_header.biBitCount + 31) / 32) * 4 * height; // TODO: Why 31 / 32?? Why not just width * height * 4?
+            U8 *image_data = (U8 *)memory_push(memory, Memory_Index_temp, image_size);
+            ASSERT(image_data);
+            if(image_data) {
+                GetDIBits(dc, bitmap, 0, height, image_data, (BITMAPINFO *)&bmp_header, DIB_RGB_COLORS);
+
+                // Try and create using the Window title. And if that fails use the classname.
+                Bool created_directory = false;
+                String program_title = config->windows[window_i].title;
+                Win32_Create_Directory_Result create_dir_r = win32_create_directory(memory, root_directory, program_title);
+                created_directory = create_dir_r.success;
+                if(!created_directory) {
+                    program_title = config->windows[window_i].class_name;
+                    create_dir_r = win32_create_directory(memory, root_directory, program_title);
+                    created_directory = create_dir_r.success;
+                }
+
+                if(created_directory) {
+
+                    Int output_filename_size = root_directory.len + 256; // 256 is padding
+                    Char *output_filename = (Char *)memory_push(memory, Memory_Index_temp, output_filename_size);
+                    ASSERT(output_filename);
+                    if(output_filename) {
+
+                        // TODO: Instead of using iteration_count it'd be better to read the previous highest-number in the file and
+                        //       just +1 to that.
+                        Int bytes_written = stbsp_snprintf(output_filename, output_filename_size, "%.*s/%.*s/%I64d.bmp",
+                                                           root_directory.len, root_directory.e,
+                                                           program_title.len, program_title.e,
+                                                           iteration_count);
+                        ASSERT(bytes_written < output_filename_size);
+
+                        Image image = {};
+                        image.width = width;
+                        image.height = height;
+                        image.pixels = (U32 * )image_data;
+                        write_image_to_disk(api, memory, &image, output_filename);
+
+                        res = true;
+
+                        memory_pop(memory, output_filename);
+                    }
+                }
+
+                memory_pop(memory, image_data);
+            }
+        }
+    }
+
+    return(res);
+}
+
+internal String
+win32_create_root_directory(Memory *memory, String target_directory) {
+    String prefix = "Screenshotter_";
+
+    Int idx = win32_directory_index_to_use(memory, prefix, target_directory);
+    Int size = target_directory.len + prefix.len + 32; // TODO: 32 is padding for number
+    Char *directory = (Char *)memory_push(memory, Memory_Index_permanent, size);
+    Int written = stbsp_snprintf(directory, size, "%.*s%d",
+                                 prefix.len, prefix.e,
+                                 idx);
+    ASSERT(written < size);
+
+    Win32_Create_Directory_Result create_directory_result = win32_create_directory(memory, target_directory,
+                                                                                   directory, true);
+    ASSERT(create_directory_result.success);
+
+    String res = create_directory_result.directory;
+    return(res);
+}
+
 // Done on a separate thread so when we have a UI and Window it can handle window-messages without interuption.
 // TODO: Maybe have a threaded version and single-threaded version? See if it's actually an issue.
 internal DWORD
@@ -592,119 +708,17 @@ win32_screen_capture_thread(void *data) {
         Memory memory = create_memory_base(all_memory, group_inputs, ARRAY_COUNT(group_inputs));
 
         // Create the session directory
-        String root_directory = {};
-        {
-            String prefix = "Screenshotter_";
+        String root_directory = win32_create_root_directory(&memory, config->target_output_directory);
 
-            Int idx = win32_directory_index_to_use(&memory, prefix, config->target_output_directory);
-            Int size = config->target_output_directory.len + prefix.len + 32; // TODO: 32 is padding for number
-            Char *directory = (Char *)memory_push(&memory, Memory_Index_permanent, size);
-            Int written = stbsp_snprintf(directory, size, "%.*s%d",
-                                         prefix.len, prefix.e,
-                                         idx);
-            ASSERT(written < size);
-
-            Win32_Create_Directory_Result create_directory_result = win32_create_directory(&memory, config->target_output_directory,
-                                                                                           directory, true);
-            ASSERT(create_directory_result.success);
-            root_directory = create_directory_result.directory;
-        }
         ASSERT(root_directory.len > 0);
 
         U64 iteration_count = 0; // TODO: Shared between all apps right now.
         while(true) {
-            Bool successfully_wrote_something = false;
+
+            Bool successfully_wrote_something = run_screenshotting(api, &memory, config, root_directory, iteration_count);
 
             Memory_Group *temp_group = get_memory_group(&memory, Memory_Index_temp);
             ASSERT(temp_group->used == 0);
-
-            for(Int window_i = 0; (window_i < config->target_window_count); ++window_i) {
-                ASSERT(config->windows[window_i].class_name.len > 0 &&
-                       config->windows[window_i].title.len > 0);
-                HWND window = win32_find_window_from_class_name(&memory, config->windows[window_i].class_name);
-
-                RECT rect = {};
-                GetClientRect(window, &rect);
-                Int width = rect.right - rect.left;
-                Int height = rect.bottom - rect.top;
-
-                // TODO: If the window is minified then the width/height will be 0
-                //       See https://www.codeproject.com/Articles/20651/Capturing-Minimized-Window-A-Kid-s-Trick for how to handle.
-                if(width > 0 && height > 0) {
-                    HDC dc = GetDC(0);
-                    HDC capture_dc = CreateCompatibleDC(dc);
-                    HBITMAP bitmap = CreateCompatibleBitmap(dc, rect.right - rect.left, rect.bottom - rect.top);
-
-                    HGDIOBJ gdiObj = SelectObject(capture_dc, bitmap);
-
-                    PrintWindow(window, capture_dc, (config->include_title_bar) ? 0 : PW_CLIENTONLY);
-
-                    // TODO: This sometimes captures the current window, not the target for some reason...
-                    //BitBlt(capture_dc, 0, 0, width, height, dc, 0, 0, SRCCOPY | CAPTUREBLT);
-                    //SelectObject(capture_dc, gdiObj);
-
-                    if(config->copy_to_clipboard) {
-                        OpenClipboard(0);
-                        EmptyClipboard();
-                        SetClipboardData(CF_BITMAP, bitmap);
-                        CloseClipboard();
-                    }
-
-                    BITMAPINFOHEADER bmp_header = {};
-                    bmp_header.biSize = sizeof(BITMAPINFOHEADER);
-                    bmp_header.biWidth = width;
-                    bmp_header.biHeight = height;
-                    bmp_header.biPlanes = 1;
-                    bmp_header.biBitCount = 32;
-
-                    U32 image_size = ((width * bmp_header.biBitCount + 31) / 32) * 4 * height; // TODO: Why 31 / 32?? Why not just width * height * 4?
-                    U8 *image_data = (U8 *)memory_push(&memory, Memory_Index_temp, image_size);
-                    ASSERT(image_data);
-                    if(image_data) {
-                        GetDIBits(dc, bitmap, 0, height, image_data, (BITMAPINFO *)&bmp_header, DIB_RGB_COLORS);
-
-                        // Try and create using the Window title. And if that fails use the classname.
-                        Bool created_directory = false;
-                        String program_title = config->windows[window_i].title;
-                        Win32_Create_Directory_Result create_dir_r = win32_create_directory(&memory, root_directory, program_title);
-                        created_directory = create_dir_r.success;
-                        if(!created_directory) {
-                            program_title = config->windows[window_i].class_name;
-                            create_dir_r = win32_create_directory(&memory, root_directory, program_title);
-                            created_directory = create_dir_r.success;
-                        }
-
-                        if(created_directory) {
-
-                            Int output_filename_size = root_directory.len + 256; // 256 is padding
-                            Char *output_filename = (Char *)memory_push(&memory, Memory_Index_temp, output_filename_size);
-                            ASSERT(output_filename);
-                            if(output_filename) {
-
-                                // TODO: Instead of using iteration_count it'd be better to read the previous highest-number in the file and
-                                //       just +1 to that.
-                                Int bytes_written = stbsp_snprintf(output_filename, output_filename_size, "%.*s/%.*s/%I64d.bmp",
-                                                                   root_directory.len, root_directory.e,
-                                                                   program_title.len, program_title.e,
-                                                                   iteration_count);
-                                ASSERT(bytes_written < output_filename_size);
-
-                                Image image = {};
-                                image.width = width;
-                                image.height = height;
-                                image.pixels = (U32 * )image_data;
-                                write_image_to_disk(api, &memory, &image, output_filename);
-
-                                successfully_wrote_something = true;
-
-                                memory_pop(&memory, output_filename);
-                            }
-                        }
-
-                        memory_pop(&memory, image_data);
-                    }
-                }
-            }
 
             // TODO: Having a semaphore woken up by the UI thread and a backup timer would be better.
             Sleep(config->amount_to_sleep);
@@ -768,17 +782,18 @@ win32_directory_browse_callback(HWND hwnd, UINT uMsg, LPARAM lParam, LPARAM lpDa
 }
 
 internal String
-win32_browse_for_directory(Memory *memory, String input_path) {
+win32_browse_for_directory(Memory *memory, String initial_path) {
     String res = {};
 
-    Char *input_path_copy = (Char *)memory_push_string(memory, Memory_Index_internal_temp, input_path);
-    ASSERT(input_path_copy);
-    if(input_path_copy) {
+    // TODO: Replace '/' in input path with '\\'.
+    Char *initial_path_copy = (Char *)memory_push_string(memory, Memory_Index_internal_temp, initial_path);
+    ASSERT(initial_path_copy);
+    if(initial_path_copy) {
         BROWSEINFO bi = { };
         bi.lpszTitle = "Select directory...";
         bi.ulFlags   = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE;
         bi.lpfn      = win32_directory_browse_callback;
-        bi.lParam    = (LPARAM)input_path_copy;
+        bi.lParam    = (LPARAM)initial_path_copy;
 
         LPITEMIDLIST pidl = SHBrowseForFolder(&bi);
         if(pidl) {
@@ -791,10 +806,14 @@ win32_browse_for_directory(Memory *memory, String input_path) {
                 imalloc->Release();
             }
 
-            res = path; // TODO: Do I need to copy the memory?
+            // TODO: Memory leak - if the user keeps browsing for directories then this will eventually run out of memory.
+            Char *internal_string = memory_push_string(memory, Memory_Index_permanent, path);
+            ASSERT_IF(internal_string) {
+                res = internal_string;
+            }
         }
 
-        memory_pop(memory, input_path_copy);
+        memory_pop(memory, initial_path_copy);
     }
 
     return(res);
@@ -1019,10 +1038,13 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
                         api.config = &config;
 
                         config.include_title_bar = true;
-                        config.target_output_directory = "C:/tmp"; // TODO: Hardcoded
+                        config.new_target_output_directory = "C:\\tmp"; // TODO: Hardcoded
+                        config.target_output_directory = config.new_target_output_directory;
+                        config.target_directory_changed = true;
                         // TODO: Create directory here if it doesn't already exist?
                         config.amount_to_sleep = 1000;
 
+#if RUN_SCREENSHOTTING_ON_THREAD
                         Win32_Screen_Capture_Thread_Parameters thread_params = {};
                         thread_params.config = &config;
                         thread_params.api = &api;
@@ -1031,6 +1053,7 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
                         //       handle platform stuff which is kinda specific to the app.
                         HANDLE capture_image_thread_handle = CreateThread(0, 0, win32_screen_capture_thread, &thread_params, 0, 0);
                         CloseHandle(capture_image_thread_handle);
+#endif
 
                         // TODO: Read core_count from settings. Maybe pass in actual core_count to settings but let
                         //       DLL overwrite it.
@@ -1044,6 +1067,8 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
 
                         EnumWindows(enum_windows_proc, (LPARAM)&api);
 
+                        U64 iteration_count = 0;
+                        U64 iteration_count_reset = 0;
                         F32 seconds_elapsed_for_last_frame = 0;
                         while(api.running) {
                             // TODO: Do rendering in separate thread and only have main thread process window messages? Maybe a good option
@@ -1145,6 +1170,27 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
 
                                 ReleaseDC(wnd, dc);
                             }
+
+#if !RUN_SCREENSHOTTING_ON_THREAD
+                            // Screenshotting
+                            {
+                                if(config.target_directory_changed) {
+                                    String new_dir = win32_create_root_directory(&memory, config.new_target_output_directory);
+                                    if(new_dir.len > 0) {
+                                        config.target_output_directory = new_dir;
+                                        config.new_target_output_directory = "";
+                                    }
+                                    config.target_directory_changed = false;
+                                }
+
+                                ++iteration_count_reset;
+                                if(iteration_count_reset == 60) {
+                                    run_screenshotting(&api, &memory, &config, config.target_output_directory, iteration_count);
+                                    ++iteration_count;
+                                    iteration_count_reset = 0;
+                                }
+                            }
+#endif
 
                             // TODO: If the windows isn't in focus have an option to go to sleep here until it is in focus.
 

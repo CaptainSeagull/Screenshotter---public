@@ -36,6 +36,8 @@ typedef double F64;
 #define internal_global static
 #define internal static
 
+#define ASSERT_IF(exp) ASSERT((exp)); if((exp))
+
 #define ARRAY_COUNT(arr) (sizeof(arr) / (sizeof(*(arr))))
 #define BYTES(v)     ((v)            * (8LL))
 #define KILOBYTES(v) ((v)            * (1024LL))

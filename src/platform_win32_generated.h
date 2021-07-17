@@ -40,7 +40,6 @@ enum sglg_Type {
     sglg_Type_Memory_Index,
     sglg_Type_Config,
     sglg_Type_Image,
-    sglg_Type_Image_Letter,
     sglg_Type_Bitmap_Header,
     sglg_Type_V2,
     sglg_Type_V3,
@@ -58,6 +57,17 @@ enum sglg_Type {
     sglg_Type_Win32_Debug_Window,
     sglg_Type_Win32_API,
     sglg_Type_Win32_Screen_Capture_Thread_Parameters,
+    sglg_Type_V2u,
+    sglg_Type_Render_Entity,
+    sglg_Type_Image_Letter,
+    sglg_Type_Rect,
+    sglg_Type_Image_Rect,
+    sglg_Type_Word,
+    sglg_Type_Line,
+    sglg_Type_Render_Entity_For_Size,
+    sglg_Type_Render_Image,
+    sglg_Type_Internal,
+    sglg_Type_Renderer,
 };
 
 // Utils
@@ -112,7 +122,6 @@ enum Memory_Index : Int;
 
 struct Config;
 struct Image;
-struct Image_Letter;
 struct Bitmap_Header;
 union V2;
 union V3;
@@ -129,6 +138,17 @@ struct Win32_Loaded_Code;
 struct Win32_Debug_Window;
 struct Win32_API;
 struct Win32_Screen_Capture_Thread_Parameters;
+struct V2u;
+struct Render_Entity;
+struct Image_Letter;
+struct Rect;
+struct Image_Rect;
+struct Word;
+struct Line;
+struct Render_Entity_For_Size;
+struct Render_Image;
+struct Internal;
+struct Renderer;
 
 // Forward declaration of functions
 uint64_t get_memory_base_size(void );
@@ -785,3 +805,4 @@ static Int sglg_Memory_Index_count(Memory_Index e);
 #define sglg_internal_enum_Memory_Arena_Error (7)
 #define sglg_internal_enum_Key (58)
 #define sglg_internal_enum_Memory_Index (8)
+#define SGLG_ENTITY_OUTPUT_INTERNAL_Render_Entity union { Rect _Rect; Image_Rect _Image_Rect; Word _Word; Line _Line; }; 

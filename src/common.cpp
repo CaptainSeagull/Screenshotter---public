@@ -41,8 +41,12 @@ struct Config {
 
     Bool copy_to_clipboard; // TODO: Only really makes sense for one window
     Bool include_title_bar;
-    String target_output_directory;
     Int amount_to_sleep;
+
+    // TODO: Move these to API?
+    String target_output_directory;
+    String new_target_output_directory;
+    Bool target_directory_changed;
 };
 
 internal Void

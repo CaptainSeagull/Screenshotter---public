@@ -87,7 +87,7 @@ struct Platform_Callbacks {
     Bool (*add_work_queue_entry)(struct API *api, Void *e, Void (*cb)(Void *d));
     Void (*complete_all_work)(struct API *api);
 
-    String (*browse_for_directory)(Memory *memory, String input_path);
+    String (*browse_for_directory)(Memory *memory, String initial_path);
 };
 
 struct Bitmap {

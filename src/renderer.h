@@ -68,7 +68,7 @@ struct Internal {
 
 struct Font {
     U64 id;
-    U64 letter_ids[128];
+    U64 letter_ids[96]; // ASCII is 32..126 (inclusive) - 95 characters
 };
 
 struct Renderer {

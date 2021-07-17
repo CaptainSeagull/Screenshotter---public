@@ -878,6 +878,8 @@ float square_root(float a );
  static Word* push_words_(Renderer * renderer , Render_Entity * * parent , U64 font_id , Int start_x , Int start_y , Int height , String * strings , Int str_count );
  static Render_Image* find_font_image(Renderer * renderer , Font * font , Char c );
  static Font* find_font_from_id(Renderer * renderer , U64 id );
+ static Char idx_to_ascii(Char i );
+ static Char ascii_to_idx(Char c );
  static Void internal_set_words(Renderer * renderer , Word * word , String * strings , Int str_count );
  static Void update_word(Renderer * renderer , Word * word , String string );
  static Void update_words(Renderer * renderer , Word * word , String * strings , Int string_count );

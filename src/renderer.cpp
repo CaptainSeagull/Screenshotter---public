@@ -87,8 +87,7 @@ internal U64
 push_image(Renderer *renderer, Image image) {
     U64 id = 0;
     Render_Image *ri = push_image_internal(renderer, image);
-    ASSERT(ri);
-    if(ri) {
+    ASSERT_IF(ri) {
         id = ri->id;
     }
 
@@ -129,12 +128,13 @@ push_solid_rectangle_(Renderer *renderer, Render_Entity **parent,
                       Int x, Int y, Int width, Int height,
                       U32 inner_colour) {
     Rect *rect = (Rect *)create_render_entity(renderer, parent, sglg_Type_Rect);
-
-    rect->x = x;
-    rect->y = y;
-    rect->width = width;
-    rect->height = height;
-    rect->inner_colour = inner_colour;
+    ASSERT_IF(rect) {
+        rect->x = x;
+        rect->y = y;
+        rect->width = width;
+        rect->height = height;
+        rect->inner_colour = inner_colour;
+    }
 
     return(rect);
 }
@@ -145,12 +145,13 @@ push_line_(Renderer *renderer, Render_Entity **parent,
            Int x1, Int y1, Int x2, Int y2,
            F32 thickness) {
     Line *line = (Line *)create_render_entity(renderer, parent, sglg_Type_Line);
-
-    line->x = x1;
-    line->y = y1;
-    line->x2 = x2;
-    line->y2 = y2;
-    line->thickness = thickness;
+    ASSERT_IF(line) {
+        line->x = x1;
+        line->y = y1;
+        line->x2 = x2;
+        line->y2 = y2;
+        line->thickness = thickness;
+    }
 
     return(line);
 }
@@ -170,8 +171,7 @@ make_letter_image(Memory *memory, stbtt_fontinfo *font, Char ch) {
         image_letter.img.width = w;
         image_letter.img.height = h;
         image_letter.img.pixels = (U32 *)memory_push(memory, Memory_Index_permanent, w * h * 4);
-        ASSERT(image_letter.img.pixels);
-        if(image_letter.img.pixels) {
+        ASSERT_IF(image_letter.img.pixels) {
 
 #define FLIP_IMAGE 0
 
@@ -224,26 +224,28 @@ push_font(API *api, Renderer *renderer, File file) {
     stbtt_fontinfo font_info = {};
     Bool success = stbtt_InitFont(&font_info, file.e, stbtt_GetFontOffsetForIndex(file.e, 0));
     if(success) {
-        Font *font = &renderer->fonts[renderer->font_count++];
-        font->id = renderer->_internal.entity_id_count++;
+        ASSERT_IF(renderer->font_count + 1 < renderer->font_count_max) {
+            Font *font = &renderer->fonts[renderer->font_count++];
+            font->id = renderer->_internal.entity_id_count++;
 
-        for(Int letter_i = 0; (letter_i < 128); ++letter_i) {
-            Image_Letter_Result ilr = make_letter_image(memory, &font_info, letter_i);
-            if(ilr.success) {
-                Image_Letter *image_letter = &ilr.image_letter;
+            // ASCII is 32 - 126 (inclusive).
+            for(Int letter_i = 32; (letter_i <= 126); ++letter_i) {
+                Image_Letter_Result ilr = make_letter_image(memory, &font_info, letter_i);
+                if(ilr.success) {
+                    Image_Letter *image_letter = &ilr.image_letter;
 
-                Render_Image *image = push_image_internal(renderer, image_letter->img);
-                ASSERT(image);
-                if(image) {
-                    image->off_x = image_letter->off_x;
-                    image->off_y = image_letter->off_y;
+                    Render_Image *image = push_image_internal(renderer, image_letter->img);
+                    ASSERT_IF(image) {
+                        image->off_x = image_letter->off_x;
+                        image->off_y = image_letter->off_y;
 
-                    font->letter_ids[letter_i] = image->id;
+                        font->letter_ids[ascii_to_idx(letter_i)] = image->id;
+                    }
                 }
             }
-        }
 
-        font_id = font->id;
+            font_id = font->id;
+        }
     }
 
     return(font_id);
@@ -262,16 +264,15 @@ push_word_(Renderer *renderer, Render_Entity **parent, U64 font_id, Int start_x,
     push_words_(renderer, (Render_Entity **)parent, font_id, start_x, start_y, height, strings, string_count)
 
 internal Word *
-push_words_(Renderer *renderer, Render_Entity **parent, U64 font_id, Int start_x, Int start_y, Int height, String *strings, Int str_count) {
+push_words_(Renderer *renderer, Render_Entity **parent, U64 font_id, Int start_x, Int start_y, Int height, String *strings, Int string_count) {
     Word *word = (Word *)create_render_entity(renderer, parent, sglg_Type_Word);
-    ASSERT(word);
-    if(word) {
+    ASSERT_IF(word) {
         word->x = start_x;
         word->y = start_y;
         word->height = height;
         word->font_id = font_id;
 
-        internal_set_words(renderer, word, strings, str_count);
+        internal_set_words(renderer, word, strings, string_count);
     }
 
     return(word);
@@ -279,7 +280,7 @@ push_words_(Renderer *renderer, Render_Entity **parent, U64 font_id, Int start_x
 
 internal Render_Image *
 find_font_image(Renderer *renderer, Font *font, Char c) {
-    Render_Image *image = find_image_from_id(renderer, font->letter_ids[c]);
+    Render_Image *image = find_image_from_id(renderer, font->letter_ids[ascii_to_idx(c)]);
     ASSERT(image);
 
     return(image);
@@ -298,24 +299,39 @@ find_font_from_id(Renderer *renderer, U64 id) {
     return(res);
 }
 
+internal Char
+idx_to_ascii(Char i) {
+    ASSERT(i < 96);
+    Char c = i + 32;
+    return(c);
+}
+
+internal Char
+ascii_to_idx(Char c) {
+    ASSERT(c >= 32 && c <= 126);
+    Char i = c - 32;
+    return(i);
+}
+
 internal Void
-internal_set_words(Renderer *renderer, Word *word, String *strings, Int str_count) {
+internal_set_words(Renderer *renderer, Word *word, String *strings, Int string_count) {
     Int running_x = 0, running_y = word->height;
 
     Font *font = find_font_from_id(renderer, word->font_id);
 
+    // TODO: Kinda hacky...
     Render_Image *a_image = find_font_image(renderer, font, 'A');
     F32 full_height = a_image->height;
 
-    for(Int str_i = 0; (str_i < str_count); ++str_i) {
-        String *str = &strings[str_i];
+    for(Int string_i = 0; (string_i < string_count); ++string_i) {
+        String *string = &strings[string_i];
 
-        for(Int letter_i = 0; (letter_i < str->len); ++letter_i) {
-            if(str->e[letter_i] == '\n') {
+        for(Int letter_i = 0; (letter_i < string->len); ++letter_i) {
+            if(string->e[letter_i] == '\n') {
                 running_x = 0;
                 running_y -= word->height;
             } else {
-                Char c = str->e[letter_i];
+                Char c = string->e[letter_i];
 
                 if(c == ' ') {
                     running_x += word->height;
@@ -330,7 +346,7 @@ internal_set_words(Renderer *renderer, Word *word, String *strings, Int str_coun
                     push_image_rect(renderer, (Render_Entity **)&word,
                                     running_x, running_y, width_to_use, height_to_use,
                                     0, 0, 0, 0,
-                                    font->letter_ids[c]);
+                                    font->letter_ids[ascii_to_idx(c)]);
 
                     running_x += (width_to_use + image->off_x); // TODO: This should be a scaled off_x
                 }
@@ -355,20 +371,21 @@ push_image_rect(Renderer *renderer, Render_Entity **parent,
                 Int start_x, Int start_y, Int width, Int height,
                 Int sprite_x, Int sprite_y, Int sprite_width, Int sprite_height,
                 U64 image_id) {
-    ASSERT(find_image_from_id(renderer, image_id));
-
-    Image_Rect *image_rect = (Image_Rect *)create_render_entity(renderer, parent, sglg_Type_Image_Rect);
-    ASSERT(image_rect);
-
-    image_rect->x = start_x;
-    image_rect->y = start_y;
-    image_rect->width = width;
-    image_rect->height = height;
-    image_rect->sprite_x = sprite_x;
-    image_rect->sprite_y = sprite_y;
-    image_rect->sprite_width = sprite_width;
-    image_rect->sprite_height = sprite_height;
-    image_rect->image_id = image_id;
+    Image_Rect *image_rect = 0;
+    ASSERT_IF(find_image_from_id(renderer, image_id)) { // Make sure the image ID is valid
+        image_rect = (Image_Rect *)create_render_entity(renderer, parent, sglg_Type_Image_Rect);
+        ASSERT_IF(image_rect) {
+            image_rect->x = start_x;
+            image_rect->y = start_y;
+            image_rect->width = width;
+            image_rect->height = height;
+            image_rect->sprite_x = sprite_x;
+            image_rect->sprite_y = sprite_y;
+            image_rect->sprite_width = sprite_width;
+            image_rect->sprite_height = sprite_height;
+            image_rect->image_id = image_id;
+        }
+    }
 
     return(image_rect);
 }

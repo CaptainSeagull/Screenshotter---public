@@ -35,11 +35,11 @@ enum sglg_Type {
     sglg_Type_Platform_Callbacks,
     sglg_Type_Bitmap,
     sglg_Type_Settings,
+    sglg_Type_Window_Info,
     sglg_Type_API,
     sglg_Type_Memory_Index,
     sglg_Type_Config,
     sglg_Type_Image,
-    sglg_Type_Image_Letter,
     sglg_Type_Bitmap_Header,
     sglg_Type_V2,
     sglg_Type_V3,
@@ -57,6 +57,18 @@ enum sglg_Type {
     sglg_Type_Win32_Debug_Window,
     sglg_Type_Win32_API,
     sglg_Type_Win32_Screen_Capture_Thread_Parameters,
+    sglg_Type_V2u,
+    sglg_Type_Render_Entity,
+    sglg_Type_Image_Letter,
+    sglg_Type_Rect,
+    sglg_Type_Image_Rect,
+    sglg_Type_Word,
+    sglg_Type_Line,
+    sglg_Type_Render_Entity_For_Size,
+    sglg_Type_Render_Image,
+    sglg_Type_Internal,
+    sglg_Type_Font,
+    sglg_Type_Renderer,
 };
 
 // Utils
@@ -105,12 +117,12 @@ enum Key : Int;
 struct Platform_Callbacks;
 struct Bitmap;
 struct Settings;
+struct Window_Info;
 struct API;
 enum Memory_Index : Int;
 
 struct Config;
 struct Image;
-struct Image_Letter;
 struct Bitmap_Header;
 union V2;
 union V3;
@@ -127,6 +139,18 @@ struct Win32_Loaded_Code;
 struct Win32_Debug_Window;
 struct Win32_API;
 struct Win32_Screen_Capture_Thread_Parameters;
+struct V2u;
+struct Render_Entity;
+struct Image_Letter;
+struct Rect;
+struct Image_Rect;
+struct Word;
+struct Line;
+struct Render_Entity_For_Size;
+struct Render_Image;
+struct Internal;
+struct Font;
+struct Renderer;
 
 // Forward declaration of functions
 uint64_t get_memory_base_size(void );
@@ -195,6 +219,8 @@ int stbsp_snprintf(char * buf , int count , char const * fmt , ... );
  static Void zero(Void * m , U64 s );
  static Void copy(Void * dst , Void * src , U64 size );
  static Void set(Void * dst , U8 v , U64 size );
+ static Void flip_image(Void * dst_pixels , Void * src_pixels , Int width , Int height );
+ static Char* memory_push_string(Memory * mem , Memory_Index idx , String s , Int padding  );
  static Void write_image_to_disk(API * api , Memory * memory , Image * image , String file_name );
 Image load_image(API * api , String file_name );
  static float lane_max(float a , float b );
@@ -769,15 +795,7 @@ float square_root(float a );
  static Lane_F32 minf32(Lane_F32 a , Lane_F32 b );
  static Lane_F32 gather_f32_internal(void * ptr , uint64_t stride , Lane_U32 indices );
  static File win32_read_file(Memory * memory , U32 memory_index_to_use , String fname , Bool null_terminate );
- static Bool win32_write_file(Memory * memory , String fname , U8 * data , U64 size );
- static Int win32_get_processor_count(Void );
- static U64 win32_locked_add(U64 volatile * a , U64 b );
- static F32 win32_safe_div(F32 a , F32 b );
- static Bool win32_add_work_queue_entry(API * api , Void * data , Void * cb );
- static Bool win32_do_next_work_queue_entry(Win32_Work_Queue * queue );
- static Void win32_complete_all_work(API * api );
- static Win32_Loaded_Code win32_load_code(Char * source_fname , Char * temp_fname );
-void  __stdcall WinMainCRTStartup();
+void  __stdcall WinMainCRTStartup(Void );
 static char const *sglg_Memory_Arena_Error_to_string(Memory_Arena_Error e);
 static int sglg_Memory_Arena_Error_count(Memory_Arena_Error e);
 static char const *sglg_Key_to_string(Key e);
@@ -788,4 +806,5 @@ static Int sglg_Memory_Index_count(Memory_Index e);
 // Helpers
 #define sglg_internal_enum_Memory_Arena_Error (7)
 #define sglg_internal_enum_Key (58)
-#define sglg_internal_enum_Memory_Index (7)
+#define sglg_internal_enum_Memory_Index (8)
+#define SGLG_ENTITY_OUTPUT_INTERNAL_Render_Entity union { Rect _Rect; Image_Rect _Image_Rect; Word _Word; Line _Line; }; 

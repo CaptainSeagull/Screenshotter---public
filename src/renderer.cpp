@@ -1,6 +1,4 @@
 
-internal_global U64 global_entity_id = 1; // Start at 1 so we know 0 is invalid.
-
 internal V2u
 v2u(V2 v) {
     V2u r = { (U32)v.x, (U32)v.y };
@@ -13,34 +11,9 @@ v2u(U32 x, U32 y) {
     return(r);
 }
 
-internal V2
-get_position(Render_Entity *render_entity) {
-    // TODO: I don't really like this... maybe move the X, Y to the Render_Image struct?
-
-    V2 res = {};
-    switch(render_entity->type) {
-        case sglg_Type_Rect: {
-            Rect *rect = (Rect *)render_entity;
-            res = v2(rect->x, rect->y);
-        } break;
-
-        case sglg_Type_Image_Rect: {
-            Image_Rect *rect = (Image_Rect *)render_entity;
-            res = v2(rect->x, rect->y);
-        } break;
-
-        case sglg_Type_Word: {
-            Word *word = (Word *)render_entity;
-            res = v2(word->x, word->y);
-        } break;
-    }
-
-    return(res);
-}
-
 internal Render_Entity *
 new_node(Memory *memory) {
-    Render_Entity *render_entity = (Render_Entity *)memory_push(memory, Memory_Index_renderer, sizeof(Render_Entity));
+    Render_Entity *render_entity = (Render_Entity *)memory_push(memory, Memory_Index_renderer, sizeof(Render_Entity_For_Size));
     ASSERT(render_entity);
 
     return(render_entity);
@@ -77,23 +50,20 @@ add_child_to_node(Memory *memory, Render_Entity **parent) {
 
 internal Void
 create_renderer(Renderer *renderer, Memory *memory) {
+    renderer->_internal.entity_id_count = 1; // Use 0 for invalid
     renderer->memory = memory;
     renderer->root = (Render_Entity * )memory_push(renderer->memory, Memory_Index_renderer, sizeof(Render_Entity));
     ASSERT(renderer->root);
 
+    renderer->image_count_max = 512;
+    renderer->images = (Render_Image *)memory_push(renderer->memory, Memory_Index_renderer, sizeof(Render_Image) * renderer->image_count_max);
+    ASSERT(renderer->images);
+
+    renderer->font_count_max = 8;
+    renderer->fonts = (Font *)memory_push(renderer->memory, Memory_Index_renderer, sizeof(Font) * renderer->font_count_max);
+    ASSERT(renderer->fonts);
+
     add_child_to_node(memory, &renderer->root);
-}
-
-internal Rect
-create_rectangle(Int x, Int y, Int width, Int height, U8 r, U8 g, U8 b, U8 a) {
-    Rect res = {};
-    res.x = x;
-    res.y = y;
-    res.width = width;
-    res.height = height;
-    res.output_colour = (a << 24 | r << 16 | g << 8 | b << 0);
-
-    return(res);
 }
 
 internal Image_Rect
@@ -112,122 +82,326 @@ create_image_rectangle(Int x, Int y, Int width, Int height, Int sprite_x, Int sp
     return(res);
 }
 
+
 internal U64
 push_image(Renderer *renderer, Image image) {
-    U64 id = global_entity_id++;
-    ASSERT(renderer->image_count + 1 < ARRAY_COUNT(renderer->images));
-    Render_Image *render_image = &renderer->images[renderer->image_count++];
-    render_image->width = image.width;
-    render_image->height = image.height;
-    render_image->pixels = image.pixels;
-    render_image->id = id;
+    U64 id = 0;
+    Render_Image *ri = push_image_internal(renderer, image);
+    ASSERT_IF(ri) {
+        id = ri->id;
+    }
 
     return(id);
 }
 
-internal Render_Entity *
-create_render_entity(Memory *memory, Render_Entity **parent, sglg_Type type) {
-    Render_Entity *render_entity = add_child_to_node(memory, parent);
-    ASSERT(render_entity);
+internal Render_Image *
+push_image_internal(Renderer *renderer, Image image) {
+    Render_Image *render_image = 0;
 
-    render_entity->visible = true;
-    render_entity->type = type;
-
-    return(render_entity);
-}
-
-internal Render_Entity *
-push_solid_rectangle(Renderer *renderer, Render_Entity **parent,
-                     Int start_x, Int start_y, Int width, Int height,
-                     U8 r, U8 g, U8 b, U8 a) {
-    Render_Entity *render_entity = create_render_entity(renderer->memory, parent, sglg_Type_Rect);
-
-    Rect *rectangle = (Rect *)render_entity;
-    *rectangle = create_rectangle(start_x, start_y, width, height, r, g, b, a);
-    render_entity->id = global_entity_id++;
-
-    return(render_entity);
-}
-
-internal Void
-push_font(Renderer *renderer, Image_Letter *font_images) {
-    for(Int i = 0; (i < 128); ++i) {
-        U64 image_id = push_image(renderer, font_images[i].img);
-        Render_Image *image = find_image_from_id(renderer, image_id);
-        ASSERT(image);
-
-        image->off_x = font_images[i].off_x;
-        image->off_y = font_images[i].off_y;
-        renderer->letter_ids[i] = image_id;
+    ASSERT_IF(renderer->image_count + 1 < renderer->image_count_max) {
+        render_image = &renderer->images[renderer->image_count++];
+        render_image->width = image.width;
+        render_image->height = image.height;
+        render_image->pixels = image.pixels;
+        render_image->id = renderer->_internal.entity_id_count++;
     }
+
+    return(render_image);
+}
+
+internal Render_Entity *
+create_render_entity(Renderer *renderer, Render_Entity **parent, sglg_Type type) {
+    Render_Entity *render_entity = add_child_to_node(renderer->memory, parent);
+    ASSERT_IF(render_entity) {
+        render_entity->visible = true;
+        render_entity->type = type;
+        render_entity->id = renderer->_internal.entity_id_count++;
+    }
+
+    return(render_entity);
+}
+
+#define push_solid_rectangle(renderer, parent, x, y, width, height, inner_colour) \
+    push_solid_rectangle_(renderer, (Render_Entity **)parent, x, y, width, height, inner_colour)
+internal Rect *
+push_solid_rectangle_(Renderer *renderer, Render_Entity **parent,
+                      Int x, Int y, Int width, Int height,
+                      U32 inner_colour) {
+    Rect *rect = (Rect *)create_render_entity(renderer, parent, sglg_Type_Rect);
+    ASSERT_IF(rect) {
+        rect->x = x;
+        rect->y = y;
+        rect->width = width;
+        rect->height = height;
+        rect->inner_colour = inner_colour;
+    }
+
+    return(rect);
+}
+
+#define push_line(renderer, parent, x1, y1, x2, y2, thickness) push_line_(renderer, (Render_Entity **)parent, x1, y1, x2, y2, thickness)
+internal Line *
+push_line_(Renderer *renderer, Render_Entity **parent,
+           Int x1, Int y1, Int x2, Int y2,
+           F32 thickness) {
+    Line *line = (Line *)create_render_entity(renderer, parent, sglg_Type_Line);
+    ASSERT_IF(line) {
+        line->x = x1;
+        line->y = y1;
+        line->x2 = x2;
+        line->y2 = y2;
+        line->thickness = thickness;
+    }
+
+    return(line);
+}
+
+struct Image_Letter_Result {
+    Image_Letter image_letter;
+    Bool success;
+};
+internal Image_Letter_Result
+make_letter_image(Memory *memory, stbtt_fontinfo *font, Char ch) {
+    Image_Letter_Result res = {};
+
+    Int w, h, off_x, off_y;
+    U8 *mono_bmp = stbtt_GetCodepointBitmap(font, 0, stbtt_ScaleForPixelHeight(font, 64.0f), ch, &w, &h, &off_x, &off_y);
+    if(mono_bmp) {
+        Image_Letter image_letter = {};
+        image_letter.img.width = w;
+        image_letter.img.height = h;
+        image_letter.img.pixels = (U32 *)memory_push(memory, Memory_Index_permanent, w * h * 4);
+        ASSERT_IF(image_letter.img.pixels) {
+
+#define FLIP_IMAGE 0
+
+#if FLIP_IMAGE
+            //image_letter.off_x = off_x; // TODO: Do we care about this?
+            image_letter.off_y = -off_y - h;
+#else
+            image_letter.off_x = off_x;
+            image_letter.off_y = off_y;
+#endif
+
+            Int pitch = (w * 4);
+
+            U8 *src = mono_bmp;
+#if FLIP_IMAGE
+            U8 *dst_row = (U8 * )image_letter.img.pixels + (h - 1) * pitch;
+#else
+            U8 *dst_row = (U8 * )image_letter.img.pixels;
+#endif
+            for(U32 y = 0; (y < h); ++y) {
+                U32 *dst = (U32 *)dst_row;
+                for(U32 x = 0; (x < w); ++x) {
+                    U8 alpha = 0xFF - *src++;
+                    *dst++ = ((alpha << 24) | (alpha << 16) | (alpha << 8) | (alpha << 0));
+                }
+
+#if FLIP_IMAGE
+                dst_row -= pitch;
+#else
+                dst_row += pitch;
+#endif
+            }
+
+            stbtt_FreeBitmap(mono_bmp, 0);
+
+            res.image_letter = image_letter;
+            res.success = true;
+        }
+    }
+
+    return(res);
+}
+
+internal U64
+push_font(API *api, Renderer *renderer, File file) {
+    U64 font_id = 0;
+
+    Memory *memory = api->memory;
+
+    stbtt_fontinfo font_info = {};
+    Bool success = stbtt_InitFont(&font_info, file.e, stbtt_GetFontOffsetForIndex(file.e, 0));
+    if(success) {
+        ASSERT_IF(renderer->font_count + 1 < renderer->font_count_max) {
+            Font *font = &renderer->fonts[renderer->font_count++];
+            font->id = renderer->_internal.entity_id_count++;
+
+            // ASCII is 32 - 126 (inclusive).
+            for(Int letter_i = 32; (letter_i <= 126); ++letter_i) {
+                Image_Letter_Result ilr = make_letter_image(memory, &font_info, letter_i);
+                if(ilr.success) {
+                    Image_Letter *image_letter = &ilr.image_letter;
+
+                    Render_Image *image = push_image_internal(renderer, image_letter->img);
+                    ASSERT_IF(image) {
+                        image->off_x = image_letter->off_x;
+                        image->off_y = image_letter->off_y;
+
+                        font->letter_ids[ascii_to_idx(letter_i)] = image->id;
+                    }
+                }
+            }
+
+            font_id = font->id;
+        }
+    }
+
+    return(font_id);
+}
+
+#define push_word(renderer, parent, font_id, start_x, start_y, height, string) \
+    push_word_(renderer, (Render_Entity **)parent, font_id, start_x, start_y, height, string)
+
+internal Word *
+push_word_(Renderer *renderer, Render_Entity **parent, U64 font_id, Int start_x, Int start_y, Int height, String string) {
+    Word *r = push_words_(renderer, parent, font_id, start_x, start_y, height, &string, 1);
+    ASSERT(r);
+    return(r);
+}
+
+#define push_words(renderer, parent, font_id, start_x, start_y, height, strings, string_count) \
+    push_words_(renderer, (Render_Entity **)parent, font_id, start_x, start_y, height, strings, string_count)
+
+internal Word *
+push_words_(Renderer *renderer, Render_Entity **parent, U64 font_id, Int start_x, Int start_y, Int height, String *strings, Int string_count) {
+    Word *word = (Word *)create_render_entity(renderer, parent, sglg_Type_Word);
+    ASSERT_IF(word) {
+        word->x = start_x;
+        word->y = start_y;
+        word->height = height;
+        word->font_id = font_id;
+
+        internal_set_words(renderer, word, strings, string_count);
+    }
+
+    return(word);
 }
 
 internal Render_Image *
-find_font_image(Renderer *renderer, Char c) {
-    Render_Image *image = find_image_from_id(renderer, renderer->letter_ids[c]);
-    ASSERT(image);
+find_font_image(Renderer *renderer, Font *font, Char c) {
+    Render_Image *image = 0;
+    ASSERT_IF(is_ascii(c)) {
+        image = find_image_from_id(renderer, font->letter_ids[ascii_to_idx(c)]);
+        ASSERT(image);
+    }
 
     return(image);
 }
 
-// TODO: The start_x / start_y stuff doesn't seem to be working...
-internal Render_Entity *
-push_word(Renderer *renderer, Render_Entity **parent, String str, Image_Letter *font_images, Int start_x, Int start_y, Int height) {
-    Render_Entity *render_entity = create_render_entity(renderer->memory, parent, sglg_Type_Word);
-
-    V2u padding = v2u(0, 10);
-
-    Word *word = (Word *)render_entity;
-    word->x = start_x;
-    word->y = start_y;
-
-    Int running_x = 0, running_y = 0;
-
-    for(Int i = 0; (i < str.len); ++i) {
-        if(str.e[i] == '\n') {
-            running_x = 0;
-            running_y -= (height + padding.y);
-        } else {
-#if 0
-            Char c = to_upper(str.e[i]); // TODO: Temp, while we're rendering all text at the same height.
-#else
-            Char c = str.e[i];
-#endif
-            if(c == ' ') {
-                running_x += height;
-            } else {
-                Render_Image *image = find_font_image(renderer, c);
-
-                Int width = floor((F32)image->width * ((F32)height / (F32)image->height)); // TODO: Is this correct?
-
-                push_image_rect(renderer, &render_entity,
-                                running_x, running_y, width, height,
-                                0, 0, 0, 0,
-                                renderer->letter_ids[c]);
-
-                running_x += (width + padding.x + image->off_x);
-            }
+internal Font *
+find_font_from_id(Renderer *renderer, U64 id) {
+    Font *res = 0;
+    for(Int i = 0; (i < renderer->font_count); ++i) {
+        if(renderer->fonts[i].id == id) {
+            res = &renderer->fonts[i];
+            break; // for
         }
     }
 
-    return(render_entity);
+    return(res);
 }
 
-internal Render_Entity *
+internal Bool
+is_ascii(Int c) {
+    Bool r = (c >= 32 && c <= 126);
+    return(r);
+}
+
+internal Int
+idx_to_ascii(Int i) {
+    Int c = i + 32;
+    ASSERT(is_ascii(c));
+    return(c);
+}
+
+internal Int
+ascii_to_idx(Int c) {
+    ASSERT(is_ascii(c));
+    Int i = c - 32;
+    return(i);
+}
+
+internal Void
+internal_set_words(Renderer *renderer, Word *word, String *strings, Int string_count) {
+    Int running_x = 0, running_y = word->height;
+
+    Font *font = find_font_from_id(renderer, word->font_id);
+    ASSERT_IF(font) {
+        // TODO: Kinda hacky...
+        Render_Image *a_image = find_font_image(renderer, font, 'A');  ASSERT(a_image);
+        F32 full_height = a_image->height;
+
+        for(Int string_i = 0; (string_i < string_count); ++string_i) {
+            String *string = &strings[string_i];
+
+            for(Int letter_i = 0; (letter_i < string->len); ++letter_i) {
+                if(string->e[letter_i] == '\n') {
+                    running_x = 0;
+                    running_y -= word->height;
+                } else {
+                    Char c = string->e[letter_i];
+
+                    ASSERT_IF(is_ascii(c)) {
+                        if(c == ' ') {
+                            running_x += word->height / 2; // TODO: Arbitrary
+                        } else {
+                            Render_Image *image = find_font_image(renderer, font, c);
+                            ASSERT_IF(image) {
+                                F32 char_pct_height_of_total = (F32)image->height / full_height;
+
+                                Int height_to_use = (word->height * char_pct_height_of_total);
+                                Int width_to_use = floor((F32)image->width * ((F32)height_to_use / (F32)image->height)); // TODO: Is this correct?
+
+                                push_image_rect(renderer, (Render_Entity **)&word,
+                                                running_x, running_y, width_to_use, height_to_use,
+                                                0, 0, 0, 0,
+                                                font->letter_ids[ascii_to_idx(c)]);
+
+                                running_x += (width_to_use + image->off_x); // TODO: This should be a scaled off_x
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+internal Void
+update_word(Renderer *renderer, Word *word, String string) {
+    update_words(renderer, word, &string, 1);
+}
+
+internal Void
+update_words(Renderer *renderer, Word *word, String *strings, Int string_count) {
+    word->child = 0; // TODO: Should copy to a freelist
+    internal_set_words(renderer, word, strings, string_count);
+}
+
+internal Image_Rect *
 push_image_rect(Renderer *renderer, Render_Entity **parent,
                 Int start_x, Int start_y, Int width, Int height,
                 Int sprite_x, Int sprite_y, Int sprite_width, Int sprite_height,
                 U64 image_id) {
-    ASSERT(find_image_from_id(renderer, image_id));
+    Image_Rect *image_rect = 0;
+    ASSERT_IF(find_image_from_id(renderer, image_id)) { // Make sure the image ID is valid
+        image_rect = (Image_Rect *)create_render_entity(renderer, parent, sglg_Type_Image_Rect);
+        ASSERT_IF(image_rect) {
+            image_rect->x = start_x;
+            image_rect->y = start_y;
+            image_rect->width = width;
+            image_rect->height = height;
+            image_rect->sprite_x = sprite_x;
+            image_rect->sprite_y = sprite_y;
+            image_rect->sprite_width = sprite_width;
+            image_rect->sprite_height = sprite_height;
+            image_rect->image_id = image_id;
+        }
+    }
 
-    Render_Entity *render_entity = create_render_entity(renderer->memory, parent, sglg_Type_Image_Rect);
-
-    Image_Rect *rectangle = (Image_Rect *)render_entity;
-
-    *rectangle = create_image_rectangle(start_x, start_y, width, height, sprite_x, sprite_y, sprite_width, sprite_height, image_id);
-    render_entity->id = global_entity_id++;
-
-    return(render_entity);
+    return(image_rect);
 }
 
 internal Render_Image *
@@ -244,7 +418,7 @@ find_image_from_id(Renderer *renderer, U64 id) {
 }
 
 internal Render_Entity *
-find_render_entity(Render_Entity *render_entity, U64 id) {
+find_render_entity_internal(Render_Entity *render_entity, U64 id) {
     Render_Entity *res = 0;
 
     Render_Entity *next = render_entity;
@@ -261,7 +435,7 @@ find_render_entity(Render_Entity *render_entity, U64 id) {
         next = render_entity;
         while(next) {
             if(next->child) {
-                res = find_render_entity(next->child, id);
+                res = find_render_entity_internal(next->child, id);
                 if(res) {
                     break; // while
                 }
@@ -274,13 +448,13 @@ find_render_entity(Render_Entity *render_entity, U64 id) {
     return(res);
 }
 
+#define find_render_entity(renderer, id, Type) (Type *)find_render_entity_(renderer, id, CONCAT(sglg_Type_, Type))
 internal Render_Entity *
-find_render_entity(Renderer *renderer, U64 id) {
-    Render_Entity *r = find_render_entity(renderer->root, id);
+find_render_entity_(Renderer *renderer, U64 id, sglg_Type expected_type) {
+    Render_Entity *r = find_render_entity_internal(renderer->root, id);
+    ASSERT(r && r->type == expected_type);
     return(r);
 }
-
-// TODO: Find entity_from_id would be useful.
 
 internal F32
 floor(F32 a) {
@@ -288,21 +462,27 @@ floor(F32 a) {
     return(r);
 }
 
-// TODO: Have this return 0 if we're accessing outside the image.
+internal F32
+absolute(F32 a) {
+    F32 r = (a > 0) ? a : -a;
+    return(r);
+}
+
 #define image_at(base,w,h,x,y) image_at_((U32 *)base,w,h,x,y)
 internal U32 *
 image_at_(U32 *base, U32 width, U32 height, U32 x, U32 y) {
     U32 *res = 0;
     if(x <= width && y <= height) {
-        U32 accessor = ((y * width) + x);
-        res = &base[accessor];
+        res = &base[(y * width) + x];
     }
+
     return(res);
 }
 
 internal Void
 render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bitmap, V2 input_offset) {
-    V2u offset = v2u(input_offset + get_position(render_entity));
+    V2u offset = v2u(input_offset.x + render_entity->x,
+                     input_offset.y + render_entity->y);
 
     // TODO: Most of the renderers are reading the screen pixels for y,x. However it'd probably be faster to just read for the y then
     //       ++ iterate through to write the X. Wouldn't be able to ASSERT as nicely though...
@@ -315,28 +495,42 @@ render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bit
                 U32 width = rect->width;
                 U32 height = rect->height;
 
-                for(U32 y = 0; (y < height); ++y) {
-                    for(U32 x = 0; (x < width); ++x) {
+                F32 line_thickness = rect->outline_thickness;
+                F32 half_line_thickness = (line_thickness * 0.5f);
+
+                for(Int iter_y = 0; (iter_y < height); ++iter_y) {
+                    for(Int iter_x = 0; (iter_x < width); ++iter_x) {
                         U32 *screen_pixel = image_at(screen_bitmap->memory,
                                                      screen_bitmap->width,
                                                      screen_bitmap->height,
-                                                     x + offset.x,
-                                                     y + offset.y);
+                                                     iter_x + offset.x,
+                                                     iter_y + offset.y);
 
                         if(screen_pixel) {
 
                             // TODO: Is the order actually swapped? Would alpha be index 0?
 #if 0
-                            F64 a = (F64)((U8 *)&rect->output_colour)[3] / 255.0;
+                            F64 a = (F64)((U8 *)&rect->inner_colour)[3] / 255.0;
 
-                            U32 l = minu32(rect->output_colour, *screen_pixel);
-                            U32 u = maxu32(rect->output_colour, *screen_pixel);
+                            U32 l = minu32(rect->inner_colour, *screen_pixel);
+                            U32 u = maxu32(rect->inner_colour, *screen_pixel);
                             U32 d = a * (u - l);
-                            U32 output_colour = l + d;
+                            U32 inner_colour = l + d;
 #else
-                            U32 bitmap_pixel = rect->output_colour;
+
+                            Bool on_outline = false;
+                            if(iter_y < line_thickness || iter_x < line_thickness) {
+                                on_outline = true;
+                            } else if(iter_y > height - line_thickness || iter_x > width - line_thickness) {
+                                on_outline = true;
+                            }
+
+                            U32 bitmap_pixel = (on_outline) ? rect->outer_colour : rect->inner_colour;
+#if 1
+                            U32 colour = bitmap_pixel;
+#else
                             F64 a = (F64)((U8 *)&bitmap_pixel)[3] / 255.0;
-                            U32 output_colour = 0xFFFFFFFF;
+                            U32 colour = 0xFFFFFFFF;
                             for(Int i = 0; (i < 3); ++i) {
                                 U32 s = ((U8 *)screen_pixel)[i];
                                 U32 b = ((U8 *)&bitmap_pixel)[i];
@@ -345,14 +539,58 @@ render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bit
                                 U32 u = maxu32(b, s);
                                 U32 d = a * (u - l);
                                 U32 o = l + d;
-                                ((U8 *)&output_colour)[i] = o;
+                                ((U8 *)&colour)[i] = o;
                             }
 #endif
+#endif
 
-                            *screen_pixel = output_colour;
+                            *screen_pixel = colour;
                         }
                     }
                 }
+            } break;
+
+            case sglg_Type_Line: {
+                Line *line = (Line *)render_entity;
+
+                F32 rise = maxf32(absolute(line->y2 - line->y), absolute(line->y - line->y2));
+                F32 run = maxf32(absolute(line->x2 - line->x), absolute(line->x - line->x2));
+
+                F32 m = (run != 0) ? rise / run : 0;
+                F32 y_intercept = line->y - (m * line->x);
+                F32 x_intercept = line->x - (m * line->y);
+
+                F32 thickness = line->thickness;
+                F32 thickness_x2 = (line->thickness * 2.0f);
+                F32 rise_test = (rise + thickness_x2);
+                F32 run_test = (run + thickness_x2);
+
+                for(Int iter_y = -thickness_x2; (iter_y < rise_test); ++iter_y) {
+                    for(Int iter_x = -thickness_x2; (iter_x < run_test); ++iter_x) {
+                        U32 *screen_pixel = image_at(screen_bitmap->memory,
+                                                     screen_bitmap->width,
+                                                     screen_bitmap->height,
+                                                     iter_x + offset.x,
+                                                     iter_y + offset.y);
+
+                        if(screen_pixel) {
+                            F32 x = iter_x + offset.x;
+                            F32 y = iter_y + offset.y;
+                            if(run != 0) {
+                                F32 t = ((m * x) + y_intercept);
+                                if(absolute(y - t) < thickness) {
+                                    *screen_pixel = 0;
+                                }
+                            } else {
+                                if(absolute(x - x_intercept) < thickness) {
+                                    *screen_pixel = 0;
+                                }
+                            }
+
+                        }
+                    }
+                }
+
             } break;
 
             case sglg_Type_Image_Rect: {
@@ -371,16 +609,18 @@ render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bit
                 F32 pct_w = sprite_width_to_use  / (F32)img_rect->width;
                 F32 pct_h = sprite_height_to_use / (F32)img_rect->height;
 
-                for(U32 y = 0; (y < img_rect->height); ++y) {
-                    for(U32 x = 0; (x < img_rect->width); ++x) {
-                        U32 img_x = floor((F32)x * pct_w);
-                        U32 img_y = floor((F32)y * pct_h);
+                F32 off_y_scaled = (F32)img->off_y * ((F32)img_rect->height / (F32)img->height);
+
+                for(U32 iter_y = 0; (iter_y < img_rect->height); ++iter_y) {
+                    for(U32 iter_x = 0; (iter_x < img_rect->width); ++iter_x) {
+                        U32 img_x = floor((F32)iter_x * pct_w);
+                        U32 img_y = floor((F32)iter_y * pct_h);
 
                         U32 *screen_pixel = image_at(screen_bitmap->memory,
                                                      screen_bitmap->width,
                                                      screen_bitmap->height,
-                                                     x + offset.x,
-                                                     y + offset.y);
+                                                     iter_x + offset.x,
+                                                     iter_y + offset.y + (off_y_scaled));
                         U32 *bitmap_pixel = image_at(img->pixels,
                                                      img->width,
                                                      img->height,
@@ -399,8 +639,8 @@ render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bit
 
                             F32 alphaf32 = alpha8 / 255.0f;
 
-                            U32 output_colour = 0xFFFFFFFF;
-                            U8 *at = (U8 *)&output_colour;
+                            U32 inner_colour = 0xFFFFFFFF;
+                            U8 *at = (U8 *)&inner_colour;
                             for(Int i = 0; (i < 4); ++i, ++at) {
                                 U8 bitmap_pixel8 = ((U8 *)bitmap_pixel)[i];
                                 U8 screen_pixel8 = ((U8 *)screen_pixel)[i];
@@ -416,16 +656,16 @@ render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bit
                                 *at = output_colour8;
                             }
 
-                            if(alphaf32 == 0) { ASSERT(output_colour == *screen_pixel); }
-                            if(alphaf32 == 1) { ASSERT(output_colour == *bitmap_pixel); }
+                            if(alphaf32 == 0) { ASSERT(inner_colour == *screen_pixel); }
+                            if(alphaf32 == 1) { ASSERT(inner_colour == *bitmap_pixel); }
 #else
                             // Binary alpha
                             U8 alpha8 = ((U8 *)bitmap_pixel)[0]; // TODO: 0 or 3?
-                            U32 output_colour = *bitmap_pixel;
-                            if(alpha8 == 255) { output_colour = *screen_pixel; }
+                            U32 inner_colour = *bitmap_pixel;
+                            if(alpha8 == 255) { inner_colour = *screen_pixel; }
 #endif
 
-                            *screen_pixel = output_colour;
+                            *screen_pixel = inner_colour;
                         }
                     }
                 }
@@ -451,7 +691,7 @@ render_node_and_siblings(Render_Entity *render_entity, Renderer *renderer, Bitma
     next = render_entity;
     while(next) {
         if(next->child) {
-            render_node_and_siblings(next->child, renderer, screen_bitmap, offset + get_position(next));
+            render_node_and_siblings(next->child, renderer, screen_bitmap, offset + v2(next->x, next->y));
         }
         next = next->next;
     }

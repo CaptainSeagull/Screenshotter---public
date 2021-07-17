@@ -86,6 +86,8 @@ struct Platform_Callbacks {
 
     Bool (*add_work_queue_entry)(struct API *api, Void *e, Void (*cb)(Void *d));
     Void (*complete_all_work)(struct API *api);
+
+    String (*browse_for_directory)(Memory *memory, String initial_path);
 };
 
 struct Bitmap {
@@ -97,9 +99,17 @@ struct Bitmap {
 struct Settings {
     U64 dll_data_struct_size;
     Int thread_count;
+
     Int window_width;
     Int window_height;
 };
+
+struct Window_Info {
+    String title;
+    String class_name;
+};
+
+struct Config;
 
 // TODO: Tidy API struct
 struct API {
@@ -112,13 +122,10 @@ struct API {
     F32 dt;
     F32 seconds_elapsed_for_last_frame;
 
-    F32 previous_mouse_pos_x;
-    F32 previous_mouse_pos_y;
-    F32 mouse_pos_x;
-    F32 mouse_pos_y;
+    F32 previous_mouse_pos_x, previous_mouse_pos_y;
+    F32 mouse_pos_x, mouse_pos_y;
 
-    Int window_width;
-    Int window_height;
+    Int window_width, window_height; // Client size
 
     Bitmap screen_bitmap;
     Bool screen_image_size_change;
@@ -130,10 +137,11 @@ struct API {
     Platform_Callbacks cb;
     Void *platform_specific;
 
-    Settings settings;
     Void *dll_data;
 
-    Int top_level_window_titles_count;
-    String top_level_window_titles[256];
+    Int window_count;
+    Window_Info windows[256];
+
+    Config *config;
 };
 

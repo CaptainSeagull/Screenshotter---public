@@ -95,6 +95,7 @@ static char const *sglg_Memory_Index_to_string(Memory_Index e) {
         case Memory_Index_renderer: { return("Memory_Index_renderer"); } break;
         case Memory_Index_malloc_nofree_size: { return("Memory_Index_malloc_nofree_size"); } break;
         case Memory_Index_font_data: { return("Memory_Index_font_data"); } break;
+        case Memory_Index_window_titles: { return("Memory_Index_window_titles"); } break;
     }
     return(0);
 }
@@ -180,6 +181,7 @@ static Memory_Index sglg_Memory_Index_from_string(char const *s, uint32_t l) {
     else if(sgl_generated_string_compare("Memory_Index_renderer", 21, s, l)) { return(Memory_Index_renderer); }
     else if(sgl_generated_string_compare("Memory_Index_malloc_nofree_size", 31, s, l)) { return(Memory_Index_malloc_nofree_size); }
     else if(sgl_generated_string_compare("Memory_Index_font_data", 22, s, l)) { return(Memory_Index_font_data); }
+    else if(sgl_generated_string_compare("Memory_Index_window_titles", 26, s, l)) { return(Memory_Index_window_titles); }
     return((Memory_Index)0);
 }
 // sglg_Type
@@ -187,7 +189,7 @@ static uint64_t sglg_get_enum_count(sglg_Type type) {
     switch(type) {
         case sglg_Type_Memory_Arena_Error: { return(7); } break;
         case sglg_Type_Key: { return(58); } break;
-        case sglg_Type_Memory_Index: { return(7); } break;
+        case sglg_Type_Memory_Index: { return(8); } break;
     }
     return(0);
 }
@@ -206,11 +208,11 @@ static uint64_t sglg_type_to_size(sglg_Type type) {
         case sglg_Type_Platform_Callbacks: { return(sizeof(Platform_Callbacks)); } break;
         case sglg_Type_Bitmap: { return(sizeof(Bitmap)); } break;
         case sglg_Type_Settings: { return(sizeof(Settings)); } break;
+        case sglg_Type_Window_Info: { return(sizeof(Window_Info)); } break;
         case sglg_Type_API: { return(sizeof(API)); } break;
         case sglg_Type_Memory_Index: { return(sizeof(Memory_Index)); } break;
         case sglg_Type_Config: { return(sizeof(Config)); } break;
         case sglg_Type_Image: { return(sizeof(Image)); } break;
-        case sglg_Type_Image_Letter: { return(sizeof(Image_Letter)); } break;
         case sglg_Type_Bitmap_Header: { return(sizeof(Bitmap_Header)); } break;
         case sglg_Type_V2: { return(sizeof(V2)); } break;
         case sglg_Type_V3: { return(sizeof(V3)); } break;
@@ -227,6 +229,18 @@ static uint64_t sglg_type_to_size(sglg_Type type) {
         case sglg_Type_Win32_Debug_Window: { return(sizeof(Win32_Debug_Window)); } break;
         case sglg_Type_Win32_API: { return(sizeof(Win32_API)); } break;
         case sglg_Type_Win32_Screen_Capture_Thread_Parameters: { return(sizeof(Win32_Screen_Capture_Thread_Parameters)); } break;
+        case sglg_Type_V2u: { return(sizeof(V2u)); } break;
+        case sglg_Type_Render_Entity: { return(sizeof(Render_Entity)); } break;
+        case sglg_Type_Image_Letter: { return(sizeof(Image_Letter)); } break;
+        case sglg_Type_Rect: { return(sizeof(Rect)); } break;
+        case sglg_Type_Image_Rect: { return(sizeof(Image_Rect)); } break;
+        case sglg_Type_Word: { return(sizeof(Word)); } break;
+        case sglg_Type_Line: { return(sizeof(Line)); } break;
+        case sglg_Type_Render_Entity_For_Size: { return(sizeof(Render_Entity_For_Size)); } break;
+        case sglg_Type_Render_Image: { return(sizeof(Render_Image)); } break;
+        case sglg_Type_Internal: { return(sizeof(Internal)); } break;
+        case sglg_Type_Font: { return(sizeof(Font)); } break;
+        case sglg_Type_Renderer: { return(sizeof(Renderer)); } break;
     }
     return(0);
 }
@@ -245,11 +259,11 @@ static sglg_Type sglg_string_to_type(char const *s, uint64_t l) {
     else if(sgl_generated_string_compare("Platform_Callbacks", 18, s, l)) { return(sglg_Type_Platform_Callbacks); }
     else if(sgl_generated_string_compare("Bitmap", 6, s, l)) { return(sglg_Type_Bitmap); }
     else if(sgl_generated_string_compare("Settings", 8, s, l)) { return(sglg_Type_Settings); }
+    else if(sgl_generated_string_compare("Window_Info", 11, s, l)) { return(sglg_Type_Window_Info); }
     else if(sgl_generated_string_compare("API", 3, s, l)) { return(sglg_Type_API); }
     else if(sgl_generated_string_compare("Memory_Index", 12, s, l)) { return(sglg_Type_Memory_Index); }
     else if(sgl_generated_string_compare("Config", 6, s, l)) { return(sglg_Type_Config); }
     else if(sgl_generated_string_compare("Image", 5, s, l)) { return(sglg_Type_Image); }
-    else if(sgl_generated_string_compare("Image_Letter", 12, s, l)) { return(sglg_Type_Image_Letter); }
     else if(sgl_generated_string_compare("Bitmap_Header", 13, s, l)) { return(sglg_Type_Bitmap_Header); }
     else if(sgl_generated_string_compare("V2", 2, s, l)) { return(sglg_Type_V2); }
     else if(sgl_generated_string_compare("V3", 2, s, l)) { return(sglg_Type_V3); }
@@ -266,5 +280,17 @@ static sglg_Type sglg_string_to_type(char const *s, uint64_t l) {
     else if(sgl_generated_string_compare("Win32_Debug_Window", 18, s, l)) { return(sglg_Type_Win32_Debug_Window); }
     else if(sgl_generated_string_compare("Win32_API", 9, s, l)) { return(sglg_Type_Win32_API); }
     else if(sgl_generated_string_compare("Win32_Screen_Capture_Thread_Parameters", 38, s, l)) { return(sglg_Type_Win32_Screen_Capture_Thread_Parameters); }
+    else if(sgl_generated_string_compare("V2u", 3, s, l)) { return(sglg_Type_V2u); }
+    else if(sgl_generated_string_compare("Render_Entity", 13, s, l)) { return(sglg_Type_Render_Entity); }
+    else if(sgl_generated_string_compare("Image_Letter", 12, s, l)) { return(sglg_Type_Image_Letter); }
+    else if(sgl_generated_string_compare("Rect", 4, s, l)) { return(sglg_Type_Rect); }
+    else if(sgl_generated_string_compare("Image_Rect", 10, s, l)) { return(sglg_Type_Image_Rect); }
+    else if(sgl_generated_string_compare("Word", 4, s, l)) { return(sglg_Type_Word); }
+    else if(sgl_generated_string_compare("Line", 4, s, l)) { return(sglg_Type_Line); }
+    else if(sgl_generated_string_compare("Render_Entity_For_Size", 22, s, l)) { return(sglg_Type_Render_Entity_For_Size); }
+    else if(sgl_generated_string_compare("Render_Image", 12, s, l)) { return(sglg_Type_Render_Image); }
+    else if(sgl_generated_string_compare("Internal", 8, s, l)) { return(sglg_Type_Internal); }
+    else if(sgl_generated_string_compare("Font", 4, s, l)) { return(sglg_Type_Font); }
+    else if(sgl_generated_string_compare("Renderer", 8, s, l)) { return(sglg_Type_Renderer); }
     return(sglg_Type_unknown);
 }

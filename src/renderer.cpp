@@ -112,11 +112,11 @@ push_image_internal(Renderer *renderer, Image image) {
 internal Render_Entity *
 create_render_entity(Renderer *renderer, Render_Entity **parent, sglg_Type type) {
     Render_Entity *render_entity = add_child_to_node(renderer->memory, parent);
-    ASSERT(render_entity);
-
-    render_entity->visible = true;
-    render_entity->type = type;
-    render_entity->id = renderer->_internal.entity_id_count++;
+    ASSERT_IF(render_entity) {
+        render_entity->visible = true;
+        render_entity->type = type;
+        render_entity->id = renderer->_internal.entity_id_count++;
+    }
 
     return(render_entity);
 }
@@ -257,6 +257,7 @@ push_font(API *api, Renderer *renderer, File file) {
 internal Word *
 push_word_(Renderer *renderer, Render_Entity **parent, U64 font_id, Int start_x, Int start_y, Int height, String string) {
     Word *r = push_words_(renderer, parent, font_id, start_x, start_y, height, &string, 1);
+    ASSERT(r);
     return(r);
 }
 
@@ -280,8 +281,11 @@ push_words_(Renderer *renderer, Render_Entity **parent, U64 font_id, Int start_x
 
 internal Render_Image *
 find_font_image(Renderer *renderer, Font *font, Char c) {
-    Render_Image *image = find_image_from_id(renderer, font->letter_ids[ascii_to_idx(c)]);
-    ASSERT(image);
+    Render_Image *image = 0;
+    ASSERT_IF(is_ascii(c)) {
+        image = find_image_from_id(renderer, font->letter_ids[ascii_to_idx(c)]);
+        ASSERT(image);
+    }
 
     return(image);
 }
@@ -299,17 +303,23 @@ find_font_from_id(Renderer *renderer, U64 id) {
     return(res);
 }
 
-internal Char
-idx_to_ascii(Char i) {
-    ASSERT(i < 96);
-    Char c = i + 32;
+internal Bool
+is_ascii(Int c) {
+    Bool r = (c >= 32 && c <= 126);
+    return(r);
+}
+
+internal Int
+idx_to_ascii(Int i) {
+    Int c = i + 32;
+    ASSERT(is_ascii(c));
     return(c);
 }
 
-internal Char
-ascii_to_idx(Char c) {
-    ASSERT(c >= 32 && c <= 126);
-    Char i = c - 32;
+internal Int
+ascii_to_idx(Int c) {
+    ASSERT(is_ascii(c));
+    Int i = c - 32;
     return(i);
 }
 
@@ -318,37 +328,41 @@ internal_set_words(Renderer *renderer, Word *word, String *strings, Int string_c
     Int running_x = 0, running_y = word->height;
 
     Font *font = find_font_from_id(renderer, word->font_id);
+    ASSERT_IF(font) {
+        // TODO: Kinda hacky...
+        Render_Image *a_image = find_font_image(renderer, font, 'A');  ASSERT(a_image);
+        F32 full_height = a_image->height;
 
-    // TODO: Kinda hacky...
-    Render_Image *a_image = find_font_image(renderer, font, 'A');
-    F32 full_height = a_image->height;
+        for(Int string_i = 0; (string_i < string_count); ++string_i) {
+            String *string = &strings[string_i];
 
-    for(Int string_i = 0; (string_i < string_count); ++string_i) {
-        String *string = &strings[string_i];
-
-        for(Int letter_i = 0; (letter_i < string->len); ++letter_i) {
-            if(string->e[letter_i] == '\n') {
-                running_x = 0;
-                running_y -= word->height;
-            } else {
-                Char c = string->e[letter_i];
-
-                if(c == ' ') {
-                    running_x += word->height;
+            for(Int letter_i = 0; (letter_i < string->len); ++letter_i) {
+                if(string->e[letter_i] == '\n') {
+                    running_x = 0;
+                    running_y -= word->height;
                 } else {
-                    Render_Image *image = find_font_image(renderer, font, c);
+                    Char c = string->e[letter_i];
 
-                    F32 char_pct_height_of_total = (F32)image->height / full_height;
+                    ASSERT_IF(is_ascii(c)) {
+                        if(c == ' ') {
+                            running_x += word->height / 2; // TODO: Arbitrary
+                        } else {
+                            Render_Image *image = find_font_image(renderer, font, c);
+                            ASSERT_IF(image) {
+                                F32 char_pct_height_of_total = (F32)image->height / full_height;
 
-                    Int height_to_use = (word->height * char_pct_height_of_total);
-                    Int width_to_use = floor((F32)image->width * ((F32)height_to_use / (F32)image->height)); // TODO: Is this correct?
+                                Int height_to_use = (word->height * char_pct_height_of_total);
+                                Int width_to_use = floor((F32)image->width * ((F32)height_to_use / (F32)image->height)); // TODO: Is this correct?
 
-                    push_image_rect(renderer, (Render_Entity **)&word,
-                                    running_x, running_y, width_to_use, height_to_use,
-                                    0, 0, 0, 0,
-                                    font->letter_ids[ascii_to_idx(c)]);
+                                push_image_rect(renderer, (Render_Entity **)&word,
+                                                running_x, running_y, width_to_use, height_to_use,
+                                                0, 0, 0, 0,
+                                                font->letter_ids[ascii_to_idx(c)]);
 
-                    running_x += (width_to_use + image->off_x); // TODO: This should be a scaled off_x
+                                running_x += (width_to_use + image->off_x); // TODO: This should be a scaled off_x
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -442,8 +456,6 @@ find_render_entity_(Renderer *renderer, U64 id, sglg_Type expected_type) {
     return(r);
 }
 
-// TODO: Find entity_from_id would be useful.
-
 internal F32
 floor(F32 a) {
     F32 r = (F32)((S32)a);
@@ -461,8 +473,7 @@ internal U32 *
 image_at_(U32 *base, U32 width, U32 height, U32 x, U32 y) {
     U32 *res = 0;
     if(x <= width && y <= height) {
-        U32 accessor = ((y * width) + x);
-        res = &base[accessor];
+        res = &base[(y * width) + x];
     }
 
     return(res);

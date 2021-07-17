@@ -66,14 +66,20 @@ struct Internal {
     U64 entity_id_count;
 };
 
+struct Font {
+    U64 id;
+    U64 letter_ids[128];
+};
+
 struct Renderer {
     Render_Entity *root;
     Memory *memory;
 
-    Render_Image images[256];
-    Int image_count;
-    U64 letter_ids[128];
-    Image_Letter *font_images;
+    Render_Image *images;
+    Int image_count_max, image_count;
+
+    Font *fonts;
+    Int font_count_max, font_count;
 
     Internal _internal;
 };

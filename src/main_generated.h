@@ -66,6 +66,7 @@ enum sglg_Type {
     sglg_Type_Render_Entity_For_Size,
     sglg_Type_Render_Image,
     sglg_Type_Internal,
+    sglg_Type_Font,
     sglg_Type_Renderer,
     sglg_Type_Image_Letter_Result,
     sglg_Type_Entry,
@@ -151,6 +152,7 @@ struct Line;
 struct Render_Entity_For_Size;
 struct Render_Image;
 struct Internal;
+struct Font;
 struct Renderer;
 struct Image_Letter_Result;
 struct Entry;
@@ -871,10 +873,11 @@ float square_root(float a );
  static Render_Image* push_image_internal(Renderer * renderer , Image image );
  static Rect* push_solid_rectangle_(Renderer * renderer , Render_Entity * * parent , Int x , Int y , Int width , Int height , U32 inner_colour );
  static Line* push_line_(Renderer * renderer , Render_Entity * * parent , Int x1 , Int y1 , Int x2 , Int y2 , F32 thickness );
- static U64 push_font(API * api , Renderer * renderer , String font_file );
+ static U64 push_font(API * api , Renderer * renderer , File file );
  static Word* push_word_(Renderer * renderer , Render_Entity * * parent , U64 font_id , Int start_x , Int start_y , Int height , String string );
  static Word* push_words_(Renderer * renderer , Render_Entity * * parent , U64 font_id , Int start_x , Int start_y , Int height , String * strings , Int str_count );
- static Render_Image* find_font_image(Renderer * renderer , Char c );
+ static Render_Image* find_font_image(Renderer * renderer , Font * font , Char c );
+ static Font* find_font_from_id(Renderer * renderer , U64 id );
  static Void internal_set_words(Renderer * renderer , Word * word , String * strings , Int str_count );
  static Void update_word(Renderer * renderer , Word * word , String string );
  static Void update_words(Renderer * renderer , Word * word , String * strings , Int string_count );
@@ -888,6 +891,7 @@ float square_root(float a );
  static Void render_node_and_siblings(Render_Entity * render_entity , Renderer * renderer , Bitmap * screen_bitmap , V2 offset );
  static Void render(Renderer * renderer , Bitmap * screen_bitmap );
 extern "C" Void init_platform_settings(Settings * settings );
+ static U64 load_font(API * api , Renderer * renderer , String fname );
  static Void setup(API * api , DLL_Data * data , Renderer * renderer );
  static Void update(API * api , Renderer * renderer );
 extern "C" Void handle_input_and_render(API * api );

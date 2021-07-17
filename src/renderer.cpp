@@ -55,6 +55,14 @@ create_renderer(Renderer *renderer, Memory *memory) {
     renderer->root = (Render_Entity * )memory_push(renderer->memory, Memory_Index_renderer, sizeof(Render_Entity));
     ASSERT(renderer->root);
 
+    renderer->image_count_max = 512;
+    renderer->images = (Render_Image *)memory_push(renderer->memory, Memory_Index_renderer, sizeof(Render_Image) * renderer->image_count_max);
+    ASSERT(renderer->images);
+
+    renderer->font_count_max = 8;
+    renderer->fonts = (Font *)memory_push(renderer->memory, Memory_Index_renderer, sizeof(Font) * renderer->font_count_max);
+    ASSERT(renderer->fonts);
+
     add_child_to_node(memory, &renderer->root);
 }
 
@@ -91,8 +99,7 @@ internal Render_Image *
 push_image_internal(Renderer *renderer, Image image) {
     Render_Image *render_image = 0;
 
-    ASSERT(renderer->image_count + 1 < ARRAY_COUNT(renderer->images));
-    if(renderer->image_count + 1 < ARRAY_COUNT(renderer->images)) {
+    ASSERT_IF(renderer->image_count + 1 < renderer->image_count_max) {
         render_image = &renderer->images[renderer->image_count++];
         render_image->width = image.width;
         render_image->height = image.height;
@@ -209,35 +216,34 @@ make_letter_image(Memory *memory, stbtt_fontinfo *font, Char ch) {
 }
 
 internal U64
-push_font(API *api, Renderer *renderer, String font_file) {
+push_font(API *api, Renderer *renderer, File file) {
     U64 font_id = 0;
 
     Memory *memory = api->memory;
 
-    File file = api->cb.read_file(memory, Memory_Index_temp, font_file, false);
-    ASSERT(file.size > 0);
-    if(file.size > 0) {
-        stbtt_fontinfo font_info = {};
-        Bool success = stbtt_InitFont(&font_info, file.e, stbtt_GetFontOffsetForIndex(file.e, 0));
-        if(success) {
-            for(Int letter_i = 0; (letter_i < 128); ++letter_i) {
-                Image_Letter_Result ilr = make_letter_image(memory, &font_info, letter_i);
-                if(ilr.success) {
-                    Image_Letter *image_letter = &ilr.image_letter;
+    stbtt_fontinfo font_info = {};
+    Bool success = stbtt_InitFont(&font_info, file.e, stbtt_GetFontOffsetForIndex(file.e, 0));
+    if(success) {
+        Font *font = &renderer->fonts[renderer->font_count++];
+        font->id = renderer->_internal.entity_id_count++;
 
-                    Render_Image *image = push_image_internal(renderer, image_letter->img);
-                    ASSERT(image);
-                    if(image) {
-                        image->off_x = image_letter->off_x;
-                        image->off_y = image_letter->off_y;
-                        renderer->letter_ids[letter_i] = image->id;
-                    }
+        for(Int letter_i = 0; (letter_i < 128); ++letter_i) {
+            Image_Letter_Result ilr = make_letter_image(memory, &font_info, letter_i);
+            if(ilr.success) {
+                Image_Letter *image_letter = &ilr.image_letter;
+
+                Render_Image *image = push_image_internal(renderer, image_letter->img);
+                ASSERT(image);
+                if(image) {
+                    image->off_x = image_letter->off_x;
+                    image->off_y = image_letter->off_y;
+
+                    font->letter_ids[letter_i] = image->id;
                 }
             }
-
-            memory_pop(memory, file.e);
-            font_id = renderer->_internal.entity_id_count++;
         }
+
+        font_id = font->id;
     }
 
     return(font_id);
@@ -272,20 +278,33 @@ push_words_(Renderer *renderer, Render_Entity **parent, U64 font_id, Int start_x
 }
 
 internal Render_Image *
-find_font_image(Renderer *renderer, Char c) {
-    Render_Image *image = find_image_from_id(renderer, renderer->letter_ids[c]);
+find_font_image(Renderer *renderer, Font *font, Char c) {
+    Render_Image *image = find_image_from_id(renderer, font->letter_ids[c]);
     ASSERT(image);
 
     return(image);
+}
+
+internal Font *
+find_font_from_id(Renderer *renderer, U64 id) {
+    Font *res = 0;
+    for(Int i = 0; (i < renderer->font_count); ++i) {
+        if(renderer->fonts[i].id == id) {
+            res = &renderer->fonts[i];
+            break; // for
+        }
+    }
+
+    return(res);
 }
 
 internal Void
 internal_set_words(Renderer *renderer, Word *word, String *strings, Int str_count) {
     Int running_x = 0, running_y = word->height;
 
-    U64 font_id = word->font_id;
+    Font *font = find_font_from_id(renderer, word->font_id);
 
-    Render_Image *a_image = find_font_image(renderer, 'A');
+    Render_Image *a_image = find_font_image(renderer, font, 'A');
     F32 full_height = a_image->height;
 
     for(Int str_i = 0; (str_i < str_count); ++str_i) {
@@ -301,7 +320,7 @@ internal_set_words(Renderer *renderer, Word *word, String *strings, Int str_coun
                 if(c == ' ') {
                     running_x += word->height;
                 } else {
-                    Render_Image *image = find_font_image(renderer, c);
+                    Render_Image *image = find_font_image(renderer, font, c);
 
                     F32 char_pct_height_of_total = (F32)image->height / full_height;
 
@@ -311,7 +330,7 @@ internal_set_words(Renderer *renderer, Word *word, String *strings, Int str_coun
                     push_image_rect(renderer, (Render_Entity **)&word,
                                     running_x, running_y, width_to_use, height_to_use,
                                     0, 0, 0, 0,
-                                    renderer->letter_ids[c]);
+                                    font->letter_ids[c]);
 
                     running_x += (width_to_use + image->off_x); // TODO: This should be a scaled off_x
                 }

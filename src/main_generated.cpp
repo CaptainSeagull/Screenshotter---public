@@ -237,6 +237,7 @@ static uint64_t sglg_type_to_size(sglg_Type type) {
         case sglg_Type_Render_Entity_For_Size: { return(sizeof(Render_Entity_For_Size)); } break;
         case sglg_Type_Render_Image: { return(sizeof(Render_Image)); } break;
         case sglg_Type_Internal: { return(sizeof(Internal)); } break;
+        case sglg_Type_Font: { return(sizeof(Font)); } break;
         case sglg_Type_Renderer: { return(sizeof(Renderer)); } break;
         case sglg_Type_Image_Letter_Result: { return(sizeof(Image_Letter_Result)); } break;
         case sglg_Type_Entry: { return(sizeof(Entry)); } break;
@@ -290,6 +291,7 @@ static sglg_Type sglg_string_to_type(char const *s, uint64_t l) {
     else if(sgl_generated_string_compare("Render_Entity_For_Size", 22, s, l)) { return(sglg_Type_Render_Entity_For_Size); }
     else if(sgl_generated_string_compare("Render_Image", 12, s, l)) { return(sglg_Type_Render_Image); }
     else if(sgl_generated_string_compare("Internal", 8, s, l)) { return(sglg_Type_Internal); }
+    else if(sgl_generated_string_compare("Font", 4, s, l)) { return(sglg_Type_Font); }
     else if(sgl_generated_string_compare("Renderer", 8, s, l)) { return(sglg_Type_Renderer); }
     else if(sgl_generated_string_compare("Image_Letter_Result", 19, s, l)) { return(sglg_Type_Image_Letter_Result); }
     else if(sgl_generated_string_compare("Entry", 5, s, l)) { return(sglg_Type_Entry); }

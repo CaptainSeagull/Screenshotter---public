@@ -67,6 +67,7 @@ enum sglg_Type {
     sglg_Type_Render_Entity_For_Size,
     sglg_Type_Render_Image,
     sglg_Type_Internal,
+    sglg_Type_Font,
     sglg_Type_Renderer,
 };
 
@@ -148,6 +149,7 @@ struct Line;
 struct Render_Entity_For_Size;
 struct Render_Image;
 struct Internal;
+struct Font;
 struct Renderer;
 
 // Forward declaration of functions

@@ -55,11 +55,25 @@ init_platform_settings(Settings *settings) {
     settings->window_height = 480;
 }
 
+internal U64
+load_font(API *api, Renderer *renderer, String fname) {
+    U64 id = 0;
+    File file = api->cb.read_file(api->memory, Memory_Index_temp, fname, false);
+    ASSERT_IF(file.size > 0) {
+        id = push_font(api, renderer, file);
+        ASSERT(id);
+        memory_pop(api->memory, file.e);
+    }
+
+    return(id);
+}
+
 internal Void
 setup(API *api, DLL_Data *data, Renderer *renderer) {
     Config *config = api->config;
+    Memory *memory = api->memory;
 
-    create_renderer(renderer, api->memory);
+    create_renderer(renderer, memory);
 
     Rect *white_background = push_solid_rectangle(renderer, &renderer->root,
                                                   0, 0, api->window_width, api->window_height,
@@ -67,11 +81,11 @@ setup(API *api, DLL_Data *data, Renderer *renderer) {
 
     data->background_id = white_background->id;
 
-    U64 font_id = push_font(api, renderer, "c:/windows/fonts/arial.ttf");
-    ASSERT(font_id);
+    U64 arial_id = load_font(api, renderer, "c:/windows/fonts/arial.ttf");
+    U64 comic_id = load_font(api, renderer, "c:/windows/fonts/comic.ttf");
 
     push_word(renderer, &white_background,
-              font_id, 10, 5, 30,
+              comic_id, 10, 5, 30,
               "Screenshotter!");
 
     push_line(renderer, &renderer->root, 0, 50, api->window_width, 50, 3.0f);
@@ -81,11 +95,11 @@ setup(API *api, DLL_Data *data, Renderer *renderer) {
         String strings[] = { "Output Directory: ", config->target_output_directory };
 
         directory_word = push_words(renderer, &white_background,
-                                    font_id, 40, 60, 20,
+                                    arial_id, 40, 60, 20,
                                     strings, ARRAY_COUNT(strings));
     } else {
         directory_word = push_word(renderer, &white_background,
-                                   font_id, 40, 60, 20,
+                                   arial_id, 40, 60, 20,
                                    "Please select an output directory");
     }
 
@@ -129,11 +143,11 @@ setup(API *api, DLL_Data *data, Renderer *renderer) {
                 // Useful for debugging
 #if 1
                 push_word(renderer, &yellow_window,
-                          font_id, 10, 5, height,
+                          arial_id, 10, 5, height,
                           api->windows[wnd_i].title);
 #else
                 push_word(renderer, &yellow_window,
-                          font_id, 10, 5, height,
+                          arial_id, 10, 5, height,
                           api->windows[wnd_i].class_name);
 #endif
 

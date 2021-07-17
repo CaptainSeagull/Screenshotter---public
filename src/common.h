@@ -37,14 +37,13 @@ typedef double F64;
 #define internal static
 
 #define ASSERT_IF(exp) ASSERT((exp)); if((exp))
-
 #define ARRAY_COUNT(arr) (sizeof(arr) / (sizeof(*(arr))))
+#define CONCAT(a, b) a##b
+
 #define BYTES(v)     ((v)            * (8LL))
 #define KILOBYTES(v) ((v)            * (1024LL))
 #define MEGABYTES(v) ((KILOBYTES(v)) * (1024LL))
 #define GIGABYTES(v) ((MEGABYTES(v)) * (1024LL))
-
-#define CONCAT(a, b) a##b
 
 #include "platform.h"
 

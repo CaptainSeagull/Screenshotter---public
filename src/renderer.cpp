@@ -147,6 +147,10 @@ push_line(Renderer *renderer, Render_Entity *parent,
         line->y = y1;
         line->x2 = x2;
         line->y2 = y2;
+
+        line->width = x2 - x1;
+        line->height = y2 - y1;
+
         line->thickness = thickness;
     }
 
@@ -237,7 +241,17 @@ push_font(API *api, Renderer *renderer, File file) {
                         image->off_y = image_letter->off_y;
 
                         font->letter_ids[ascii_to_idx(letter_i)] = image->id;
+
+                        font->full_height = maxu32(font->full_height, image->height);
                     }
+                }
+            }
+
+            // Update the offset using the new height.
+            for(Int letter_i = 33/* Skip space*/; (letter_i <= 126); ++letter_i) {
+                Render_Image *image = find_font_image(renderer, font, letter_i);
+                if(image) {
+                    image->off_y += font->full_height;
                 }
             }
 
@@ -249,18 +263,18 @@ push_font(API *api, Renderer *renderer, File file) {
 }
 
 internal Word *
-push_word(Renderer *renderer, Render_Entity *parent, U64 font_id, Int start_x, Int start_y, Int height, String string) {
-    Word *r = push_words(renderer, parent, font_id, start_x, start_y, height, &string, 1);
+push_word(Renderer *renderer, Render_Entity *parent, U64 font_id, Int x, Int y, Int height, String string) {
+    Word *r = push_words(renderer, parent, font_id, x, y, height, &string, 1);
     ASSERT(r);
     return(r);
 }
 
 internal Word *
-push_words(Renderer *renderer, Render_Entity *parent, U64 font_id, Int start_x, Int start_y, Int height, String *strings, Int string_count) {
+push_words(Renderer *renderer, Render_Entity *parent, U64 font_id, Int x, Int y, Int height, String *strings, Int string_count) {
     Word *word = (Word *)create_render_entity(renderer, &parent, sglg_Type_Word);
     ASSERT_IF(word) {
-        word->x = start_x;
-        word->y = start_y;
+        word->x = x;
+        word->y = y;
         word->height = height;
         word->font_id = font_id;
 
@@ -316,13 +330,10 @@ ascii_to_idx(Int c) {
 
 internal Void
 internal_set_words(Renderer *renderer, Word *word, String *strings, Int string_count) {
-    Int running_x = 0, running_y = word->height;
-
     Font *font = find_font_from_id(renderer, word->font_id);
     ASSERT_IF(font) {
-        // TODO: Kinda hacky...
-        Render_Image *a_image = find_font_image(renderer, font, 'A');  ASSERT(a_image);
-        F32 full_height = a_image->height;
+        Int running_x = 0;
+        Int running_y = 0;
 
         for(Int string_i = 0; (string_i < string_count); ++string_i) {
             String *string = &strings[string_i];
@@ -330,29 +341,34 @@ internal_set_words(Renderer *renderer, Word *word, String *strings, Int string_c
             for(Int letter_i = 0; (letter_i < string->len); ++letter_i) {
                 if(string->e[letter_i] == '\n') {
                     running_x = 0;
-                    running_y -= word->height;
+                    running_y += word->height;
+                    // TODO: Also increase the height of word?
                 } else {
                     Char c = string->e[letter_i];
 
                     ASSERT_IF(is_ascii(c)) {
+                        Int width_to_add = 0;
                         if(c == ' ') {
-                            running_x += word->height / 2; // TODO: Arbitrary
+                            width_to_add += word->height / 2; // TODO: Arbitrary
                         } else {
                             Render_Image *image = find_font_image(renderer, font, c);
                             ASSERT_IF(image) {
-                                F32 char_pct_height_of_total = (F32)image->height / full_height;
+                                F32 char_pct_height_of_total = (F32)image->height / font->full_height;
+                                ASSERT(char_pct_height_of_total >= 0 && char_pct_height_of_total <= 1);
 
                                 Int height_to_use = (word->height * char_pct_height_of_total);
                                 Int width_to_use = floor((F32)image->width * ((F32)height_to_use / (F32)image->height)); // TODO: Is this correct?
 
-                                push_image_rect(renderer, (Render_Entity **)&word,
+                                push_image_rect(renderer, word,
                                                 running_x, running_y, width_to_use, height_to_use,
-                                                0, 0, 0, 0,
                                                 font->letter_ids[ascii_to_idx(c)]);
 
-                                running_x += (width_to_use + image->off_x); // TODO: This should be a scaled off_x
+                                width_to_add += (width_to_use + image->off_x); // TODO: This should be a scaled off_x
                             }
                         }
+
+                        running_x += width_to_add;
+                        word->width += width_to_add * 2; // TODO: *2 because this doesn't seem to be correct...
                     }
                 }
             }
@@ -372,22 +388,17 @@ update_words(Renderer *renderer, Word *word, String *strings, Int string_count) 
 }
 
 internal Image_Rect *
-push_image_rect(Renderer *renderer, Render_Entity **parent,
-                Int start_x, Int start_y, Int width, Int height,
-                Int sprite_x, Int sprite_y, Int sprite_width, Int sprite_height,
+push_image_rect(Renderer *renderer, Render_Entity *parent,
+                Int x, Int y, Int width, Int height,
                 U64 image_id) {
     Image_Rect *image_rect = 0;
     ASSERT_IF(find_image_from_id(renderer, image_id)) { // Make sure the image ID is valid
-        image_rect = (Image_Rect *)create_render_entity(renderer, parent, sglg_Type_Image_Rect);
+        image_rect = (Image_Rect *)create_render_entity(renderer, &parent, sglg_Type_Image_Rect);
         ASSERT_IF(image_rect) {
-            image_rect->x = start_x;
-            image_rect->y = start_y;
+            image_rect->x = x;
+            image_rect->y = y;
             image_rect->width = width;
             image_rect->height = height;
-            image_rect->sprite_x = sprite_x;
-            image_rect->sprite_y = sprite_y;
-            image_rect->sprite_width = sprite_width;
-            image_rect->sprite_height = sprite_height;
             image_rect->image_id = image_id;
         }
     }
@@ -471,9 +482,9 @@ image_at_(U32 *base, U32 width, U32 height, U32 x, U32 y) {
 }
 
 internal Void
-render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bitmap, V2 input_offset) {
-    V2u offset = v2u(input_offset.x + render_entity->x,
-                     input_offset.y + render_entity->y);
+render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bitmap, BB parent) {
+    V2u offset = v2u(parent.x + render_entity->x,
+                     parent.y + render_entity->y);
 
     // TODO: Most of the renderers are reading the screen pixels for y,x. However it'd probably be faster to just read for the y then
     //       ++ iterate through to write the X. Wouldn't be able to ASSERT as nicely though...
@@ -491,51 +502,55 @@ render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bit
 
                 for(Int iter_y = 0; (iter_y < height); ++iter_y) {
                     for(Int iter_x = 0; (iter_x < width); ++iter_x) {
-                        U32 *screen_pixel = image_at(screen_bitmap->memory,
-                                                     screen_bitmap->width,
-                                                     screen_bitmap->height,
-                                                     iter_x + offset.x,
-                                                     iter_y + offset.y);
 
-                        if(screen_pixel) {
+                        if(iter_x + offset.x < parent.width && iter_y + offset.y < parent.height) {
 
-                            // TODO: Is the order actually swapped? Would alpha be index 0?
+                            U32 *screen_pixel = image_at(screen_bitmap->memory,
+                                                         screen_bitmap->width,
+                                                         screen_bitmap->height,
+                                                         iter_x + offset.x,
+                                                         iter_y + offset.y);
+
+                            if(screen_pixel) {
+
+                                // TODO: Is the order actually swapped? Would alpha be index 0?
 #if 0
-                            F64 a = (F64)((U8 *)&rect->inner_colour)[3] / 255.0;
+                                F64 a = (F64)((U8 *)&rect->inner_colour)[3] / 255.0;
 
-                            U32 l = minu32(rect->inner_colour, *screen_pixel);
-                            U32 u = maxu32(rect->inner_colour, *screen_pixel);
-                            U32 d = a * (u - l);
-                            U32 inner_colour = l + d;
-#else
-
-                            Bool on_outline = false;
-                            if(iter_y < line_thickness || iter_x < line_thickness) {
-                                on_outline = true;
-                            } else if(iter_y > height - line_thickness || iter_x > width - line_thickness) {
-                                on_outline = true;
-                            }
-
-                            U32 bitmap_pixel = (on_outline) ? rect->outer_colour : rect->inner_colour;
-#if 1
-                            U32 colour = bitmap_pixel;
-#else
-                            F64 a = (F64)((U8 *)&bitmap_pixel)[3] / 255.0;
-                            U32 colour = 0xFFFFFFFF;
-                            for(Int i = 0; (i < 3); ++i) {
-                                U32 s = ((U8 *)screen_pixel)[i];
-                                U32 b = ((U8 *)&bitmap_pixel)[i];
-
-                                U32 l = minu32(b, s);
-                                U32 u = maxu32(b, s);
+                                U32 l = minu32(rect->inner_colour, *screen_pixel);
+                                U32 u = maxu32(rect->inner_colour, *screen_pixel);
                                 U32 d = a * (u - l);
-                                U32 o = l + d;
-                                ((U8 *)&colour)[i] = o;
-                            }
+                                U32 inner_colour = l + d;
+#else
+
+                                Bool on_outline = false;
+                                if(iter_y < line_thickness || iter_x < line_thickness) {
+                                    on_outline = true;
+                                } else if(iter_y > height - line_thickness || iter_x > width - line_thickness) {
+                                    on_outline = true;
+                                }
+
+                                U32 bitmap_pixel = (on_outline) ? rect->outer_colour : rect->inner_colour;
+#if 1
+                                U32 colour = bitmap_pixel;
+#else
+                                F64 a = (F64)((U8 *)&bitmap_pixel)[3] / 255.0;
+                                U32 colour = 0xFFFFFFFF;
+                                for(Int i = 0; (i < 3); ++i) {
+                                    U32 s = ((U8 *)screen_pixel)[i];
+                                    U32 b = ((U8 *)&bitmap_pixel)[i];
+
+                                    U32 l = minu32(b, s);
+                                    U32 u = maxu32(b, s);
+                                    U32 d = a * (u - l);
+                                    U32 o = l + d;
+                                    ((U8 *)&colour)[i] = o;
+                                }
 #endif
 #endif
 
-                            *screen_pixel = colour;
+                                *screen_pixel = colour;
+                            }
                         }
                     }
                 }
@@ -558,26 +573,28 @@ render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bit
 
                 for(Int iter_y = -thickness_x2; (iter_y < rise_test); ++iter_y) {
                     for(Int iter_x = -thickness_x2; (iter_x < run_test); ++iter_x) {
-                        U32 *screen_pixel = image_at(screen_bitmap->memory,
-                                                     screen_bitmap->width,
-                                                     screen_bitmap->height,
-                                                     iter_x + offset.x,
-                                                     iter_y + offset.y);
 
-                        if(screen_pixel) {
-                            F32 x = iter_x + offset.x;
-                            F32 y = iter_y + offset.y;
-                            if(run != 0) {
-                                F32 t = ((m * x) + y_intercept);
-                                if(absolute(y - t) < thickness) {
-                                    *screen_pixel = 0;
-                                }
-                            } else {
-                                if(absolute(x - x_intercept) < thickness) {
-                                    *screen_pixel = 0;
+                        if(iter_x + offset.x < parent.width && iter_y + offset.y < parent.height) {
+                            U32 *screen_pixel = image_at(screen_bitmap->memory,
+                                                         screen_bitmap->width,
+                                                         screen_bitmap->height,
+                                                         iter_x + offset.x,
+                                                         iter_y + offset.y);
+
+                            if(screen_pixel) {
+                                F32 x = iter_x + offset.x;
+                                F32 y = iter_y + offset.y;
+                                if(run != 0) {
+                                    F32 t = ((m * x) + y_intercept);
+                                    if(absolute(y - t) < thickness) {
+                                        *screen_pixel = RGBA(0, 0, 0, 0xFF); // TODO: Make colour configruable
+                                    }
+                                } else {
+                                    if(absolute(x - x_intercept) < thickness) {
+                                        *screen_pixel = RGBA(0, 0, 0, 0xFF); // TODO: Make colour configruable
+                                    }
                                 }
                             }
-
                         }
                     }
                 }
@@ -604,59 +621,66 @@ render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bit
 
                 for(U32 iter_y = 0; (iter_y < img_rect->height); ++iter_y) {
                     for(U32 iter_x = 0; (iter_x < img_rect->width); ++iter_x) {
-                        U32 img_x = floor((F32)iter_x * pct_w);
-                        U32 img_y = floor((F32)iter_y * pct_h);
 
-                        U32 *screen_pixel = image_at(screen_bitmap->memory,
-                                                     screen_bitmap->width,
-                                                     screen_bitmap->height,
-                                                     iter_x + offset.x,
-                                                     iter_y + offset.y + (off_y_scaled));
-                        U32 *bitmap_pixel = image_at(img->pixels,
-                                                     img->width,
-                                                     img->height,
-                                                     img_rect->sprite_x + img_x,
-                                                     img_rect->sprite_y + img_y);
+                        if(iter_x + offset.x < parent.width) {
+                            // TODO: There's an issue with how I'm calculating the Word type's height, so it ends up filtering this
+                            //       out completely. Look into this!
+                            /*if(iter_y + offset.y < parent.height)*/ {
+                                U32 img_x = floor((F32)iter_x * pct_w);
+                                U32 img_y = floor((F32)iter_y * pct_h);
 
-                        // TODO: Will bitmap_pixel ever be NULL?
-                        ASSERT(bitmap_pixel);
-                        if(screen_pixel && bitmap_pixel) {
+                                U32 *screen_pixel = image_at(screen_bitmap->memory,
+                                                             screen_bitmap->width,
+                                                             screen_bitmap->height,
+                                                             iter_x + offset.x,
+                                                             iter_y + offset.y + (off_y_scaled));
+                                U32 *bitmap_pixel = image_at(img->pixels,
+                                                             img->width,
+                                                             img->height,
+                                                             img_rect->sprite_x + img_x,
+                                                             img_rect->sprite_y + img_y);
 
-                            // TODO: Use off_x / off_y in here as well.
+                                // TODO: Will bitmap_pixel ever be NULL?
+                                ASSERT(bitmap_pixel);
+                                if(screen_pixel && bitmap_pixel) {
+
+                                    // TODO: Use off_x / off_y in here as well.
 
 #if 0
-                            // Contrinuous alpha... doesn't work :-(
-                            U8 alpha8 = ((U8 *)bitmap_pixel)[0];
+                                    // Contrinuous alpha... doesn't work :-(
+                                    U8 alpha8 = ((U8 *)bitmap_pixel)[0];
 
-                            F32 alphaf32 = alpha8 / 255.0f;
+                                    F32 alphaf32 = alpha8 / 255.0f;
 
-                            U32 inner_colour = 0xFFFFFFFF;
-                            U8 *at = (U8 *)&inner_colour;
-                            for(Int i = 0; (i < 4); ++i, ++at) {
-                                U8 bitmap_pixel8 = ((U8 *)bitmap_pixel)[i];
-                                U8 screen_pixel8 = ((U8 *)screen_pixel)[i];
+                                    U32 inner_colour = 0xFFFFFFFF;
+                                    U8 *at = (U8 *)&inner_colour;
+                                    for(Int i = 0; (i < 4); ++i, ++at) {
+                                        U8 bitmap_pixel8 = ((U8 *)bitmap_pixel)[i];
+                                        U8 screen_pixel8 = ((U8 *)screen_pixel)[i];
 
-                                U32 lower = minu32(bitmap_pixel8, screen_pixel8);
-                                U32 upper = maxu32(bitmap_pixel8, screen_pixel8);
+                                        U32 lower = minu32(bitmap_pixel8, screen_pixel8);
+                                        U32 upper = maxu32(bitmap_pixel8, screen_pixel8);
 
-                                U32 delta = alphaf32 * (upper - lower);
-                                U32 output_colour_tmp = lower + delta;
-                                ASSERT(output_colour_tmp <= 0xFF);
-                                U8 output_colour8 = (U8)output_colour_tmp;
+                                        U32 delta = alphaf32 * (upper - lower);
+                                        U32 output_colour_tmp = lower + delta;
+                                        ASSERT(output_colour_tmp <= 0xFF);
+                                        U8 output_colour8 = (U8)output_colour_tmp;
 
-                                *at = output_colour8;
-                            }
+                                        *at = output_colour8;
+                                    }
 
-                            if(alphaf32 == 0) { ASSERT(inner_colour == *screen_pixel); }
-                            if(alphaf32 == 1) { ASSERT(inner_colour == *bitmap_pixel); }
+                                    if(alphaf32 == 0) { ASSERT(inner_colour == *screen_pixel); }
+                                    if(alphaf32 == 1) { ASSERT(inner_colour == *bitmap_pixel); }
 #else
-                            // Binary alpha
-                            U8 alpha8 = ((U8 *)bitmap_pixel)[0]; // TODO: 0 or 3?
-                            U32 inner_colour = *bitmap_pixel;
-                            if(alpha8 == 255) { inner_colour = *screen_pixel; }
+                                    // Binary alpha
+                                    U8 alpha8 = ((U8 *)bitmap_pixel)[0]; // TODO: 0 or 3?
+                                    U32 inner_colour = *bitmap_pixel;
+                                    if(alpha8 == 255) { inner_colour = *screen_pixel; }
 #endif
 
-                            *screen_pixel = inner_colour;
+                                    *screen_pixel = inner_colour;
+                                }
+                            }
                         }
                     }
                 }
@@ -667,14 +691,25 @@ render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bit
     }
 }
 
+internal BB
+get_overlap(BB a, BB b) {
+    Int x = maxu32(a.x, b.x);
+    Int y = maxu32(a.y, b.y);
+    Int w = minu32(a.width, b.width);
+    Int h = minu32(a.height, b.height);
+
+    BB r = { x, y, w, h };
+    return(r);
+}
+
 internal Void
-render_node_and_siblings(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bitmap, V2 offset) {
+render_node_and_siblings(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bitmap, BB parent_bb) {
     // TODO: Sort entities based on depth first?
 
     // Render all siblings first
     Render_Entity *next = render_entity;
     while(next) {
-        render_node(next, renderer, screen_bitmap, offset);
+        render_node(next, renderer, screen_bitmap, parent_bb);
         next = next->next;
     }
 
@@ -682,7 +717,19 @@ render_node_and_siblings(Render_Entity *render_entity, Renderer *renderer, Bitma
     next = render_entity;
     while(next) {
         if(next->child) {
-            render_node_and_siblings(next->child, renderer, screen_bitmap, offset + v2(next->x, next->y));
+
+            BB cur = { next->x, next->y,
+                       (next->width) ? next->width : 0xFFFF,
+                       (next->height) ? next->height : 0xFFFF
+                     };
+
+            if(next->type == sglg_Type_Word) {
+                int k = 0;
+            }
+
+            BB r = get_overlap(parent_bb, cur);
+
+            render_node_and_siblings(next->child, renderer, screen_bitmap, r);
         }
         next = next->next;
     }
@@ -690,7 +737,11 @@ render_node_and_siblings(Render_Entity *render_entity, Renderer *renderer, Bitma
 
 internal Void
 render(Renderer *renderer, Bitmap *screen_bitmap) {
-    render_node_and_siblings(renderer->root, renderer, screen_bitmap, v2(0, 0));
+    BB rectangle = {
+        0, 0,
+        0xFFFF, 0xFFFF,
+    };
+    render_node_and_siblings(renderer->root, renderer, screen_bitmap, rectangle);
 
     // TODO: Needs to handle clipping for drawing bitmaps off the end of screen.
     // TODO: Handle Rotation

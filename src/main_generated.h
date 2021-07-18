@@ -57,6 +57,7 @@ enum sglg_Type {
     sglg_Type_stbrp_rect,
     sglg_Type_stbtt_kerningentry,
     sglg_Type_V2u,
+    sglg_Type_BB,
     sglg_Type_Render_Entity,
     sglg_Type_Image_Letter,
     sglg_Type_Rect,
@@ -143,6 +144,7 @@ struct stbtt_pack_context;
 struct stbtt_fontinfo;
 struct stbtt_kerningentry;
 struct V2u;
+struct BB;
 struct Render_Entity;
 struct Image_Letter;
 struct Rect;
@@ -228,7 +230,7 @@ int stbsp_snprintf(char * buf , int count , char const * fmt , ... );
  static Void flip_image(Void * dst_pixels , Void * src_pixels , Int width , Int height );
  static Char* memory_push_string(Memory * mem , Memory_Index idx , String s , Int padding  );
  static Void write_image_to_disk(API * api , Memory * memory , Image * image , String file_name );
-Image load_image(API * api , String file_name );
+ static Image load_image(API * api , String file_name );
  static float lane_max(float a , float b );
  static float minf32(float a , float b );
  static float maxf32(float a , float b );
@@ -874,8 +876,8 @@ float square_root(float a );
  static Rect* push_solid_rectangle(Renderer * renderer , Render_Entity * parent , Int x , Int y , Int width , Int height , U32 inner_colour );
  static Line* push_line(Renderer * renderer , Render_Entity * parent , Int x1 , Int y1 , Int x2 , Int y2 , F32 thickness );
  static U64 push_font(API * api , Renderer * renderer , File file );
- static Word* push_word(Renderer * renderer , Render_Entity * parent , U64 font_id , Int start_x , Int start_y , Int height , String string );
- static Word* push_words(Renderer * renderer , Render_Entity * parent , U64 font_id , Int start_x , Int start_y , Int height , String * strings , Int string_count );
+ static Word* push_word(Renderer * renderer , Render_Entity * parent , U64 font_id , Int x , Int y , Int height , String string );
+ static Word* push_words(Renderer * renderer , Render_Entity * parent , U64 font_id , Int x , Int y , Int height , String * strings , Int string_count );
  static Render_Image* find_font_image(Renderer * renderer , Font * font , Char c );
  static Font* find_font_from_id(Renderer * renderer , U64 id );
  static Bool is_ascii(Int c );
@@ -884,14 +886,15 @@ float square_root(float a );
  static Void internal_set_words(Renderer * renderer , Word * word , String * strings , Int string_count );
  static Void update_word(Renderer * renderer , Word * word , String string );
  static Void update_words(Renderer * renderer , Word * word , String * strings , Int string_count );
- static Image_Rect* push_image_rect(Renderer * renderer , Render_Entity * * parent , Int start_x , Int start_y , Int width , Int height , Int sprite_x , Int sprite_y , Int sprite_width , Int sprite_height , U64 image_id );
+ static Image_Rect* push_image_rect(Renderer * renderer , Render_Entity * parent , Int x , Int y , Int width , Int height , U64 image_id );
  static Render_Image* find_image_from_id(Renderer * renderer , U64 id );
  static Render_Entity* find_render_entity_internal(Render_Entity * render_entity , U64 id );
  static F32 floor(F32 a );
  static F32 absolute(F32 a );
  static U32* image_at_(U32 * base , U32 width , U32 height , U32 x , U32 y );
- static Void render_node(Render_Entity * render_entity , Renderer * renderer , Bitmap * screen_bitmap , V2 input_offset );
- static Void render_node_and_siblings(Render_Entity * render_entity , Renderer * renderer , Bitmap * screen_bitmap , V2 offset );
+ static Void render_node(Render_Entity * render_entity , Renderer * renderer , Bitmap * screen_bitmap , BB parent );
+ static BB get_overlap(BB a , BB b );
+ static Void render_node_and_siblings(Render_Entity * render_entity , Renderer * renderer , Bitmap * screen_bitmap , BB parent_bb );
  static Void render(Renderer * renderer , Bitmap * screen_bitmap );
 extern "C" Void init_platform_settings(Settings * settings );
  static U64 load_font(API * api , Renderer * renderer , String fname );

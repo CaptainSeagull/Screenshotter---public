@@ -5,11 +5,19 @@ struct V2u {
     U32 x, y;
 };
 
+struct BB {
+    Int x, y;
+    Int width, height;
+};
+
 struct Render_Entity {
     Int x, y;
+    Int width, height;
+
     sglg_Type type;
     U64 id;
     Bool visible;
+
     Render_Entity *next, *child;
 };
 
@@ -21,7 +29,6 @@ struct Image_Letter {
 // TODO: Instead of prefixing with SGLG_ENTITY_PATTERN, can I generate this just based on inheritance?
 
 SGLG_ENTITY_PATTERN(Render_Entity) struct Rect : public Render_Entity {
-    Int width, height;
     F32 outline_thickness;
     U32 inner_colour;
     U32 outer_colour;
@@ -29,8 +36,6 @@ SGLG_ENTITY_PATTERN(Render_Entity) struct Rect : public Render_Entity {
 
 // TODO: Make a sprite-sheet version.
 SGLG_ENTITY_PATTERN(Render_Entity) struct Image_Rect : public Render_Entity {
-    Int width, height;
-
     U64 image_id;
 
     Int sprite_x, sprite_y;
@@ -39,7 +44,7 @@ SGLG_ENTITY_PATTERN(Render_Entity) struct Image_Rect : public Render_Entity {
 
 SGLG_ENTITY_PATTERN(Render_Entity) struct Word : public Render_Entity {
     String string; // TODO: Not used
-    Int height;
+    //Int height;
     U64 font_id;
 };
 
@@ -69,6 +74,7 @@ struct Internal {
 struct Font {
     U64 id;
     U64 letter_ids[96]; // ASCII is 32..126 (inclusive) - 95 characters
+    Int full_height;
 };
 
 struct Renderer {

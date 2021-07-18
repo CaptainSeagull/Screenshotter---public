@@ -58,7 +58,8 @@ write_image_to_disk(API *api, Memory *memory, Image *image, String file_name) {
     memory_pop(memory, to_write);
 }
 
-Image load_image(API *api, String file_name) {
+internal Image
+load_image(API *api, String file_name) {
     Memory *memory = api->memory;
 
     Image img = {};

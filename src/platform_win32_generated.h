@@ -58,6 +58,7 @@ enum sglg_Type {
     sglg_Type_Win32_API,
     sglg_Type_Win32_Screen_Capture_Thread_Parameters,
     sglg_Type_V2u,
+    sglg_Type_BB,
     sglg_Type_Render_Entity,
     sglg_Type_Image_Letter,
     sglg_Type_Rect,
@@ -140,6 +141,7 @@ struct Win32_Debug_Window;
 struct Win32_API;
 struct Win32_Screen_Capture_Thread_Parameters;
 struct V2u;
+struct BB;
 struct Render_Entity;
 struct Image_Letter;
 struct Rect;
@@ -222,7 +224,7 @@ int stbsp_snprintf(char * buf , int count , char const * fmt , ... );
  static Void flip_image(Void * dst_pixels , Void * src_pixels , Int width , Int height );
  static Char* memory_push_string(Memory * mem , Memory_Index idx , String s , Int padding  );
  static Void write_image_to_disk(API * api , Memory * memory , Image * image , String file_name );
-Image load_image(API * api , String file_name );
+ static Image load_image(API * api , String file_name );
  static float lane_max(float a , float b );
  static float minf32(float a , float b );
  static float maxf32(float a , float b );

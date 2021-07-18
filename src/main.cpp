@@ -84,22 +84,35 @@ setup(API *api, DLL_Data *data, Renderer *renderer) {
     U64 arial_id = load_font(api, renderer, "c:/windows/fonts/arial.ttf");
     U64 comic_id = load_font(api, renderer, "c:/windows/fonts/comic.ttf");
 
-    push_word(renderer, white_background,
-              comic_id, 10, 5, 30,
+#if 0
+    Int y = 40;
+    push_word(renderer, white_background, comic_id,
+              10, y, 40,
               "Screenshotter!");
 
-    push_line(renderer, renderer->root, 0, 50, api->window_width, 50, 3.0f);
+    Image arrow = load_image(api, "arrow.bmp");
+    U64 arrow_id = push_image(renderer, arrow);
+
+    Rect *r = push_solid_rectangle(renderer, white_background,
+                                   10, y, 100, 100,
+                                   RGBA(255, 0, 0, 255));
+
+    push_image_rect(renderer, r,
+                    0, 0, 30, 40,
+                    arrow_id);
+#else
+    push_line(renderer, white_background, 0, 50, api->window_width, 50, 3.0f);
 
     Word *directory_word = 0;
     if(config->target_output_directory.len > 0) {
         String strings[] = { "Output Directory: ", config->target_output_directory };
 
         directory_word = push_words(renderer, white_background,
-                                    arial_id, 40, 60, 20,
+                                    arial_id, 40, 60, 25,
                                     strings, ARRAY_COUNT(strings));
     } else {
         directory_word = push_word(renderer, white_background,
-                                   arial_id, 40, 60, 20,
+                                   arial_id, 40, 60, 25,
                                    "Please select an output directory");
     }
 
@@ -113,7 +126,7 @@ setup(API *api, DLL_Data *data, Renderer *renderer) {
     button->outer_colour = 0xFF000000;
     data->button_id = button->id;
 
-    push_line(renderer, renderer->root, 0, 95, api->window_width, 95, 3.0f);
+    push_line(renderer, white_background, 0, 95, api->window_width, 95, 3.0f);
 
     // Running programs text
     {
@@ -121,7 +134,7 @@ setup(API *api, DLL_Data *data, Renderer *renderer) {
         //   https://devblogs.microsoft.com/cppblog/data-breakpoints-15-8-update/
         // Investigate!
 
-        Int height = 20;
+        Int height = 25;
         Int running_y = 110;
         for(Int wnd_i = 0; (wnd_i < api->window_count); ++wnd_i) {
             if(api->windows[wnd_i].title.len > 0 && api->windows[wnd_i].class_name.len > 0) {
@@ -155,10 +168,12 @@ setup(API *api, DLL_Data *data, Renderer *renderer) {
             }
         }
     }
+#endif
 }
 
 internal Void
 update(API *api, Renderer *renderer) {
+#if 0
     DLL_Data *data = (DLL_Data *)api->dll_data;
     Config *config = api->config;
     Memory *memory = api->memory;
@@ -226,6 +241,7 @@ update(API *api, Renderer *renderer) {
             config->windows[config->target_window_count++] = data->windows[list_i].info;
         }
     }
+#endif
 
     render(renderer, &api->screen_bitmap);
 }

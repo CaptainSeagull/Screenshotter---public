@@ -230,6 +230,7 @@ static uint64_t sglg_type_to_size(sglg_Type type) {
         case sglg_Type_Win32_API: { return(sizeof(Win32_API)); } break;
         case sglg_Type_Win32_Screen_Capture_Thread_Parameters: { return(sizeof(Win32_Screen_Capture_Thread_Parameters)); } break;
         case sglg_Type_V2u: { return(sizeof(V2u)); } break;
+        case sglg_Type_BB: { return(sizeof(BB)); } break;
         case sglg_Type_Render_Entity: { return(sizeof(Render_Entity)); } break;
         case sglg_Type_Image_Letter: { return(sizeof(Image_Letter)); } break;
         case sglg_Type_Rect: { return(sizeof(Rect)); } break;
@@ -281,6 +282,7 @@ static sglg_Type sglg_string_to_type(char const *s, uint64_t l) {
     else if(sgl_generated_string_compare("Win32_API", 9, s, l)) { return(sglg_Type_Win32_API); }
     else if(sgl_generated_string_compare("Win32_Screen_Capture_Thread_Parameters", 38, s, l)) { return(sglg_Type_Win32_Screen_Capture_Thread_Parameters); }
     else if(sgl_generated_string_compare("V2u", 3, s, l)) { return(sglg_Type_V2u); }
+    else if(sgl_generated_string_compare("BB", 2, s, l)) { return(sglg_Type_BB); }
     else if(sgl_generated_string_compare("Render_Entity", 13, s, l)) { return(sglg_Type_Render_Entity); }
     else if(sgl_generated_string_compare("Image_Letter", 12, s, l)) { return(sglg_Type_Image_Letter); }
     else if(sgl_generated_string_compare("Rect", 4, s, l)) { return(sglg_Type_Rect); }

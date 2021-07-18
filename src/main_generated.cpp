@@ -228,6 +228,7 @@ static uint64_t sglg_type_to_size(sglg_Type type) {
         case sglg_Type_stbrp_rect: { return(sizeof(stbrp_rect)); } break;
         case sglg_Type_stbtt_kerningentry: { return(sizeof(stbtt_kerningentry)); } break;
         case sglg_Type_V2u: { return(sizeof(V2u)); } break;
+        case sglg_Type_BB: { return(sizeof(BB)); } break;
         case sglg_Type_Render_Entity: { return(sizeof(Render_Entity)); } break;
         case sglg_Type_Image_Letter: { return(sizeof(Image_Letter)); } break;
         case sglg_Type_Rect: { return(sizeof(Rect)); } break;
@@ -282,6 +283,7 @@ static sglg_Type sglg_string_to_type(char const *s, uint64_t l) {
     else if(sgl_generated_string_compare("stbtt_fontinfo", 14, s, l)) { return(sglg_Type_stbtt_fontinfo); }
     else if(sgl_generated_string_compare("stbtt_kerningentry", 18, s, l)) { return(sglg_Type_stbtt_kerningentry); }
     else if(sgl_generated_string_compare("V2u", 3, s, l)) { return(sglg_Type_V2u); }
+    else if(sgl_generated_string_compare("BB", 2, s, l)) { return(sglg_Type_BB); }
     else if(sgl_generated_string_compare("Render_Entity", 13, s, l)) { return(sglg_Type_Render_Entity); }
     else if(sgl_generated_string_compare("Image_Letter", 12, s, l)) { return(sglg_Type_Image_Letter); }
     else if(sgl_generated_string_compare("Rect", 4, s, l)) { return(sglg_Type_Rect); }

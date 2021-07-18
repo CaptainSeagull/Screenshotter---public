@@ -75,7 +75,7 @@ setup(API *api, DLL_Data *data, Renderer *renderer) {
 
     create_renderer(renderer, memory);
 
-    Rect *white_background = push_solid_rectangle(renderer, &renderer->root,
+    Rect *white_background = push_solid_rectangle(renderer, renderer->root,
                                                   0, 0, api->window_width, api->window_height,
                                                   RGBA(255, 255, 255, 255));
 
@@ -84,21 +84,21 @@ setup(API *api, DLL_Data *data, Renderer *renderer) {
     U64 arial_id = load_font(api, renderer, "c:/windows/fonts/arial.ttf");
     U64 comic_id = load_font(api, renderer, "c:/windows/fonts/comic.ttf");
 
-    push_word(renderer, &white_background,
+    push_word(renderer, white_background,
               comic_id, 10, 5, 30,
               "Screenshotter!");
 
-    push_line(renderer, &renderer->root, 0, 50, api->window_width, 50, 3.0f);
+    push_line(renderer, renderer->root, 0, 50, api->window_width, 50, 3.0f);
 
     Word *directory_word = 0;
     if(config->target_output_directory.len > 0) {
         String strings[] = { "Output Directory: ", config->target_output_directory };
 
-        directory_word = push_words(renderer, &white_background,
+        directory_word = push_words(renderer, white_background,
                                     arial_id, 40, 60, 20,
                                     strings, ARRAY_COUNT(strings));
     } else {
-        directory_word = push_word(renderer, &white_background,
+        directory_word = push_word(renderer, white_background,
                                    arial_id, 40, 60, 20,
                                    "Please select an output directory");
     }
@@ -106,14 +106,14 @@ setup(API *api, DLL_Data *data, Renderer *renderer) {
     ASSERT(directory_word);
     data->directory_word_id = directory_word->id;
 
-    Rect *button = push_solid_rectangle(renderer, &white_background,
+    Rect *button = push_solid_rectangle(renderer, white_background,
                                         5, 58, 30, 30,
                                         RGBA(255, 255, 255, 255));
     button->outline_thickness = 3.0f;
     button->outer_colour = 0xFF000000;
     data->button_id = button->id;
 
-    push_line(renderer, &renderer->root, 0, 95, api->window_width, 95, 3.0f);
+    push_line(renderer, renderer->root, 0, 95, api->window_width, 95, 3.0f);
 
     // Running programs text
     {
@@ -125,10 +125,10 @@ setup(API *api, DLL_Data *data, Renderer *renderer) {
         Int running_y = 110;
         for(Int wnd_i = 0; (wnd_i < api->window_count); ++wnd_i) {
             if(api->windows[wnd_i].title.len > 0 && api->windows[wnd_i].class_name.len > 0) {
-                Rect *yellow_window = push_solid_rectangle(renderer, &white_background,
+                Rect *yellow_window = push_solid_rectangle(renderer, white_background,
                                                            0, running_y, 640, height + 10,
                                                            RGBA(255, 255, 0, 0));
-                Rect *green_window = push_solid_rectangle(renderer, &white_background,
+                Rect *green_window = push_solid_rectangle(renderer, white_background,
                                                           0, running_y, 640, height + 10,
                                                           RGBA(0, 255, 0, 0));
                 yellow_window->visible = false;
@@ -142,11 +142,11 @@ setup(API *api, DLL_Data *data, Renderer *renderer) {
 
                 // Useful for debugging
 #if 1
-                push_word(renderer, &yellow_window,
+                push_word(renderer, yellow_window,
                           arial_id, 10, 5, height,
                           api->windows[wnd_i].title);
 #else
-                push_word(renderer, &yellow_window,
+                push_word(renderer, yellow_window,
                           arial_id, 10, 5, height,
                           api->windows[wnd_i].class_name);
 #endif

@@ -121,13 +121,11 @@ create_render_entity(Renderer *renderer, Render_Entity **parent, sglg_Type type)
     return(render_entity);
 }
 
-#define push_solid_rectangle(renderer, parent, x, y, width, height, inner_colour) \
-    push_solid_rectangle_(renderer, (Render_Entity **)parent, x, y, width, height, inner_colour)
 internal Rect *
-push_solid_rectangle_(Renderer *renderer, Render_Entity **parent,
-                      Int x, Int y, Int width, Int height,
-                      U32 inner_colour) {
-    Rect *rect = (Rect *)create_render_entity(renderer, parent, sglg_Type_Rect);
+push_solid_rectangle(Renderer *renderer, Render_Entity *parent,
+                     Int x, Int y, Int width, Int height,
+                     U32 inner_colour) {
+    Rect *rect = (Rect *)create_render_entity(renderer, &parent, sglg_Type_Rect);
     ASSERT_IF(rect) {
         rect->x = x;
         rect->y = y;
@@ -139,12 +137,11 @@ push_solid_rectangle_(Renderer *renderer, Render_Entity **parent,
     return(rect);
 }
 
-#define push_line(renderer, parent, x1, y1, x2, y2, thickness) push_line_(renderer, (Render_Entity **)parent, x1, y1, x2, y2, thickness)
 internal Line *
-push_line_(Renderer *renderer, Render_Entity **parent,
-           Int x1, Int y1, Int x2, Int y2,
-           F32 thickness) {
-    Line *line = (Line *)create_render_entity(renderer, parent, sglg_Type_Line);
+push_line(Renderer *renderer, Render_Entity *parent,
+          Int x1, Int y1, Int x2, Int y2,
+          F32 thickness) {
+    Line *line = (Line *)create_render_entity(renderer, &parent, sglg_Type_Line);
     ASSERT_IF(line) {
         line->x = x1;
         line->y = y1;
@@ -251,22 +248,16 @@ push_font(API *api, Renderer *renderer, File file) {
     return(font_id);
 }
 
-#define push_word(renderer, parent, font_id, start_x, start_y, height, string) \
-    push_word_(renderer, (Render_Entity **)parent, font_id, start_x, start_y, height, string)
-
 internal Word *
-push_word_(Renderer *renderer, Render_Entity **parent, U64 font_id, Int start_x, Int start_y, Int height, String string) {
-    Word *r = push_words_(renderer, parent, font_id, start_x, start_y, height, &string, 1);
+push_word(Renderer *renderer, Render_Entity *parent, U64 font_id, Int start_x, Int start_y, Int height, String string) {
+    Word *r = push_words(renderer, parent, font_id, start_x, start_y, height, &string, 1);
     ASSERT(r);
     return(r);
 }
 
-#define push_words(renderer, parent, font_id, start_x, start_y, height, strings, string_count) \
-    push_words_(renderer, (Render_Entity **)parent, font_id, start_x, start_y, height, strings, string_count)
-
 internal Word *
-push_words_(Renderer *renderer, Render_Entity **parent, U64 font_id, Int start_x, Int start_y, Int height, String *strings, Int string_count) {
-    Word *word = (Word *)create_render_entity(renderer, parent, sglg_Type_Word);
+push_words(Renderer *renderer, Render_Entity *parent, U64 font_id, Int start_x, Int start_y, Int height, String *strings, Int string_count) {
+    Word *word = (Word *)create_render_entity(renderer, &parent, sglg_Type_Word);
     ASSERT_IF(word) {
         word->x = start_x;
         word->y = start_y;

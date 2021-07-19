@@ -17,11 +17,7 @@ internal void my_free(void *d) { /* Do nothing... */ }
 #define STB_TRUETYPE_IMPLEMENTATION
 #define STBTT_malloc(x,u) ((void)(u),my_malloc(x))
 #define STBTT_free(x,u)   ((void)(u),my_free(x))
-#define STBTT_assert(exp) { }
-#if ALLOW_ASSERTS
-    #undef STBTT_assert
-    #define STBTT_assert ASSERT
-#endif
+#define STBTT_assert ASSERT
 #include "../shared/stb_truetype.h"
 
 #include "main_generated.h"
@@ -101,6 +97,10 @@ setup(API *api, DLL_Data *data, Renderer *renderer) {
                     0, 0, 30, 40,
                     arrow_id);
 #else
+    push_word(renderer, white_background, comic_id,
+              10, 0, 40,
+              "Screenshotter!");
+
     push_line(renderer, white_background, 0, 50, api->window_width, 50, 3.0f);
 
     Word *directory_word = 0;
@@ -173,7 +173,7 @@ setup(API *api, DLL_Data *data, Renderer *renderer) {
 
 internal Void
 update(API *api, Renderer *renderer) {
-#if 0
+#if 1
     DLL_Data *data = (DLL_Data *)api->dll_data;
     Config *config = api->config;
     Memory *memory = api->memory;

@@ -3,6 +3,7 @@
 set RELEASE_FLAG=false
 set INTERNAL_FLAG=true
 set ALLOW_ASSERTS_FLAG=true
+set SHOW_FPS_FLAG=true
 set USE_OPENGL_WINDOW_FLAG=false
 set RUN_SCREENSHOTTING_ON_THREAD_FLAG=false
 
@@ -42,13 +43,19 @@ if "%USE_OPENGL_WINDOW_FLAG%"=="true" (
     set USE_OPENGL_WINDOW=-DUSE_OPENGL_WINDOW=0
 )
 
+if "%SHOW_FPS_FLAG%"=="true" (
+    set SHOW_FPS=-DSHOW_FPS=1
+) else (
+    set SHOW_FPS=-DSHOW_FPS=0
+)
+
 if "%RUN_SCREENSHOTTING_ON_THREAD_FLAG%"=="true" (
     set RUN_SCREENSHOTTING_ON_THREAD=-DRUN_SCREENSHOTTING_ON_THREAD=1
 ) else (
     set RUN_SCREENSHOTTING_ON_THREAD=-DRUN_SCREENSHOTTING_ON_THREAD=0
 )
 
-set COMPILER_FLAGS=-nologo -Gm- -GR- %WARNINGS% -FC -Zi -Oi -GS- -Gs9999999 -Wall %INTERNAL% %ALLOW_ASSERTS% %ALLOW_TESTS% %USE_OPENGL_WINDOW% %RUN_SCREENSHOTTING_ON_THREAD%
+set COMPILER_FLAGS=-nologo -Gm- -GR- %WARNINGS% -FC -Zi -Oi -GS- -Gs9999999 -Wall %INTERNAL% %ALLOW_ASSERTS% %ALLOW_TESTS% %USE_OPENGL_WINDOW% %RUN_SCREENSHOTTING_ON_THREAD% %SHOW_FPS%
 if "%RELEASE_FLAG%"=="true" (
     set COMPILER_FLAGS=%COMPILER_FLAGS% -MT -fp:fast -EHa- -O2
 ) else (
@@ -67,7 +74,7 @@ pushd "build"
 del *_screenshotter.pdb > NUL > NUL
 
 cl -LD -FeScreenshotter %COMPILER_FLAGS% "../src/main.cpp" -FmScreenshotter.map -link kernel32.lib -stack:0x100000,0x100000 -EXPORT:init_platform_settings -EXPORT:handle_input_and_render -PDB:%random%_screenshotter.pdb -stack:0x100000,0x100000 -subsystem:windows,5.2
-cl -FeWin32 %COMPILER_FLAGS% "../src/platform_win32.cpp" -FmWin32.map -link -nodefaultlib %LIBS% -stack:0x100000,0x100000 -subsystem:windows,5.2
+cl -FeWin32 %COMPILER_FLAGS% "../src/platform_win32.cpp" -FmWin32.map -link %LIBS% -stack:0x100000,0x100000 -subsystem:windows,5.2
 popd
 
 :skipEverything

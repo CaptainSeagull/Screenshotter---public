@@ -988,7 +988,8 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
                 }
 
                 if(RegisterClassA(&wnd_class)) {
-                    HWND wnd = CreateWindowExA(0, wnd_class.lpszClassName, "Screenshotter",
+                    Char *window_title = "Screenshotter";
+                    HWND wnd = CreateWindowExA(0, wnd_class.lpszClassName, window_title,
                                                WS_OVERLAPPEDWINDOW | WS_VISIBLE | WS_POPUP, CW_USEDEFAULT, CW_USEDEFAULT,
                                                settings.window_width, settings.window_height, 0, 0, hInstance, 0);
 
@@ -1167,6 +1168,17 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
 
                                 win32_update_window(&memory, dc, &cr, api.screen_bitmap.memory, &global_bmp_info,
                                                     api.screen_bitmap.width, api.screen_bitmap.height);
+
+#if SHOW_FPS
+                                {
+                                    Char buf[1024] = {};
+                                    Int bytes_written = stbsp_snprintf(buf, ARRAY_COUNT(buf), "%s - %f",
+                                                                       window_title, seconds_elapsed_for_last_frame);
+                                    ASSERT(bytes_written < ARRAY_COUNT(buf));
+                                    Bool success = SetWindowTextA(wnd, buf);
+                                    ASSERT(success);
+                                }
+#endif
 
                                 ReleaseDC(wnd, dc);
                             }

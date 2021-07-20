@@ -203,7 +203,6 @@ update(API *api, Renderer *renderer) {
                         ASSERT(directory_word);
 
                         config->new_target_output_directory = new_directory;
-                        config->target_directory_changed = true;
 
                         String strings[] = { "Output Directory: ", new_directory };
 

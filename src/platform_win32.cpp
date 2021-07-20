@@ -505,7 +505,7 @@ win32_create_directory(Memory *memory, String root, String dir, Bool save_direct
     Char *output_file_directory = (Char *)memory_push(memory, (save_directory_string) ? Memory_Index_permanent : Memory_Index_temp, max_size);
     ASSERT(output_file_directory);
     if(output_file_directory) {
-        Int bytes_written = stbsp_snprintf(output_file_directory, max_size, "%.*s/%.*s",
+        Int bytes_written = stbsp_snprintf(output_file_directory, max_size, "%.*s\\%.*s",
                                            root.len, root.e,
                                            dir.len, dir.e);
         ASSERT(bytes_written < max_size);
@@ -588,14 +588,13 @@ run_screenshotting(API *api, Memory *memory, Config *config, String root_directo
             // TODO: This sometimes captures the current window, not the target for some reason...
             //BitBlt(capture_dc, 0, 0, width, height, dc, 0, 0, SRCCOPY | CAPTUREBLT);
             //SelectObject(capture_dc, gdiObj);
-
-            if(config->copy_to_clipboard) {
-                OpenClipboard(0);
-                EmptyClipboard();
-                SetClipboardData(CF_BITMAP, bitmap);
-                CloseClipboard();
-            }
-
+#if 0
+            // Test code to copy to clipboard.
+            OpenClipboard(0);
+            EmptyClipboard();
+            SetClipboardData(CF_BITMAP, bitmap);
+            CloseClipboard();
+#endif
             BITMAPINFOHEADER bmp_header = {};
             bmp_header.biSize = sizeof(BITMAPINFOHEADER);
             bmp_header.biWidth = width;
@@ -657,79 +656,27 @@ run_screenshotting(API *api, Memory *memory, Config *config, String root_directo
 
 internal String
 win32_create_root_directory(Memory *memory, String target_directory) {
+    String res = {};
+
     String prefix = "Screenshotter_";
 
     Int idx = win32_directory_index_to_use(memory, prefix, target_directory);
     Int size = target_directory.len + prefix.len + 32; // TODO: 32 is padding for number
     Char *directory = (Char *)memory_push(memory, Memory_Index_permanent, size);
-    Int written = stbsp_snprintf(directory, size, "%.*s%d",
-                                 prefix.len, prefix.e,
-                                 idx);
-    ASSERT(written < size);
+    ASSERT_IF(directory) {
+        Int written = stbsp_snprintf(directory, size, "%.*s%d",
+                                     prefix.len, prefix.e,
+                                     idx);
+        ASSERT(written < size);
 
-    Win32_Create_Directory_Result create_directory_result = win32_create_directory(memory, target_directory,
-                                                                                   directory, true);
-    ASSERT(create_directory_result.success);
-
-    String res = create_directory_result.directory;
-    return(res);
-}
-
-// Done on a separate thread so when we have a UI and Window it can handle window-messages without interuption.
-// TODO: Maybe have a threaded version and single-threaded version? See if it's actually an issue.
-internal DWORD
-win32_screen_capture_thread(void *data) {
-    Win32_Screen_Capture_Thread_Parameters *tp = (Win32_Screen_Capture_Thread_Parameters *)data;
-
-    Config *config = tp->config;
-    API *api = tp->api;
-
-    // TODO: Smaller sizes since these are on a thread?
-    U64 permanent_size = MEGABYTES(128);
-    U64 temp_size = MEGABYTES(128);
-    U64 internal_temp_size = MEGABYTES(128);
-    U64 bitmap_size = 0;
-    U64 renderer_size = 0;
-    U64 malloc_nofree_size = 0;
-    U64 font_size = 0;
-    U64 titles_size =  0;
-    U64 total_size = get_memory_base_size() + permanent_size + temp_size + internal_temp_size + bitmap_size + renderer_size +
-                     malloc_nofree_size + font_size + titles_size;
-
-    Void *all_memory = VirtualAlloc(0, total_size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
-    ASSERT(all_memory);
-    if(all_memory) {
-        zero(all_memory, total_size);
-
-        U64 group_inputs[] = { permanent_size, temp_size, internal_temp_size, bitmap_size,
-                               renderer_size, malloc_nofree_size, font_size, titles_size
-                             };
-        ASSERT(SGLG_ENUM_COUNT(Memory_Index) == ARRAY_COUNT(group_inputs));
-        Memory memory = create_memory_base(all_memory, group_inputs, ARRAY_COUNT(group_inputs));
-
-        // Create the session directory
-        String root_directory = win32_create_root_directory(&memory, config->target_output_directory);
-
-        ASSERT(root_directory.len > 0);
-
-        U64 iteration_count = 0; // TODO: Shared between all apps right now.
-        while(true) {
-
-            Bool successfully_wrote_something = run_screenshotting(api, &memory, config, root_directory, iteration_count);
-
-            Memory_Group *temp_group = get_memory_group(&memory, Memory_Index_temp);
-            ASSERT(temp_group->used == 0);
-
-            // TODO: Having a semaphore woken up by the UI thread and a backup timer would be better.
-            Sleep(config->amount_to_sleep);
-            ASSERT(iteration_count < 0xFFFFFFFFFFFFFFFF);
-            if(successfully_wrote_something) {
-                ++iteration_count;
-            }
-        }
+        // TODO: Memory leak.
+        Win32_Create_Directory_Result create_directory_result = win32_create_directory(memory, target_directory,
+                                                                                       directory, true);
+        ASSERT(create_directory_result.success);
+        res = create_directory_result.directory;
     }
 
-    return(0); // What to return on error?
+    return(res);
 }
 
 internal BOOL CALLBACK
@@ -1039,22 +986,9 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
                         api.config = &config;
 
                         config.include_title_bar = true;
-                        config.new_target_output_directory = "C:\\tmp"; // TODO: Hardcoded
-                        config.target_output_directory = config.new_target_output_directory;
-                        config.target_directory_changed = true;
+                        config.target_output_directory = "C:\\tmp"; // TODO: Hardcoded
                         // TODO: Create directory here if it doesn't already exist?
                         config.amount_to_sleep = 1000;
-
-#if RUN_SCREENSHOTTING_ON_THREAD
-                        Win32_Screen_Capture_Thread_Parameters thread_params = {};
-                        thread_params.config = &config;
-                        thread_params.api = &api;
-
-                        // TODO: This part is kinda specific to the screenshotter. Maybe that's OK though, but have a think about how to
-                        //       handle platform stuff which is kinda specific to the app.
-                        HANDLE capture_image_thread_handle = CreateThread(0, 0, win32_screen_capture_thread, &thread_params, 0, 0);
-                        CloseHandle(capture_image_thread_handle);
-#endif
 
                         // TODO: Read core_count from settings. Maybe pass in actual core_count to settings but let
                         //       DLL overwrite it.
@@ -1183,26 +1117,24 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
                                 ReleaseDC(wnd, dc);
                             }
 
-#if !RUN_SCREENSHOTTING_ON_THREAD
                             // Screenshotting
                             {
-                                if(config.target_directory_changed) {
+                                if(config.new_target_output_directory.len > 0) {
                                     String new_dir = win32_create_root_directory(&memory, config.new_target_output_directory);
-                                    if(new_dir.len > 0) {
-                                        config.target_output_directory = new_dir;
+                                    ASSERT_IF(new_dir.len > 0) {
+                                        config.target_output_directory = config.new_target_output_directory;
+                                        config.target_output_directory_full = new_dir;
                                         config.new_target_output_directory = "";
                                     }
-                                    config.target_directory_changed = false;
                                 }
 
                                 ++iteration_count_reset;
                                 if(iteration_count_reset == 60) {
-                                    run_screenshotting(&api, &memory, &config, config.target_output_directory, iteration_count);
+                                    run_screenshotting(&api, &memory, &config, config.target_output_directory_full, iteration_count);
                                     ++iteration_count;
                                     iteration_count_reset = 0;
                                 }
                             }
-#endif
 
                             // TODO: If the windows isn't in focus have an option to go to sleep here until it is in focus.
 

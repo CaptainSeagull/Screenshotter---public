@@ -797,7 +797,6 @@ float square_root(float a );
  static Lane_F32 minf32(Lane_F32 a , Lane_F32 b );
  static Lane_F32 gather_f32_internal(void * ptr , uint64_t stride , Lane_U32 indices );
  static File win32_read_file(Memory * memory , U32 memory_index_to_use , String fname , Bool null_terminate );
-void  __stdcall WinMainCRTStartup(Void );
 static char const *sglg_Memory_Arena_Error_to_string(Memory_Arena_Error e);
 static int sglg_Memory_Arena_Error_count(Memory_Arena_Error e);
 static char const *sglg_Key_to_string(Key e);

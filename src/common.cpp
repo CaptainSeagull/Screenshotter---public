@@ -70,8 +70,7 @@ flip_image(Void *dst_pixels, Void *src_pixels, Int width, Int height) {
 internal Char *
 memory_push_string(Memory *mem, Memory_Index idx, String s, Int padding = 0) {
     Char *res = (Char *)memory_push(mem, idx, s.len + 1 + padding);
-    ASSERT(res);
-    if(res) {
+    ASSERT_IF(res) {
         copy(res, s.e, s.len);
     }
 

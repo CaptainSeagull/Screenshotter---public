@@ -18,6 +18,10 @@ internal void my_free(void *d) { /* Do nothing... */ }
 #define STBTT_malloc(x,u) ((void)(u),my_malloc(x))
 #define STBTT_free(x,u)   ((void)(u),my_free(x))
 #define STBTT_assert ASSERT
+//#define STBTT_sqrt square_root
+//#define STBTT_ifloor floor
+//#define STBTT_iceil ceil
+//#define STBTT_pow // TODO: No replacement - custom pow replacement requires int for exponant.
 #include "../shared/stb_truetype.h"
 
 #include "main_generated.h"

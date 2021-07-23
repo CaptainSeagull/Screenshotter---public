@@ -810,7 +810,7 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
         }
 
         // Create copy of args.
-        Char *arg_cpy = (Char *)memory_push(&memory, Memory_Index_permanent, (sizeof(Char) * (args_len + 1)));
+        Char *arg_cpy = (Char *)memory_push(&memory, Memory_Index_permanent, args_len + 1);
         if(arg_cpy) {
             string_copy(arg_cpy, cmdline);
 
@@ -829,9 +829,7 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
             U64 mem_size = original_cnt * 2;
             Int argc = 1;
             Char **argv = (Char **)memory_push(&memory, Memory_Index_permanent, (sizeof(Char *) * mem_size));
-            if(!argv) {
-                ASSERT(0); // TODO: Did not have enough memory!
-            } else {
+            ASSERT_IF(argv) {
                 Char **cur = argv;
                 *cur++ = arg_cpy;
                 for(Int i = 0; (i < args_len); ++i) {
@@ -847,9 +845,7 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
 
                             if(fhandle != INVALID_HANDLE_VALUE) {
                                 do {
-                                    if(argc + 1 >= mem_size) {
-                                        ASSERT(0); // TODO: Don't use malloc so can't realloc... just bail?
-                                    }
+                                    ASSERT(argc + 1 < mem_size);
 
                                     *cur = find_data.cFileName;
                                     ++cur;

@@ -465,9 +465,36 @@ floor(F32 a) {
 }
 
 internal F32
+ceil(F32 a) {
+    F32 r = (F32)((S32)(a + 0.5f));
+    return(r);
+}
+
+internal F32
 absolute(F32 a) {
     F32 r = (a > 0) ? a : -a;
     return(r);
+}
+
+internal F32
+power(F32 x, Int y) {
+    F32 res = 1;
+    if(y == 0) {
+        res = 1;
+    } else {
+        F32 t = power(x, y / 2);
+        if(y % 2 == 0) {
+            res = t * t;
+        } else {
+            if(y > 0) {
+                res = x * t * t;
+            } else {
+                res = (t * t) / x;
+            }
+        }
+    }
+
+    return(res);
 }
 
 #define image_at(base,w,h,x,y) image_at_((U32 *)base,w,h,x,y)

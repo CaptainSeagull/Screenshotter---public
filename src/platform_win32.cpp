@@ -28,6 +28,7 @@
 internal_global BITMAPINFO global_bmp_info;
 internal_global API *global_api;
 internal_global GLuint global_gl_blit_texture_handle;
+internal_global Win32_System_Callbacks *global_sys_cb;
 
 internal File
 win32_read_file(Memory *memory, U32 memory_index_to_use, String fname, Bool null_terminate) {
@@ -145,30 +146,30 @@ win32_update_window(Memory *memory, HDC dc, RECT  *wnd_rect, Void *input_bitmap_
 
     // Could be moved to platform-independent code.
     {
-        glViewport(0, 0, wnd_w, wnd_h);
+        global_sys_cb->glViewport(0, 0, wnd_w, wnd_h);
 
-        glBindTexture(GL_TEXTURE_2D, global_gl_blit_texture_handle);
+        global_sys_cb->glBindTexture(GL_TEXTURE_2D, global_gl_blit_texture_handle);
 
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, bitmap_width, bitmap_height, 0, GL_BGRA_EXT, GL_UNSIGNED_BYTE, bitmap_memory);
+        global_sys_cb->glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, bitmap_width, bitmap_height, 0, GL_BGRA_EXT, GL_UNSIGNED_BYTE, bitmap_memory);
 
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,     GL_CLAMP);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,     GL_CLAMP);
+        global_sys_cb->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        global_sys_cb->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        global_sys_cb->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,     GL_CLAMP);
+        global_sys_cb->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,     GL_CLAMP);
 
-        glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+        global_sys_cb->glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 
-        glEnable(GL_TEXTURE_2D); // TODO: Move above glBindTexture?
+        global_sys_cb->glEnable(GL_TEXTURE_2D); // TODO: Move above glBindTexture?
 #if INTERNAL
-        glClearColor(1.0f, 0.0f, 1.0f, 0.0f);
+        global_sys_cb->glClearColor(1.0f, 0.0f, 1.0f, 0.0f);
 #else
-        glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+        global_sys_cb->glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 #endif
-        glClear(GL_COLOR_BUFFER_BIT);
+        global_sys_cb->glClear(GL_COLOR_BUFFER_BIT);
 
-        glMatrixMode(GL_MODELVIEW); glLoadIdentity();
+        global_sys_cb->glMatrixMode(GL_MODELVIEW); global_sys_cb->glLoadIdentity();
 
-        glMatrixMode(GL_PROJECTION);
+        global_sys_cb->glMatrixMode(GL_PROJECTION);
 
         // This is pre-transposted
         F32 proj[16] = {win32_safe_div(2.0f, bitmap_width), 0,                                   0, 0,
@@ -176,10 +177,10 @@ win32_update_window(Memory *memory, HDC dc, RECT  *wnd_rect, Void *input_bitmap_
                         0,                                  0,                                   1, 0,
                         -1,                                 -1,                                  0, 1
                        };
-        glLoadMatrixf(proj);
-        glMatrixMode(GL_TEXTURE); glLoadIdentity();
+        global_sys_cb->glLoadMatrixf(proj);
+        global_sys_cb->glMatrixMode(GL_TEXTURE); global_sys_cb->glLoadIdentity();
 
-        glBegin(GL_TRIANGLES);
+        global_sys_cb->glBegin(GL_TRIANGLES);
 
         // TODO: How to handle aspect ratio - black bars or crop?
 
@@ -189,25 +190,25 @@ win32_update_window(Memory *memory, HDC dc, RECT  *wnd_rect, Void *input_bitmap_
         F32 max_y = bitmap_height;
 
         F32 colour[4] = { 1, 1, 1, 1 };
-        glColor4f(colour[0], colour[1], colour[2], colour[3]);
+        global_sys_cb->glColor4f(colour[0], colour[1], colour[2], colour[3]);
 
-        glTexCoord2f(0, 0); glVertex2f(min_x, min_y);
-        glTexCoord2f(1, 0); glVertex2f(max_x, min_y);
-        glTexCoord2f(1, 1); glVertex2f(max_x, max_y);
+        global_sys_cb->glTexCoord2f(0, 0); global_sys_cb->glVertex2f(min_x, min_y);
+        global_sys_cb->glTexCoord2f(1, 0); global_sys_cb->glVertex2f(max_x, min_y);
+        global_sys_cb->glTexCoord2f(1, 1); global_sys_cb->glVertex2f(max_x, max_y);
 
-        glTexCoord2f(0, 0); glVertex2f(min_x, min_y);
-        glTexCoord2f(1, 1); glVertex2f(max_x, max_y);
-        glTexCoord2f(0, 1); glVertex2f(min_x, max_y);
-        glEnd();
+        global_sys_cb->glTexCoord2f(0, 0); global_sys_cb->glVertex2f(min_x, min_y);
+        global_sys_cb->glTexCoord2f(1, 1); global_sys_cb->glVertex2f(max_x, max_y);
+        global_sys_cb->glTexCoord2f(0, 1); global_sys_cb->glVertex2f(min_x, max_y);
+        global_sys_cb->glEnd();
     }
 
-    SwapBuffers(dc);
+    global_sys_cb->SwapBuffers(dc);
 #else
     // TODO: Bitblt may be faster than StretchDIBits
-    StretchDIBits(dc,
-                  0, 0, bitmap_width, bitmap_height,
-                  0, 0, wnd_w, wnd_h,
-                  bitmap_memory, bitmap_info, DIB_RGB_COLORS, SRCCOPY);
+    global_sys_cb->StretchDIBits(dc,
+                                 0, 0, bitmap_width, bitmap_height,
+                                 0, 0, wnd_w, wnd_h,
+                                 bitmap_memory, bitmap_info, DIB_RGB_COLORS, SRCCOPY);
 #endif
 
     if(should_flip_image) {
@@ -215,7 +216,6 @@ win32_update_window(Memory *memory, HDC dc, RECT  *wnd_rect, Void *input_bitmap_
     }
 }
 
-// TODO: Mirror doesn't like CALLACK
 internal LRESULT CALLBACK
 win32_window_proc(HWND wnd, UINT msg, WPARAM w_param, LPARAM l_param) {
     LRESULT res = 0;
@@ -224,7 +224,7 @@ win32_window_proc(HWND wnd, UINT msg, WPARAM w_param, LPARAM l_param) {
 
         case WM_SIZE: {
             RECT cr;
-            GetClientRect(wnd, &cr);
+            global_sys_cb->GetClientRect(wnd, &cr);
             Int w = cr.right - cr.left;
             Int h = cr.bottom - cr.top;
 
@@ -263,7 +263,7 @@ win32_window_proc(HWND wnd, UINT msg, WPARAM w_param, LPARAM l_param) {
         } break;*/
 
         default: {
-            res = DefWindowProcA(wnd, msg, w_param, l_param);
+            res = global_sys_cb->DefWindowProcA(wnd, msg, w_param, l_param);
         }
     }
 
@@ -322,17 +322,18 @@ win32_get_wall_clock(Void) {
 }
 
 internal Void
-win32_get_window_dimension(HWND wnd, Int *w, Int *h) {
+win32_get_window_dimension(HWND wnd, Int *w, Int *h, Win32_System_Callbacks *sys_cb) {
     RECT cr;
-    Bool s = GetClientRect(wnd, &cr);
-    ASSERT(s);
-    *w = (cr.right - cr.left);
-    *h = (cr.bottom - cr.top);
+    Bool s = sys_cb->GetClientRect(wnd, &cr);
+    ASSERT_IF(s) {
+        *w = (cr.right - cr.left);
+        *h = (cr.bottom - cr.top);
+    }
 }
 
 internal Void
-win32_init_opengl(HWND window) {
-    HDC dc = GetDC(window);
+win32_init_opengl(HWND window, Win32_System_Callbacks *sys_cb) {
+    HDC dc = sys_cb->GetDC(window);
 
     PIXELFORMATDESCRIPTOR desired_pfd = {};
     desired_pfd.nSize = sizeof(desired_pfd);
@@ -343,19 +344,19 @@ win32_init_opengl(HWND window) {
     desired_pfd.cAlphaBits = 8;
     desired_pfd.iLayerType = PFD_MAIN_PLANE;
 
-    Int suggested_pfd_i = ChoosePixelFormat(dc, &desired_pfd);
+    Int suggested_pfd_i = sys_cb->ChoosePixelFormat(dc, &desired_pfd);
     PIXELFORMATDESCRIPTOR suggested_pfd;
-    DescribePixelFormat(dc, suggested_pfd_i, sizeof(suggested_pfd), &suggested_pfd);
-    SetPixelFormat(dc, suggested_pfd_i, &suggested_pfd);
+    sys_cb->DescribePixelFormat(dc, suggested_pfd_i, sizeof(suggested_pfd), &suggested_pfd);
+    sys_cb->SetPixelFormat(dc, suggested_pfd_i, &suggested_pfd);
 
-    HGLRC rc = wglCreateContext(dc);
-    if(wglMakeCurrent(dc, rc)) {
-        glGenTextures(1, &global_gl_blit_texture_handle);
+    HGLRC rc = sys_cb->wglCreateContext(dc);
+    if(sys_cb->wglMakeCurrent(dc, rc)) {
+        sys_cb->glGenTextures(1, &global_gl_blit_texture_handle);
     } else {
         ASSERT(0); // TODO: Something went wrong. Not sure how to handle this error...
     }
 
-    ReleaseDC(window, dc);
+    sys_cb->ReleaseDC(window, dc);
 }
 
 //
@@ -476,14 +477,14 @@ win32_load_code(Char *source_fname, Char *temp_fname) {
 }
 
 internal HWND
-win32_find_window_from_class_name(Memory *memory, String window_title) {
+win32_find_window_from_class_name(Memory *memory, String window_title, Win32_System_Callbacks *sys_cb) {
     HWND window = 0;
 
     Char *window_title_raw = (Char *)memory_push(memory, Memory_Index_temp, window_title.len + 1); // Nul-terminate
     ASSERT(window_title_raw);
     if(window_title_raw) {
         string_copy(window_title_raw, window_title.e, window_title.len);
-        window = FindWindowExA(0, 0, TEXT(window_title_raw), 0);
+        window = sys_cb->FindWindowExA(0, 0, TEXT(window_title_raw), 0);
         ASSERT(window);
 
         memory_pop(memory, window_title_raw);
@@ -561,29 +562,29 @@ win32_directory_index_to_use(Memory *mem, String session_prefix, String input_ta
 }
 
 internal Bool
-run_screenshotting(API *api, Memory *memory, Config *config, String root_directory, U64 iteration_count) {
+run_screenshotting(API *api, Memory *memory, Config *config, Win32_System_Callbacks *sys_cb, String root_directory, U64 iteration_count) {
     Bool res = false;
 
     for(Int window_i = 0; (window_i < config->target_window_count); ++window_i) {
         ASSERT(config->windows[window_i].class_name.len > 0 &&
                config->windows[window_i].title.len > 0);
-        HWND window = win32_find_window_from_class_name(memory, config->windows[window_i].class_name);
+        HWND window = win32_find_window_from_class_name(memory, config->windows[window_i].class_name, sys_cb);
 
         RECT rect = {};
-        GetClientRect(window, &rect);
+        sys_cb->GetClientRect(window, &rect);
         Int width = rect.right - rect.left;
         Int height = rect.bottom - rect.top;
 
         // TODO: If the window is minified then the width/height will be 0
         //       See https://www.codeproject.com/Articles/20651/Capturing-Minimized-Window-A-Kid-s-Trick for how to handle.
         if(width > 0 && height > 0) {
-            HDC dc = GetDC(0);
-            HDC capture_dc = CreateCompatibleDC(dc);
-            HBITMAP bitmap = CreateCompatibleBitmap(dc, rect.right - rect.left, rect.bottom - rect.top);
+            HDC dc = sys_cb->GetDC(0);
+            HDC capture_dc = sys_cb->CreateCompatibleDC(dc);
+            HBITMAP bitmap =  sys_cb->CreateCompatibleBitmap(dc, rect.right - rect.left, rect.bottom - rect.top);
 
-            HGDIOBJ gdiObj = SelectObject(capture_dc, bitmap);
+            HGDIOBJ gdiObj = sys_cb->SelectObject(capture_dc, bitmap);
 
-            PrintWindow(window, capture_dc, (config->include_title_bar) ? 0 : PW_CLIENTONLY);
+            sys_cb->PrintWindow(window, capture_dc, (config->include_title_bar) ? 0 : PW_CLIENTONLY);
 
             // TODO: This sometimes captures the current window, not the target for some reason...
             //BitBlt(capture_dc, 0, 0, width, height, dc, 0, 0, SRCCOPY | CAPTUREBLT);
@@ -606,7 +607,7 @@ run_screenshotting(API *api, Memory *memory, Config *config, String root_directo
             U8 *image_data = (U8 *)memory_push(memory, Memory_Index_temp, image_size);
             ASSERT(image_data);
             if(image_data) {
-                GetDIBits(dc, bitmap, 0, height, image_data, (BITMAPINFO *)&bmp_header, DIB_RGB_COLORS);
+                sys_cb->GetDIBits(dc, bitmap, 0, height, image_data, (BITMAPINFO *)&bmp_header, DIB_RGB_COLORS);
 
                 // Try and create using the Window title. And if that fails use the classname.
                 Bool created_directory = false;
@@ -648,6 +649,8 @@ run_screenshotting(API *api, Memory *memory, Config *config, String root_directo
 
                 memory_pop(memory, image_data);
             }
+
+            sys_cb->ReleaseDC(0, dc);
         }
     }
 
@@ -692,9 +695,9 @@ enum_windows_proc(HWND hwnd, LPARAM param) {
     Char *class_name = (Char *)memory_push(memory, Memory_Index_window_titles, max_string_length);
     ASSERT(title && class_name);
     if(title && class_name) {
-        if(IsWindowVisible(hwnd)) {
-            GetWindowText(hwnd, (LPSTR)title, max_string_length);
-            GetClassName(hwnd, (LPSTR)class_name, max_string_length);
+        if(global_sys_cb->IsWindowVisible(hwnd)) {
+            global_sys_cb->GetWindowText(hwnd, (LPSTR)title, max_string_length);
+            global_sys_cb->GetClassName(hwnd, (LPSTR)class_name, max_string_length);
 
             Int title_len = string_length(title);
             Int class_name_len = string_length(class_name);
@@ -722,7 +725,7 @@ enum_windows_proc(HWND hwnd, LPARAM param) {
 internal int CALLBACK
 win32_directory_browse_callback(HWND hwnd, UINT uMsg, LPARAM lParam, LPARAM lpData) {
     if(uMsg == BFFM_INITIALIZED) {
-        SendMessage(hwnd, BFFM_SETSELECTION, TRUE, lpData);
+        global_sys_cb->SendMessageA(hwnd, BFFM_SETSELECTION, TRUE, lpData);
     }
 
     return 0;
@@ -742,13 +745,13 @@ win32_browse_for_directory(Memory *memory, String initial_path) {
         bi.lpfn      = win32_directory_browse_callback;
         bi.lParam    = (LPARAM)initial_path_copy;
 
-        LPITEMIDLIST pidl = SHBrowseForFolder(&bi);
+        LPITEMIDLIST pidl = global_sys_cb->SHBrowseForFolder(&bi);
         if(pidl) {
             TCHAR path[MAX_PATH];
-            SHGetPathFromIDList(pidl, path);
+            global_sys_cb->SHGetPathFromIDList(pidl, path);
 
             IMalloc *imalloc = 0;
-            if(SUCCEEDED(SHGetMalloc(&imalloc))) {
+            if(SUCCEEDED(global_sys_cb->SHGetMalloc(&imalloc))) {
                 imalloc->Free(pidl);
                 imalloc->Release();
             }
@@ -764,6 +767,96 @@ win32_browse_for_directory(Memory *memory, String initial_path) {
     }
 
     return(res);
+}
+
+internal Win32_System_Callbacks
+load_system_callbacks(Void) {
+    Win32_System_Callbacks r = {};
+
+#define LOAD(dll,name) r.name = (name##_t *)GetProcAddress(dll, #name); if(!r.name && r.success) { r.success = false; }
+
+    r.success = true;
+
+#define SPECIAL_IF(x) if(!x) { ASSERT(0); r.success = false; } else
+
+    SPECIAL_IF(r.success) {
+        HMODULE user32 = LoadLibraryA("user32.dll");
+        SPECIAL_IF(user32) {
+            LOAD(user32, TranslateMessage);
+            LOAD(user32, DispatchMessageA);
+            LOAD(user32, PeekMessageA);
+            LOAD(user32, SendMessageA);
+            LOAD(user32, DefWindowProcA);
+            LOAD(user32, RegisterClassA);
+            LOAD(user32, CreateWindowExA);
+            LOAD(user32, PrintWindow);
+            LOAD(user32, IsWindowVisible);
+            LOAD(user32, GetDC);
+            LOAD(user32, ReleaseDC);
+            LOAD(user32, SetWindowTextA);
+            LOAD(user32, GetWindowTextA);
+            LOAD(user32, GetClientRect);
+            LOAD(user32, GetCursorPos);
+            LOAD(user32, ScreenToClient);
+            LOAD(user32, FindWindowExA);
+            LOAD(user32, EnumWindows);
+            LOAD(user32, GetClassNameA);
+        }
+    }
+
+    SPECIAL_IF(r.success) {
+        HMODULE gdi32 = LoadLibraryA("gdi32.dll");
+        SPECIAL_IF(gdi32) {
+            LOAD(gdi32, CreateCompatibleBitmap);
+            LOAD(gdi32, CreateCompatibleDC);
+            LOAD(gdi32, GetDIBits);
+            LOAD(gdi32, SelectObject);
+            LOAD(gdi32, StretchDIBits);
+            LOAD(gdi32, ChoosePixelFormat);
+            LOAD(gdi32, DescribePixelFormat);
+            LOAD(gdi32, SetPixelFormat);
+            LOAD(gdi32, SwapBuffers);
+        }
+    }
+
+    SPECIAL_IF(r.success) {
+        HMODULE shell32 = LoadLibraryA("shell32.dll");
+        SPECIAL_IF(shell32) {
+            LOAD(shell32, SHGetMalloc);
+            LOAD(shell32, SHGetPathFromIDListA);
+            LOAD(shell32, SHBrowseForFolderA);
+        }
+    }
+
+#if USE_OPENGL_WINDOW
+    ASSERT_IF(r.success) {
+        HMODULE opengl32 = LoadLibraryA("opengl32.dll");
+        ASSERT_IF(opengl32) {
+            LOAD(opengl32, wglCreateContext);
+            LOAD(opengl32, wglMakeCurrent);
+            LOAD(opengl32, glBegin);
+            LOAD(opengl32, glLoadMatrixf);
+            LOAD(opengl32, glViewport);
+            LOAD(opengl32, glBindTexture);
+            LOAD(opengl32, glTexImage2D);
+            LOAD(opengl32, glTexParameteri);
+            LOAD(opengl32, glTexEnvi);
+            LOAD(opengl32, glEnable);
+            LOAD(opengl32, glClearColor);
+            LOAD(opengl32, glClear);
+            LOAD(opengl32, glMatrixMode);
+            LOAD(opengl32, glLoadIdentity);
+            LOAD(opengl32, glColor4f);
+            LOAD(opengl32, glTexCoord2f);
+            LOAD(opengl32, glEnd);
+            LOAD(opengl32, glGenTextures);
+            LOAD(opengl32, glVertex2f);
+        }
+    }
+#endif
+
+    ASSERT(r.success);
+    return(r);
 }
 
 int CALLBACK
@@ -863,7 +956,6 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
 
         // _Real_ entry point for program...
         if(successfully_parsed_command_line) {
-
             Char _path[1024] = {}; // TODO: MAX_PATH?
             GetModuleFileNameA(0, _path, ARRAY_COUNT(_path));
             String path = create_string(_path);
@@ -882,6 +974,9 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
             string_copy(tmp_dll_path, _path);
             string_copy(&tmp_dll_path[last_slash], "screenshotter_temp.dll");
             Win32_Loaded_Code loaded_code = win32_load_code(src_dll_path, tmp_dll_path);
+
+            Win32_System_Callbacks sys_cb = load_system_callbacks();
+            global_sys_cb = &sys_cb;
 
             API api = {};
             Settings settings = {};
@@ -919,28 +1014,29 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
                 // Make the frame rate more granular.
                 {
                     HMODULE winmmdll = LoadLibraryA("winmm.dll");
-                    if(winmmdll) {
-                        typedef MMRESULT TimeBeginPeriod_t(uint32_t uPeriod);
-                        TimeBeginPeriod_t *winm_timeBeginPeriod = (TimeBeginPeriod_t *)GetProcAddress(winmmdll, "timeBeginPeriod");
-                        if(winm_timeBeginPeriod) {
+                    ASSERT_IF(winmmdll) {
+                        typedef MMRESULT timeBeginPeriod_t(UINT uPeriod);
+                        timeBeginPeriod_t *winm_timeBeginPeriod = (timeBeginPeriod_t *)GetProcAddress(winmmdll, "timeBeginPeriod");
+                        ASSERT_IF(winm_timeBeginPeriod) {
                             winm_timeBeginPeriod(1);
                         }
 
                         FreeLibrary(winmmdll);
                     }
+
                 }
 
-                if(RegisterClassA(&wnd_class)) {
+                if(sys_cb.RegisterClassA(&wnd_class)) {
                     Char *window_title = "Screenshotter";
-                    HWND wnd = CreateWindowExA(0, wnd_class.lpszClassName, window_title,
-                                               WS_OVERLAPPEDWINDOW | WS_VISIBLE | WS_POPUP, CW_USEDEFAULT, CW_USEDEFAULT,
-                                               settings.window_width, settings.window_height, 0, 0, hInstance, 0);
+                    HWND wnd = sys_cb.CreateWindowExA(0, wnd_class.lpszClassName, window_title,
+                                                      WS_OVERLAPPEDWINDOW | WS_VISIBLE | WS_POPUP, CW_USEDEFAULT, CW_USEDEFAULT,
+                                                      settings.window_width, settings.window_height, 0, 0, hInstance, 0);
 
 #if USE_OPENGL_WINDOW
-                    win32_init_opengl(wnd);
+                    win32_init_opengl(wnd, &sys_cb);
 #endif
 
-                    win32_get_window_dimension(wnd, &api.window_width, &api.window_height);
+                    win32_get_window_dimension(wnd, &api.window_width, &api.window_height, &sys_cb);
 
                     if((wnd) && (wnd != INVALID_HANDLE_VALUE)) {
                         LARGE_INTEGER last_counter = win32_get_wall_clock();
@@ -996,7 +1092,7 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
                             }
                         }
 
-                        EnumWindows(enum_windows_proc, (LPARAM)&api);
+                        sys_cb.EnumWindows(enum_windows_proc, (LPARAM)&api); // TODO: Pass sys_cb and API in here
 
                         U64 iteration_count = 0;
                         U64 iteration_count_reset = 0;
@@ -1028,7 +1124,7 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
                             // Process pending messages
                             {
                                 MSG msg;
-                                while(PeekMessageA(&msg, wnd, 0, 0, PM_REMOVE)) {
+                                while(sys_cb.PeekMessageA(&msg, wnd, 0, 0, PM_REMOVE)) {
                                     switch(msg.message) {
                                         case WM_QUIT: case WM_CLOSE: { api.running = false; } break; // TODO: Does this have to be here and inside the windowproc?
 
@@ -1044,8 +1140,8 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
                                         case WM_RBUTTONUP: { api.key[key_mouse_right]  = 0.0f; } break;
 
                                         default: {
-                                            TranslateMessage(&msg);
-                                            DispatchMessageA(&msg);
+                                            sys_cb.TranslateMessage(&msg);
+                                            sys_cb.DispatchMessageA(&msg);
                                         } break;
                                     }
                                 }
@@ -1067,8 +1163,8 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
                                 // Get mouse position
                                 {
                                     POINT pt;
-                                    GetCursorPos(&pt);
-                                    ScreenToClient(wnd, &pt);
+                                    sys_cb.GetCursorPos(&pt);
+                                    sys_cb.ScreenToClient(wnd, &pt);
 
                                     api.previous_mouse_pos_x = api.mouse_pos_x;
                                     api.previous_mouse_pos_y = api.mouse_pos_y;
@@ -1084,7 +1180,7 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
                                 }
 
                                 RECT cr;
-                                GetClientRect(wnd, &cr);
+                                sys_cb.GetClientRect(wnd, &cr);
 
                                 api.window_width = cr.right - cr.left;
                                 api.window_height = cr.bottom - cr.top;
@@ -1094,7 +1190,7 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
                                 if(!api.init) { api.screen_image_size_change = false; }
                                 api.init = false;
 
-                                HDC dc = GetDC(wnd);
+                                HDC dc = sys_cb.GetDC(wnd);
 
                                 win32_update_window(&memory, dc, &cr, api.screen_bitmap.memory, &global_bmp_info,
                                                     api.screen_bitmap.width, api.screen_bitmap.height);
@@ -1105,12 +1201,12 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
                                     Int bytes_written = stbsp_snprintf(buf, ARRAY_COUNT(buf), "%s - %f",
                                                                        window_title, seconds_elapsed_for_last_frame);
                                     ASSERT(bytes_written < ARRAY_COUNT(buf));
-                                    Bool success = SetWindowTextA(wnd, buf);
+                                    Bool success = sys_cb.SetWindowTextA(wnd, buf);
                                     ASSERT(success);
                                 }
 #endif
 
-                                ReleaseDC(wnd, dc);
+                                sys_cb.ReleaseDC(wnd, dc);
                             }
 
                             // Screenshotting
@@ -1126,7 +1222,7 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
 
                                 ++iteration_count_reset;
                                 if(iteration_count_reset == 60) {
-                                    run_screenshotting(&api, &memory, &config, config.target_output_directory_full, iteration_count);
+                                    run_screenshotting(&api, &memory, &config, &sys_cb, config.target_output_directory_full, iteration_count);
                                     ++iteration_count;
                                     iteration_count_reset = 0;
                                 }

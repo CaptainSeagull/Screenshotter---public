@@ -13,12 +13,6 @@
     #define TOKEN_ALLOW_ASSERT          - Whether to turn ASSERTS on/off. Has no effect if STRING_ASSERT is defined.
     #define TOKEN_PUBLIC_DEC            - Allows functions to have a declaration. Can use static or inline if required.
 
-    #define TOKEN_IS_END_OF_LINE(c)     - What we consider the end of a line.
-    #define TOKEN_IS_WHITESPACE(c)      - What we consider whitespace.
-    #define TOKEN_IS_ALPHABETICAL(c)    - What we consider alphabetical characters.
-    #define TOKEN_IS_NUMBER(c)          - What we consider numeric characters.
-    #define TOKEN_IS_HEXIDECIMAL        - What we consider hexidecimal (0-9, a-f).
-
     #define TOKEN_SKIP_CPP_COMMENTS     - Treat C++-style comments as whitespace.
     #define TOKEN_TOKEN_SKIP_C_COMMENTS - Treat C-style comments as whitespace.
 
@@ -176,27 +170,14 @@ TOKEN_PUBLIC_DEC char const *token_type_to_string(Token_Type type);
 
 //
 // Overrideable macros
-#if !defined(TOKEN_IS_END_OF_LINE)
-    #define TOKEN_IS_END_OF_LINE(c) ((c == '\n') || (c == '\r'))
-#endif
+#define TOKEN_IS_END_OF_LINE(c) ((c == '\n') || (c == '\r'))
+#define TOKEN_IS_WHITESPACE(c) ((c == ' ') || (c == '\t') || (c == '\v') || (c == '\f') || (TOKEN_IS_END_OF_LINE(c)))
+#define TOKEN_IS_ALPHABETICAL(c) (((c >= 'a') && (c <= 'z')) || ((c >= 'A') && (c <= 'Z')))
+#define TOKEN_IS_NUMBER(c) ((c >= '0') && (c <= '9'))
+#define TOKEN_IS_HEXIDECIMAL(c) (TOKEN_IS_NUMBER(c) || ((c >= 'a') && (c <= 'f')) || ((c >= 'A') && (c <= 'F')))
 
-#if !defined(TOKEN_IS_WHITESPACE)
-    #define TOKEN_IS_WHITESPACE(c) ((c == ' ') || (c == '\t') || (c == '\v') || (c == '\f') || (TOKEN_IS_END_OF_LINE(c)))
-#endif
-
-#if !defined(TOKEN_IS_ALPHABETICAL)
-    #define TOKEN_IS_ALPHABETICAL(c) (((c >= 'a') && (c <= 'z')) || ((c >= 'A') && (c <= 'Z')))
-#endif
-
-#if !defined(TOKEN_IS_NUMBER)
-    #define TOKEN_IS_NUMBER(c) ((c >= '0') && (c <= '9'))
-#endif
-
-#if !defined(TOKEN_IS_HEXIDECIMAL)
-    #define TOKEN_IS_HEXIDECIMAL(c) (TOKEN_IS_NUMBER(c) || ((c >= 'a') && (c <= 'f')) || ((c >= 'A') && (c <= 'F')))
-#endif
-
-static void internal_tokenizer_advance(Tokenizer *tokenizer, int size_to_advance) {
+static void
+internal_tokenizer_advance(Tokenizer *tokenizer, int size_to_advance) {
     for(int i = 0; (i < size_to_advance); ++i) {
         ++tokenizer->at;
         ++tokenizer->col;
@@ -207,7 +188,8 @@ static void internal_tokenizer_advance(Tokenizer *tokenizer, int size_to_advance
     }
 }
 
-static void internal_eat_whitespace(Tokenizer *tokenizer) {
+static void
+internal_eat_whitespace(Tokenizer *tokenizer) {
     for(;;) {
         if(!tokenizer->at[0]) { // Nul terminator.
             break; // for
@@ -238,31 +220,36 @@ static void internal_eat_whitespace(Tokenizer *tokenizer) {
 
 //
 // Public methods
-TOKEN_PUBLIC_DEC Tokenizer create_tokenizer(char const *input_stream) {
+TOKEN_PUBLIC_DEC Tokenizer
+create_tokenizer(char const *input_stream) {
     Tokenizer tokenizer = {};
     tokenizer.at = input_stream;
 
     return(tokenizer);
 }
 
-TOKEN_PUBLIC_DEC Token peak_token(Tokenizer *tokenizer) {
+TOKEN_PUBLIC_DEC Token
+peak_token(Tokenizer *tokenizer) {
     Tokenizer copy_tokenizer = *tokenizer;
     Token res = get_token(&copy_tokenizer);
 
     return(res);
 }
 
-TOKEN_PUBLIC_DEC void eat_token(Tokenizer *tokenizer) {
+TOKEN_PUBLIC_DEC void
+eat_token(Tokenizer *tokenizer) {
     eat_tokens(tokenizer, 1);
 }
 
-TOKEN_PUBLIC_DEC void eat_tokens(Tokenizer *tokenizer, int num_tokens_to_eat) {
+TOKEN_PUBLIC_DEC void
+eat_tokens(Tokenizer *tokenizer, int num_tokens_to_eat) {
     for(int i = 0; (i < num_tokens_to_eat); ++i) {
         get_token(tokenizer);
     }
 }
 
-TOKEN_PUBLIC_DEC Token get_token(Tokenizer *tokenizer) {
+TOKEN_PUBLIC_DEC Token
+get_token(Tokenizer *tokenizer) {
     Token res = {};
     internal_eat_whitespace(tokenizer);
 
@@ -440,8 +427,9 @@ TOKEN_PUBLIC_DEC Token get_token(Tokenizer *tokenizer) {
     return(res);
 }
 
-TOKEN_PUBLIC_DEC char const *token_type_to_string(Token_Type type) {
-    char const *res = "";
+TOKEN_PUBLIC_DEC char const *
+token_type_to_string(Token_Type type) {
+    char const *res = 0;
     switch(type) {
         case Token_Type_unknown: { res = "Token_Type_unknown"; } break;
         case Token_Type_open_paren: { res = "Token_Type_open_paren"; } break;

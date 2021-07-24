@@ -497,6 +497,18 @@ power(F32 x, Int y) {
     return(res);
 }
 
+internal F32
+fast_power(F32 a, F32 b) {
+    union {
+        F32 d;
+        int x[2];
+    } u = { a };
+
+    u.x[1] = (int)(b * (u.x[1] - 1072632447) + 1072632447);
+    u.x[0] = 0;
+    return u.d;
+}
+
 #define image_at(base,w,h,x,y) image_at_((U32 *)base,w,h,x,y)
 internal U32 *
 image_at_(U32 *base, U32 width, U32 height, U32 x, U32 y) {

@@ -28,6 +28,7 @@ enum sglg_Type {
     sglg_Type_String,
     sglg_Type_String_To_Int_Result,
     sglg_Type_String_To_Float_Result,
+    sglg_Type_Find_Index_Result,
     sglg_Type_stbsp__context,
     sglg_Type_Int,
     sglg_Type_File,
@@ -114,6 +115,7 @@ struct Internal_Push_Info;
 struct String;
 struct String_To_Int_Result;
 struct String_To_Float_Result;
+struct Find_Index_Result;
 struct stbsp__context;
 struct File;
 enum Key : Int;
@@ -182,10 +184,9 @@ int string_compare(String a , String b );
 int operator==(String a , String b );
 int string_contains(String a , String b );
 int string_contains(String str , char target );
-int find_index(String str , char target , int find_last  );
+Find_Index_Result find_index(String str , char target , int find_last  );
 int string_length(char * str );
 int string_length(char const * str );
-int char_to_int(char c );
 String_To_Int_Result string_to_int(String s );
 String_To_Float_Result string_to_float(String s );
 int string_copy(char * dst , char * src );
@@ -201,10 +202,10 @@ int string_compare(String a , String b );
 int operator==(String a , String b );
 int string_contains(String a , String b );
 int string_contains(String str , char target );
-int find_index(String str , char target , int find_last );
+Find_Index_Result find_index(String str , char target , int find_last );
 int string_length(char * str );
 int string_length(char const * str );
-int char_to_int(char c );
+ static int internal_char_to_int(char c );
 String_To_Int_Result string_to_int(String s );
 String_To_Float_Result string_to_float(String s );
 int string_copy(char * dst , char * src );
@@ -892,7 +893,7 @@ float square_root(float a );
  static F32 floor(F32 a );
  static F32 ceil(F32 a );
  static F32 absolute(F32 a );
- static F32 power(F32 x , Int y );
+ static F32 fastPow(F32 a , F32 b );
  static U32* image_at_(U32 * base , U32 width , U32 height , U32 x , U32 y );
  static Void render_node(Render_Entity * render_entity , Renderer * renderer , Bitmap * screen_bitmap , BB parent );
  static BB get_overlap(BB a , BB b );

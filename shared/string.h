@@ -25,10 +25,10 @@
         String my_string = "Hello, World!"; // operator= is overloaded
         int length = my_string.len;
 
-        Char as_cstring[1024] = {};
+        Char as_cstring[1024];
         memcpy(as_cstring, my_string.e, my_string.len); // Assumes my_string.len < 1024
 
-        String my_string2 = "2.44);"
+        String my_string2 = "2.44"
         String_To_Float_Result r = string_to_float(my_string2);
         if(r.success) {
             float as_float = r.v;
@@ -92,6 +92,11 @@ struct String_To_Float_Result {
     float v;
 };
 
+struct Find_Index_Result {
+    int/*bool*/ success;
+    STRING_SIZE_TYPE idx;
+};
+
 STRING_PUBLIC_DEC String create_string(char *str, STRING_SIZE_TYPE len = 0);
 STRING_PUBLIC_DEC String create_string(char const *str, STRING_SIZE_TYPE len = 0);
 
@@ -103,12 +108,11 @@ STRING_PUBLIC_DEC int/*bool*/ operator==(String a, String b);
 STRING_PUBLIC_DEC int/*bool*/ string_contains(String a, String b);
 STRING_PUBLIC_DEC int/*bool*/ string_contains(String str, char target);
 
-STRING_PUBLIC_DEC STRING_SIZE_TYPE find_index(String str, char target, int/*bool*/ find_last = false); // Returns -1 on failure
+STRING_PUBLIC_DEC Find_Index_Result find_index(String str, char target, int/*bool*/ find_last = false);
 
 STRING_PUBLIC_DEC STRING_SIZE_TYPE string_length(char *str);
 STRING_PUBLIC_DEC STRING_SIZE_TYPE string_length(char const *str);
 
-STRING_PUBLIC_DEC int char_to_int(char c);
 STRING_PUBLIC_DEC String_To_Int_Result string_to_int(String s);
 STRING_PUBLIC_DEC String_To_Float_Result string_to_float(String s);
 
@@ -134,113 +138,125 @@ String::String(char const *c_string) {
     this->len = s.len;
 }
 
-STRING_PUBLIC_DEC String create_string(char *str, STRING_SIZE_TYPE len/*= 0*/) {
+STRING_PUBLIC_DEC String
+create_string(char *str, STRING_SIZE_TYPE len/*= 0*/) {
     STRING_ASSERT(str);
 
-    String res;
-    res.e = str;
-    res.len = (len) ? len : string_length(str);
+    String r;
+    r.e = str;
+    r.len = (len) ? len : string_length(str);
 
-    return(res);
+    return(r);
 }
 
-STRING_PUBLIC_DEC String create_string(char const *str, STRING_SIZE_TYPE len/*= 0*/) {
-    String res = create_string((char *)str, len);
-
-    return(res);
+STRING_PUBLIC_DEC String
+create_string(char const *str, STRING_SIZE_TYPE len/*= 0*/) {
+    String r = create_string((char *)str, len);
+    return(r);
 }
 
-STRING_PUBLIC_DEC String create_substring(String str, STRING_SIZE_TYPE start, STRING_SIZE_TYPE end/*= 1*/) {
+STRING_PUBLIC_DEC String
+create_substring(String str, STRING_SIZE_TYPE start, STRING_SIZE_TYPE end/*= 1*/) {
     if(end == -1) { end = str.len; }
 
-    String res = create_string(str.e + start, end - start);
-
-    return(res);
+    String r = create_string(str.e + start, end - start);
+    return(r);
 }
 
-STRING_PUBLIC_DEC int/*bool*/ string_compare(String a, String b) {
-    int/*bool*/ res = false;
+STRING_PUBLIC_DEC int/*bool*/
+string_compare(String a, String b) {
+    int/*bool*/ r = false;
     if(a.len == b.len) {
-        res = true;
+        r = true;
 
         for(STRING_SIZE_TYPE i = 0; (i < a.len); ++i) {
             if(a.e[i] != b.e[i]) {
-                res = false;
+                r = false;
                 break; // while
             }
         }
     }
 
-    return(res);
+    return(r);
 }
 
-STRING_PUBLIC_DEC int/*bool*/ operator==(String a, String b) {
+STRING_PUBLIC_DEC int/*bool*/
+operator==(String a, String b) {
     int/*bool*/ r = string_compare(a, b);
     return(r);
 }
 
-STRING_PUBLIC_DEC int/*bool*/ string_contains(String a, String b) {
-    int/*bool*/ res = false;
+STRING_PUBLIC_DEC int/*bool*/
+string_contains(String a, String b) {
+    int/*bool*/ r = false;
     for(STRING_SIZE_TYPE i = 0; (i < a.len); ++i) {
-        // TODO: Doesn't work for unisgned numbers. Also... why the hell am I doing b.len < 0??
-        if((a.len - i) - b.len < 0) {
+        String a_tmp = create_string(&a.e[i], b.len);
+        if(string_compare(a_tmp, b)) {
+            r = true;
             break; // for
-        } else {
-            String a_tmp = create_string(&a.e[i], b.len);
-            if(string_compare(a_tmp, b)) {
-                res = true;
+        }
+    }
+
+    return(r);
+}
+
+STRING_PUBLIC_DEC int/*bool*/
+string_contains(String str, char target) {
+    int/*bool*/ r = false;
+
+    for(STRING_SIZE_TYPE i = 0; (i < str.len); ++i) {
+        if(str.e[i] == target) {
+            r = true;
+            break;
+        }
+    }
+
+    return(r);
+}
+
+STRING_PUBLIC_DEC Find_Index_Result
+find_index(String str, char target, int/*bool*/ find_last/*=false*/) {
+    Find_Index_Result r = {};
+
+    if(find_last) {
+        for(STRING_SIZE_TYPE i = 0, j = str.len - 1; (i < str.len); ++i, --j) {
+            if(str.e[j] == target) {
+                r.idx = j;
+                r.success = true;
+                break; // for
+            }
+        }
+    } else {
+        for(STRING_SIZE_TYPE i = 0; (i < str.len); ++i) {
+            if(str.e[i] == target) {
+                r.idx = i;
+                r.success = true;
                 break; // for
             }
         }
     }
 
-    return(res);
+    return(r);
 }
 
-STRING_PUBLIC_DEC int/*bool*/ string_contains(String str, char target) {
-    int/*bool*/ res = false;
-
-    for(STRING_SIZE_TYPE i = 0; (i < str.len); ++i) {
-        if(str.e[i] == target) {
-            res = true;
-            break;
-        }
-    }
-
-    return(res);
-}
-
-STRING_PUBLIC_DEC STRING_SIZE_TYPE find_index(String str, char target, int/*bool*/ find_last/*=false*/) {
-    STRING_SIZE_TYPE res = -1;
-
-    // TODO: Would be faster to do a reversed search if find_last is defined... but lazy
-
-    for(STRING_SIZE_TYPE i = 0; (i < str.len); ++i) {
-        if(str.e[i] == target) {
-            res = i;
-            if(!find_last) {
-                break;
-            }
-        }
-    }
-
-    return(res);
-}
-
-STRING_PUBLIC_DEC STRING_SIZE_TYPE string_length(char *str) {
+STRING_PUBLIC_DEC STRING_SIZE_TYPE
+string_length(char *str) {
     STRING_ASSERT(str);
 
-    STRING_SIZE_TYPE res = 0;
-    while(*str++) { ++res; }
+    STRING_SIZE_TYPE r = 0;
+    while(*str++) { ++r; }
 
-    return(res);
+    return(r);
 }
 
-STRING_PUBLIC_DEC STRING_SIZE_TYPE string_length(char const *str) {
-    return string_length((char *)str);
+STRING_PUBLIC_DEC STRING_SIZE_TYPE
+string_length(char const *str) {
+    STRING_SIZE_TYPE r = string_length((char *)str);
+    return(r);
 }
 
-STRING_PUBLIC_DEC int char_to_int(char c) {
+static int
+internal_char_to_int(char c) {
     int r = -1;
     switch(c) {
         case '0': { r = 0; } break;
@@ -258,13 +274,14 @@ STRING_PUBLIC_DEC int char_to_int(char c) {
     return(r);
 }
 
-STRING_PUBLIC_DEC String_To_Int_Result string_to_int(String s) {
+STRING_PUBLIC_DEC String_To_Int_Result
+string_to_int(String s) {
     int a = 0;
     int/*bool*/ success = false;
     int/*bool*/ is_negative = (s.e[0] == '-') ? true : false;
 
     for(STRING_SIZE_TYPE i = (is_negative) ? 1 : 0; (i < s.len); ++i) {
-        int t = char_to_int(s.e[i]);
+        int t = internal_char_to_int(s.e[i]);
         if(t == -1) {
             break; // for - something went wrong
         } else {
@@ -286,7 +303,8 @@ STRING_PUBLIC_DEC String_To_Int_Result string_to_int(String s) {
     return(r);
 }
 
-STRING_PUBLIC_DEC String_To_Float_Result string_to_float(String s) {
+STRING_PUBLIC_DEC String_To_Float_Result
+string_to_float(String s) {
     // a is before decimal point, b is after.
     float a = 0.0f, b = 0.0f;
     int/*Bool*/ a_success = false, b_success = false;
@@ -300,7 +318,7 @@ STRING_PUBLIC_DEC String_To_Float_Result string_to_float(String s) {
             a_success = true;
             break;
         } else {
-            int t = char_to_int(s.e[i]);
+            int t = internal_char_to_int(s.e[i]);
             if(t == -1) {
                 break; // for - something went wrong
             } else {
@@ -317,12 +335,12 @@ STRING_PUBLIC_DEC String_To_Float_Result string_to_float(String s) {
     }
 
     if(!b_success) { // Only called if string has a decimal point
-        for(STRING_SIZE_TYPE i = s.len - 1; (i >= 0); --i) {
-            if(s.e[i] == '.') {
+        for(STRING_SIZE_TYPE i = 0, j = s.len - 1; (i < s.len); ++i, --j) {
+            if(s.e[j] == '.') {
                 b_success = true;
                 break;
             } else {
-                int t = char_to_int(s.e[i]);
+                int t = internal_char_to_int(s.e[j]);
                 if(t == -1) {
                     break; // for - something went wrong
                 } else {
@@ -344,35 +362,40 @@ STRING_PUBLIC_DEC String_To_Float_Result string_to_float(String s) {
     return(r);
 }
 
-STRING_PUBLIC_DEC STRING_SIZE_TYPE string_copy(char *dst, char *src) {
-    STRING_SIZE_TYPE res = 0;
+STRING_PUBLIC_DEC STRING_SIZE_TYPE
+string_copy(char *dst, char *src) {
+    STRING_SIZE_TYPE r = 0;
     while(*src) {
         *dst = *src;
         ++dst;
         ++src;
-        ++res; // TODO: Could calculate at end, rather than increment every time through the loop?
+        ++r; // TODO: Could calculate at end, rather than increment every time through the loop?
     }
 
-    return(res);
+    return(r);
 }
 
-STRING_PUBLIC_DEC STRING_SIZE_TYPE string_copy(char const *dst, char const *src) {
+STRING_PUBLIC_DEC STRING_SIZE_TYPE
+string_copy(char const *dst, char const *src) {
     STRING_SIZE_TYPE r = string_copy((char *)dst, (char *)src);
     return(r);
 }
 
-STRING_PUBLIC_DEC STRING_SIZE_TYPE string_copy(char *dst, char const *src) {
+STRING_PUBLIC_DEC STRING_SIZE_TYPE
+string_copy(char *dst, char const *src) {
     STRING_SIZE_TYPE r = string_copy(dst, (char *)src);
     return(r);
 }
 
-STRING_PUBLIC_DEC STRING_SIZE_TYPE string_copy(char const *dst, char *src) {
+STRING_PUBLIC_DEC STRING_SIZE_TYPE
+string_copy(char const *dst, char *src) {
     STRING_SIZE_TYPE r = string_copy((char *)dst, src);
     return(r);
 }
 
 
-STRING_PUBLIC_DEC STRING_SIZE_TYPE string_copy(char *dst, char *src, STRING_SIZE_TYPE len) {
+STRING_PUBLIC_DEC STRING_SIZE_TYPE
+string_copy(char *dst, char *src, STRING_SIZE_TYPE len) {
     STRING_SIZE_TYPE i;
     for(i = 0; (i < len); ++i, ++dst, ++src) {
         *dst = *src;
@@ -381,7 +404,8 @@ STRING_PUBLIC_DEC STRING_SIZE_TYPE string_copy(char *dst, char *src, STRING_SIZE
     return(i);
 }
 
-STRING_PUBLIC_DEC char to_lower(char a) {
+STRING_PUBLIC_DEC char
+to_lower(char a) {
     char r = a;
     if(a >= 'A' && a <= 'Z') {
         r += 32; // 'a' - 'A'
@@ -390,7 +414,8 @@ STRING_PUBLIC_DEC char to_lower(char a) {
     return(r);
 }
 
-STRING_PUBLIC_DEC char to_upper(char a) {
+STRING_PUBLIC_DEC char
+to_upper(char a) {
     char r = a;
     if(a >= 'a' && a <= 'z') {
         r -= 32; // 'a' - 'A'

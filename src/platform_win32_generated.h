@@ -28,6 +28,7 @@ enum sglg_Type {
     sglg_Type_String,
     sglg_Type_String_To_Int_Result,
     sglg_Type_String_To_Float_Result,
+    sglg_Type_Find_Index_Result,
     sglg_Type_stbsp__context,
     sglg_Type_Int,
     sglg_Type_File,
@@ -172,6 +173,7 @@ struct Internal_Push_Info;
 struct String;
 struct String_To_Int_Result;
 struct String_To_Float_Result;
+struct Find_Index_Result;
 struct stbsp__context;
 struct File;
 enum Key : Int;
@@ -238,10 +240,9 @@ int string_compare(String a , String b );
 int operator==(String a , String b );
 int string_contains(String a , String b );
 int string_contains(String str , char target );
-int find_index(String str , char target , int find_last  );
+Find_Index_Result find_index(String str , char target , int find_last  );
 int string_length(char * str );
 int string_length(char const * str );
-int char_to_int(char c );
 String_To_Int_Result string_to_int(String s );
 String_To_Float_Result string_to_float(String s );
 int string_copy(char * dst , char * src );
@@ -257,10 +258,10 @@ int string_compare(String a , String b );
 int operator==(String a , String b );
 int string_contains(String a , String b );
 int string_contains(String str , char target );
-int find_index(String str , char target , int find_last );
+Find_Index_Result find_index(String str , char target , int find_last );
 int string_length(char * str );
 int string_length(char const * str );
-int char_to_int(char c );
+ static int internal_char_to_int(char c );
 String_To_Int_Result string_to_int(String s );
 String_To_Float_Result string_to_float(String s );
 int string_copy(char * dst , char * src );

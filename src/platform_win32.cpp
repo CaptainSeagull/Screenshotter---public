@@ -691,8 +691,8 @@ enum_windows_proc(HWND hwnd, LPARAM param) {
 
     Int max_string_length = 1024;
 
-    Char *title = (Char *)memory_push(memory, Memory_Index_window_titles, max_string_length);
-    Char *class_name = (Char *)memory_push(memory, Memory_Index_window_titles, max_string_length);
+    Char *title = (Char *)memory_push(memory, Memory_Index_permanent, max_string_length);
+    Char *class_name = (Char *)memory_push(memory, Memory_Index_permanent, max_string_length);
     ASSERT(title && class_name);
     if(title && class_name) {
         if(global_sys_cb->IsWindowVisible(hwnd)) {
@@ -867,19 +867,11 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
     U64 permanent_size = GIGABYTES(4);
     U64 temp_size = GIGABYTES(4);
     U64 internal_temp_size = MEGABYTES(128);
-    U64 bitmap_size = MAX_SCREEN_BITMAP_SIZE + 1;
-    U64 renderer_size = MEGABYTES(128);
-    U64 malloc_nofree_size = MEGABYTES(128);
-    U32 font_size = sizeof(Image_Letter) * 256 + 1;
-    U32 titles_size = MEGABYTES(1);
-    U64 total_size = get_memory_base_size() + permanent_size + temp_size + internal_temp_size + bitmap_size +
-                     renderer_size + malloc_nofree_size + font_size + titles_size;
+    U64 total_size = get_memory_base_size() + permanent_size + temp_size + internal_temp_size;
 
     Void *all_memory = VirtualAlloc(0, total_size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
     if(all_memory) {
-        U64 group_inputs[] = { permanent_size, temp_size, internal_temp_size, bitmap_size,
-                               renderer_size, malloc_nofree_size, font_size, titles_size
-                             };
+        U64 group_inputs[] = { permanent_size, temp_size, internal_temp_size };
         ASSERT(SGLG_ENUM_COUNT(Memory_Index) == ARRAY_COUNT(group_inputs));
         Memory memory = create_memory_base(all_memory, group_inputs, ARRAY_COUNT(group_inputs));
 
@@ -991,7 +983,7 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
             settings.window_width = 1080 / 2;
 
             loaded_code.init_platform_settings(&settings);
-            api.screen_bitmap.memory = memory_push(&memory, Memory_Index_bitmap, MAX_SCREEN_BITMAP_SIZE);
+            api.screen_bitmap.memory = memory_push(&memory, Memory_Index_permanent, MAX_SCREEN_BITMAP_SIZE);
             ASSERT(api.screen_bitmap.memory);
             if(api.screen_bitmap.memory) {
                 global_api = &api;

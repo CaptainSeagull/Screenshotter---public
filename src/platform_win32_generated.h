@@ -871,5 +871,5 @@ static Int sglg_Memory_Index_count(Memory_Index e);
 // Helpers
 #define sglg_internal_enum_Memory_Arena_Error (7)
 #define sglg_internal_enum_Key (58)
-#define sglg_internal_enum_Memory_Index (8)
+#define sglg_internal_enum_Memory_Index (3)
 #define SGLG_ENTITY_OUTPUT_INTERNAL_Render_Entity union { Rect _Rect; Image_Rect _Image_Rect; Word _Word; Line _Line; }; 

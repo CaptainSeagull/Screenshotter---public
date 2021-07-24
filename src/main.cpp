@@ -11,7 +11,7 @@
 #include "../shared/lane/lane.cpp"
 
 internal API *global_api;
-internal void *my_malloc(uint64_t size) { return memory_push(global_api->memory, Memory_Index_malloc_nofree_size, size); }
+internal void *my_malloc(uint64_t size) { return memory_push(global_api->memory, Memory_Index_permanent, size); }
 internal void my_free(void *d) { /* Do nothing... */ }
 #define STBTT_STATIC
 #define STB_TRUETYPE_IMPLEMENTATION

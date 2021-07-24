@@ -47,14 +47,8 @@ typedef double F64;
 
 #include "platform.h"
 
-// TODO: None of these are shared between the UI and "screenshooting" threads. May be useful to have some way to pass memory back-and-forth.
 enum Memory_Index : Int {
     Memory_Index_permanent,
     Memory_Index_temp,
     Memory_Index_internal_temp,
-    Memory_Index_bitmap,
-    Memory_Index_renderer,
-    Memory_Index_malloc_nofree_size,
-    Memory_Index_font_data,
-    Memory_Index_window_titles,
 };

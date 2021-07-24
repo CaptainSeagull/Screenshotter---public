@@ -893,7 +893,8 @@ float square_root(float a );
  static F32 floor(F32 a );
  static F32 ceil(F32 a );
  static F32 absolute(F32 a );
- static F32 fastPow(F32 a , F32 b );
+ static F32 power(F32 x , Int y );
+ static F32 fast_power(F32 a , F32 b );
  static U32* image_at_(U32 * base , U32 width , U32 height , U32 x , U32 y );
  static Void render_node(Render_Entity * render_entity , Renderer * renderer , Bitmap * screen_bitmap , BB parent );
  static BB get_overlap(BB a , BB b );
@@ -915,5 +916,5 @@ static Int sglg_Memory_Index_count(Memory_Index e);
 // Helpers
 #define sglg_internal_enum_Memory_Arena_Error (7)
 #define sglg_internal_enum_Key (58)
-#define sglg_internal_enum_Memory_Index (8)
+#define sglg_internal_enum_Memory_Index (3)
 #define SGLG_ENTITY_OUTPUT_INTERNAL_Render_Entity union { Rect _Rect; Image_Rect _Image_Rect; Word _Word; Line _Line; }; 

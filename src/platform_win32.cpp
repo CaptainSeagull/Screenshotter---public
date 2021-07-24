@@ -22,7 +22,29 @@
 
 #define MAX_SCREEN_BITMAP_SIZE (1920 * 1080 * 4) // TODO: Change to 4k?
 
-// TODO: Go through this file and tidy it up.
+extern "C"
+{
+#pragma function(memset)
+    void *memset(void *dst, int c, size_t cnt) {
+        U8 *dst8 = (U8 *)dst;
+        while(cnt--) {
+            *dst8++ = (U8)c;
+        }
+
+        return(dst);
+    }
+
+#pragma function(memcpy)
+    void *memcpy(void *dst, const void *src, size_t cnt) {
+        U8 *dst8 = (U8 *)dst;
+        U8 *src8 = (U8 *)src;
+        while(cnt--) {
+            *dst8++ = *src8++;
+        }
+
+        return(dst);
+    }
+}
 
 // TODO: Globals... :-(
 internal_global BITMAPINFO global_bmp_info;
@@ -693,8 +715,7 @@ enum_windows_proc(HWND hwnd, LPARAM param) {
 
     Char *title = (Char *)memory_push(memory, Memory_Index_permanent, max_string_length);
     Char *class_name = (Char *)memory_push(memory, Memory_Index_permanent, max_string_length);
-    ASSERT(title && class_name);
-    if(title && class_name) {
+    ASSERT_IF(title && class_name) {
         if(global_sys_cb->IsWindowVisible(hwnd)) {
             global_sys_cb->GetWindowText(hwnd, (LPSTR)title, max_string_length);
             global_sys_cb->GetClassName(hwnd, (LPSTR)class_name, max_string_length);
@@ -703,8 +724,7 @@ enum_windows_proc(HWND hwnd, LPARAM param) {
             Int class_name_len = string_length(class_name);
 
             if(title_len > 0 && class_name_len > 0) {
-                ASSERT(api->window_count < ARRAY_COUNT(api->windows));
-                if(api->window_count < ARRAY_COUNT(api->windows)) {
+                ASSERT_IF(api->window_count < ARRAY_COUNT(api->windows)) {
                     Window_Info *wi = &api->windows[api->window_count++];
                     wi->title = create_string(title, title_len);
                     wi->class_name = create_string(class_name, class_name_len);
@@ -716,7 +736,7 @@ enum_windows_proc(HWND hwnd, LPARAM param) {
 
     if(!success) {
         if(class_name) { memory_pop(memory, class_name); }
-        if(title)      { memory_pop(memory, title); }
+        if(title)      { memory_pop(memory, title);      }
     }
 
     return(TRUE);

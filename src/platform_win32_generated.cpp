@@ -11,7 +11,7 @@ static int sgl_generated_string_compare(char const *a, uint32_t a_len, char cons
     }
     return(res);
 }
-static char const *sglg_Memory_Arena_Error_to_string(Memory_Arena_Error e) {
+static char const *Memory_Arena_Error_to_string(Memory_Arena_Error e) {
     switch(e) {
         case Memory_Arena_Error_success: { return("Memory_Arena_Error_success"); } break;
         case Memory_Arena_Error_invalid_group_buffer_index: { return("Memory_Arena_Error_invalid_group_buffer_index"); } break;
@@ -19,11 +19,10 @@ static char const *sglg_Memory_Arena_Error_to_string(Memory_Arena_Error e) {
         case Memory_Arena_Error_invalid_input: { return("Memory_Arena_Error_invalid_input"); } break;
         case Memory_Arena_Error_internal_error: { return("Memory_Arena_Error_internal_error"); } break;
         case Memory_Arena_Error_wrong_free_order: { return("Memory_Arena_Error_wrong_free_order"); } break;
-        case Memory_Arena_Error_count: { return("Memory_Arena_Error_count"); } break;
     }
     return(0);
 }
-static char const *sglg_Key_to_string(Key e) {
+static char const *Key_to_string(Key e) {
     switch(e) {
         case key_unknown: { return("key_unknown"); } break;
         case key_ctrl: { return("key_ctrl"); } break;
@@ -86,7 +85,7 @@ static char const *sglg_Key_to_string(Key e) {
     }
     return(0);
 }
-static char const *sglg_Memory_Index_to_string(Memory_Index e) {
+static char const *Memory_Index_to_string(Memory_Index e) {
     switch(e) {
         case Memory_Index_permanent: { return("Memory_Index_permanent"); } break;
         case Memory_Index_temp: { return("Memory_Index_temp"); } break;
@@ -94,7 +93,7 @@ static char const *sglg_Memory_Index_to_string(Memory_Index e) {
     }
     return(0);
 }
-static Memory_Arena_Error sglg_Memory_Arena_Error_from_string(char const *s, uint32_t l) {
+static Memory_Arena_Error Memory_Arena_Error_from_string(char const *s, uint32_t l) {
     if(0) {}
     else if(sgl_generated_string_compare("Memory_Arena_Error_success", 26, s, l)) { return(Memory_Arena_Error_success); }
     else if(sgl_generated_string_compare("Memory_Arena_Error_invalid_group_buffer_index", 45, s, l)) { return(Memory_Arena_Error_invalid_group_buffer_index); }
@@ -102,10 +101,9 @@ static Memory_Arena_Error sglg_Memory_Arena_Error_from_string(char const *s, uin
     else if(sgl_generated_string_compare("Memory_Arena_Error_invalid_input", 32, s, l)) { return(Memory_Arena_Error_invalid_input); }
     else if(sgl_generated_string_compare("Memory_Arena_Error_internal_error", 33, s, l)) { return(Memory_Arena_Error_internal_error); }
     else if(sgl_generated_string_compare("Memory_Arena_Error_wrong_free_order", 35, s, l)) { return(Memory_Arena_Error_wrong_free_order); }
-    else if(sgl_generated_string_compare("Memory_Arena_Error_count", 24, s, l)) { return(Memory_Arena_Error_count); }
     return((Memory_Arena_Error)0);
 }
-static Key sglg_Key_from_string(char const *s, uint32_t l) {
+static Key Key_from_string(char const *s, uint32_t l) {
     if(0) {}
     else if(sgl_generated_string_compare("key_unknown", 11, s, l)) { return(key_unknown); }
     else if(sgl_generated_string_compare("key_ctrl", 8, s, l)) { return(key_ctrl); }
@@ -167,126 +165,130 @@ static Key sglg_Key_from_string(char const *s, uint32_t l) {
     else if(sgl_generated_string_compare("key_cnt", 7, s, l)) { return(key_cnt); }
     return((Key)0);
 }
-static Memory_Index sglg_Memory_Index_from_string(char const *s, uint32_t l) {
+static Memory_Index Memory_Index_from_string(char const *s, uint32_t l) {
     if(0) {}
     else if(sgl_generated_string_compare("Memory_Index_permanent", 22, s, l)) { return(Memory_Index_permanent); }
     else if(sgl_generated_string_compare("Memory_Index_temp", 17, s, l)) { return(Memory_Index_temp); }
     else if(sgl_generated_string_compare("Memory_Index_internal_temp", 26, s, l)) { return(Memory_Index_internal_temp); }
     return((Memory_Index)0);
 }
-// sglg_Type
-static uint64_t sglg_get_enum_count(sglg_Type type) {
+// Type
+static uint64_t get_enum_count(Type type) {
     switch(type) {
-        case sglg_Type_Memory_Arena_Error: { return(7); } break;
-        case sglg_Type_Key: { return(58); } break;
-        case sglg_Type_Memory_Index: { return(3); } break;
+        case Type_Memory_Arena_Error: { return(6); } break;
+        case Type_Key: { return(58); } break;
+        case Type_Memory_Index: { return(3); } break;
     }
     return(0);
 }
-static uint64_t sglg_type_to_size(sglg_Type type) {
+static uint64_t type_to_size(Type type) {
     switch(type) {
-        case sglg_Type_Memory_Arena_Error: { return(sizeof(Memory_Arena_Error)); } break;
-        case sglg_Type_Memory_Group: { return(sizeof(Memory_Group)); } break;
-        case sglg_Type_Memory: { return(sizeof(Memory)); } break;
-        case sglg_Type_Internal_Push_Info: { return(sizeof(Internal_Push_Info)); } break;
-        case sglg_Type_String: { return(sizeof(String)); } break;
-        case sglg_Type_String_To_Int_Result: { return(sizeof(String_To_Int_Result)); } break;
-        case sglg_Type_String_To_Float_Result: { return(sizeof(String_To_Float_Result)); } break;
-        case sglg_Type_Find_Index_Result: { return(sizeof(Find_Index_Result)); } break;
-        case sglg_Type_stbsp__context: { return(sizeof(stbsp__context)); } break;
-        case sglg_Type_File: { return(sizeof(File)); } break;
-        case sglg_Type_Key: { return(sizeof(Key)); } break;
-        case sglg_Type_Platform_Callbacks: { return(sizeof(Platform_Callbacks)); } break;
-        case sglg_Type_Bitmap: { return(sizeof(Bitmap)); } break;
-        case sglg_Type_Settings: { return(sizeof(Settings)); } break;
-        case sglg_Type_Window_Info: { return(sizeof(Window_Info)); } break;
-        case sglg_Type_API: { return(sizeof(API)); } break;
-        case sglg_Type_Memory_Index: { return(sizeof(Memory_Index)); } break;
-        case sglg_Type_Config: { return(sizeof(Config)); } break;
-        case sglg_Type_Image: { return(sizeof(Image)); } break;
-        case sglg_Type_Bitmap_Header: { return(sizeof(Bitmap_Header)); } break;
-        case sglg_Type_V2: { return(sizeof(V2)); } break;
-        case sglg_Type_V3: { return(sizeof(V3)); } break;
-        case sglg_Type_V4: { return(sizeof(V4)); } break;
-        case sglg_Type_Lane_F32: { return(sizeof(Lane_F32)); } break;
-        case sglg_Type_Lane_U32: { return(sizeof(Lane_U32)); } break;
-        case sglg_Type_Lane_V2: { return(sizeof(Lane_V2)); } break;
-        case sglg_Type_Lane_V3: { return(sizeof(Lane_V3)); } break;
-        case sglg_Type_Lane_V4: { return(sizeof(Lane_V4)); } break;
-        case sglg_Type_Lane_M2x2: { return(sizeof(Lane_M2x2)); } break;
-        case sglg_Type_Win32_Work_Queue_Entry: { return(sizeof(Win32_Work_Queue_Entry)); } break;
-        case sglg_Type_Win32_Work_Queue: { return(sizeof(Win32_Work_Queue)); } break;
-        case sglg_Type_Win32_Loaded_Code: { return(sizeof(Win32_Loaded_Code)); } break;
-        case sglg_Type_Win32_Debug_Window: { return(sizeof(Win32_Debug_Window)); } break;
-        case sglg_Type_Win32_API: { return(sizeof(Win32_API)); } break;
-        case sglg_Type_Win32_Screen_Capture_Thread_Parameters: { return(sizeof(Win32_Screen_Capture_Thread_Parameters)); } break;
-        case sglg_Type_Win32_System_Callbacks: { return(sizeof(Win32_System_Callbacks)); } break;
-        case sglg_Type_V2u: { return(sizeof(V2u)); } break;
-        case sglg_Type_BB: { return(sizeof(BB)); } break;
-        case sglg_Type_Render_Entity: { return(sizeof(Render_Entity)); } break;
-        case sglg_Type_Image_Letter: { return(sizeof(Image_Letter)); } break;
-        case sglg_Type_Rect: { return(sizeof(Rect)); } break;
-        case sglg_Type_Image_Rect: { return(sizeof(Image_Rect)); } break;
-        case sglg_Type_Word: { return(sizeof(Word)); } break;
-        case sglg_Type_Line: { return(sizeof(Line)); } break;
-        case sglg_Type_Render_Entity_For_Size: { return(sizeof(Render_Entity_For_Size)); } break;
-        case sglg_Type_Render_Image: { return(sizeof(Render_Image)); } break;
-        case sglg_Type_Internal: { return(sizeof(Internal)); } break;
-        case sglg_Type_Font: { return(sizeof(Font)); } break;
-        case sglg_Type_Renderer: { return(sizeof(Renderer)); } break;
+        case Type_Memory_Arena_Error: { return(sizeof(Memory_Arena_Error)); } break;
+        case Type_Memory_Group: { return(sizeof(Memory_Group)); } break;
+        case Type_Memory: { return(sizeof(Memory)); } break;
+        case Type_Internal_Push_Info: { return(sizeof(Internal_Push_Info)); } break;
+        case Type_String: { return(sizeof(String)); } break;
+        case Type_String_To_Int_Result: { return(sizeof(String_To_Int_Result)); } break;
+        case Type_String_To_Float_Result: { return(sizeof(String_To_Float_Result)); } break;
+        case Type_Find_Index_Result: { return(sizeof(Find_Index_Result)); } break;
+        case Type_stbsp__context: { return(sizeof(stbsp__context)); } break;
+        case Type_File: { return(sizeof(File)); } break;
+        case Type_Key: { return(sizeof(Key)); } break;
+        case Type_Platform_Callbacks: { return(sizeof(Platform_Callbacks)); } break;
+        case Type_Bitmap: { return(sizeof(Bitmap)); } break;
+        case Type_Settings: { return(sizeof(Settings)); } break;
+        case Type_Window_Info: { return(sizeof(Window_Info)); } break;
+        case Type_API: { return(sizeof(API)); } break;
+        case Type_Memory_Index: { return(sizeof(Memory_Index)); } break;
+        case Type_Config: { return(sizeof(Config)); } break;
+        case Type_Image: { return(sizeof(Image)); } break;
+        case Type_Bitmap_Header: { return(sizeof(Bitmap_Header)); } break;
+        case Type_V2: { return(sizeof(V2)); } break;
+        case Type_V3: { return(sizeof(V3)); } break;
+        case Type_V4: { return(sizeof(V4)); } break;
+        case Type_Lane_F32: { return(sizeof(Lane_F32)); } break;
+        case Type_Lane_U32: { return(sizeof(Lane_U32)); } break;
+        case Type_Lane_V2: { return(sizeof(Lane_V2)); } break;
+        case Type_Lane_V3: { return(sizeof(Lane_V3)); } break;
+        case Type_Lane_V4: { return(sizeof(Lane_V4)); } break;
+        case Type_Lane_M2x2: { return(sizeof(Lane_M2x2)); } break;
+        case Type_Win32_Work_Queue_Entry: { return(sizeof(Win32_Work_Queue_Entry)); } break;
+        case Type_Win32_Work_Queue: { return(sizeof(Win32_Work_Queue)); } break;
+        case Type_Win32_Loaded_Code: { return(sizeof(Win32_Loaded_Code)); } break;
+        case Type_Win32_Debug_Window: { return(sizeof(Win32_Debug_Window)); } break;
+        case Type_Win32_API: { return(sizeof(Win32_API)); } break;
+        case Type_Win32_Screen_Capture_Thread_Parameters: { return(sizeof(Win32_Screen_Capture_Thread_Parameters)); } break;
+        case Type_Win32_System_Callbacks: { return(sizeof(Win32_System_Callbacks)); } break;
+        case Type_V2u: { return(sizeof(V2u)); } break;
+        case Type_BB: { return(sizeof(BB)); } break;
+        case Type_Render_Entity: { return(sizeof(Render_Entity)); } break;
+        case Type_Image_Letter: { return(sizeof(Image_Letter)); } break;
+        case Type_Rect: { return(sizeof(Rect)); } break;
+        case Type_Image_Rect: { return(sizeof(Image_Rect)); } break;
+        case Type_Word: { return(sizeof(Word)); } break;
+        case Type_Line: { return(sizeof(Line)); } break;
+        case Type_Render_Entity_For_Size: { return(sizeof(Render_Entity_For_Size)); } break;
+        case Type_Render_Image: { return(sizeof(Render_Image)); } break;
+        case Type_Internal: { return(sizeof(Internal)); } break;
+        case Type_Font: { return(sizeof(Font)); } break;
+        case Type_Renderer: { return(sizeof(Renderer)); } break;
+        case Type_Win32_Create_Directory_Result: { return(sizeof(Win32_Create_Directory_Result)); } break;
+        case Type_Command_Line_Result: { return(sizeof(Command_Line_Result)); } break;
     }
     return(0);
 }
-static sglg_Type sglg_string_to_type(char const *s, uint64_t l) {
+static Type string_to_type(char const *s, uint64_t l) {
     if(0) {}
-    else if(sgl_generated_string_compare("Memory_Arena_Error", 18, s, l)) { return(sglg_Type_Memory_Arena_Error); }
-    else if(sgl_generated_string_compare("Memory_Group", 12, s, l)) { return(sglg_Type_Memory_Group); }
-    else if(sgl_generated_string_compare("Memory", 6, s, l)) { return(sglg_Type_Memory); }
-    else if(sgl_generated_string_compare("Internal_Push_Info", 18, s, l)) { return(sglg_Type_Internal_Push_Info); }
-    else if(sgl_generated_string_compare("String", 6, s, l)) { return(sglg_Type_String); }
-    else if(sgl_generated_string_compare("String_To_Int_Result", 20, s, l)) { return(sglg_Type_String_To_Int_Result); }
-    else if(sgl_generated_string_compare("String_To_Float_Result", 22, s, l)) { return(sglg_Type_String_To_Float_Result); }
-    else if(sgl_generated_string_compare("Find_Index_Result", 17, s, l)) { return(sglg_Type_Find_Index_Result); }
-    else if(sgl_generated_string_compare("stbsp__context", 14, s, l)) { return(sglg_Type_stbsp__context); }
-    else if(sgl_generated_string_compare("File", 4, s, l)) { return(sglg_Type_File); }
-    else if(sgl_generated_string_compare("Key", 3, s, l)) { return(sglg_Type_Key); }
-    else if(sgl_generated_string_compare("Platform_Callbacks", 18, s, l)) { return(sglg_Type_Platform_Callbacks); }
-    else if(sgl_generated_string_compare("Bitmap", 6, s, l)) { return(sglg_Type_Bitmap); }
-    else if(sgl_generated_string_compare("Settings", 8, s, l)) { return(sglg_Type_Settings); }
-    else if(sgl_generated_string_compare("Window_Info", 11, s, l)) { return(sglg_Type_Window_Info); }
-    else if(sgl_generated_string_compare("API", 3, s, l)) { return(sglg_Type_API); }
-    else if(sgl_generated_string_compare("Memory_Index", 12, s, l)) { return(sglg_Type_Memory_Index); }
-    else if(sgl_generated_string_compare("Config", 6, s, l)) { return(sglg_Type_Config); }
-    else if(sgl_generated_string_compare("Image", 5, s, l)) { return(sglg_Type_Image); }
-    else if(sgl_generated_string_compare("Bitmap_Header", 13, s, l)) { return(sglg_Type_Bitmap_Header); }
-    else if(sgl_generated_string_compare("V2", 2, s, l)) { return(sglg_Type_V2); }
-    else if(sgl_generated_string_compare("V3", 2, s, l)) { return(sglg_Type_V3); }
-    else if(sgl_generated_string_compare("V4", 2, s, l)) { return(sglg_Type_V4); }
-    else if(sgl_generated_string_compare("Lane_F32", 8, s, l)) { return(sglg_Type_Lane_F32); }
-    else if(sgl_generated_string_compare("Lane_U32", 8, s, l)) { return(sglg_Type_Lane_U32); }
-    else if(sgl_generated_string_compare("Lane_V2", 7, s, l)) { return(sglg_Type_Lane_V2); }
-    else if(sgl_generated_string_compare("Lane_V3", 7, s, l)) { return(sglg_Type_Lane_V3); }
-    else if(sgl_generated_string_compare("Lane_V4", 7, s, l)) { return(sglg_Type_Lane_V4); }
-    else if(sgl_generated_string_compare("Lane_M2x2", 9, s, l)) { return(sglg_Type_Lane_M2x2); }
-    else if(sgl_generated_string_compare("Win32_Work_Queue_Entry", 22, s, l)) { return(sglg_Type_Win32_Work_Queue_Entry); }
-    else if(sgl_generated_string_compare("Win32_Work_Queue", 16, s, l)) { return(sglg_Type_Win32_Work_Queue); }
-    else if(sgl_generated_string_compare("Win32_Loaded_Code", 17, s, l)) { return(sglg_Type_Win32_Loaded_Code); }
-    else if(sgl_generated_string_compare("Win32_Debug_Window", 18, s, l)) { return(sglg_Type_Win32_Debug_Window); }
-    else if(sgl_generated_string_compare("Win32_API", 9, s, l)) { return(sglg_Type_Win32_API); }
-    else if(sgl_generated_string_compare("Win32_Screen_Capture_Thread_Parameters", 38, s, l)) { return(sglg_Type_Win32_Screen_Capture_Thread_Parameters); }
-    else if(sgl_generated_string_compare("Win32_System_Callbacks", 22, s, l)) { return(sglg_Type_Win32_System_Callbacks); }
-    else if(sgl_generated_string_compare("V2u", 3, s, l)) { return(sglg_Type_V2u); }
-    else if(sgl_generated_string_compare("BB", 2, s, l)) { return(sglg_Type_BB); }
-    else if(sgl_generated_string_compare("Render_Entity", 13, s, l)) { return(sglg_Type_Render_Entity); }
-    else if(sgl_generated_string_compare("Image_Letter", 12, s, l)) { return(sglg_Type_Image_Letter); }
-    else if(sgl_generated_string_compare("Rect", 4, s, l)) { return(sglg_Type_Rect); }
-    else if(sgl_generated_string_compare("Image_Rect", 10, s, l)) { return(sglg_Type_Image_Rect); }
-    else if(sgl_generated_string_compare("Word", 4, s, l)) { return(sglg_Type_Word); }
-    else if(sgl_generated_string_compare("Line", 4, s, l)) { return(sglg_Type_Line); }
-    else if(sgl_generated_string_compare("Render_Entity_For_Size", 22, s, l)) { return(sglg_Type_Render_Entity_For_Size); }
-    else if(sgl_generated_string_compare("Render_Image", 12, s, l)) { return(sglg_Type_Render_Image); }
-    else if(sgl_generated_string_compare("Internal", 8, s, l)) { return(sglg_Type_Internal); }
-    else if(sgl_generated_string_compare("Font", 4, s, l)) { return(sglg_Type_Font); }
-    else if(sgl_generated_string_compare("Renderer", 8, s, l)) { return(sglg_Type_Renderer); }
-    return(sglg_Type_unknown);
+    else if(sgl_generated_string_compare("Memory_Arena_Error", 18, s, l)) { return(Type_Memory_Arena_Error); }
+    else if(sgl_generated_string_compare("Memory_Group", 12, s, l)) { return(Type_Memory_Group); }
+    else if(sgl_generated_string_compare("Memory", 6, s, l)) { return(Type_Memory); }
+    else if(sgl_generated_string_compare("Internal_Push_Info", 18, s, l)) { return(Type_Internal_Push_Info); }
+    else if(sgl_generated_string_compare("String", 6, s, l)) { return(Type_String); }
+    else if(sgl_generated_string_compare("String_To_Int_Result", 20, s, l)) { return(Type_String_To_Int_Result); }
+    else if(sgl_generated_string_compare("String_To_Float_Result", 22, s, l)) { return(Type_String_To_Float_Result); }
+    else if(sgl_generated_string_compare("Find_Index_Result", 17, s, l)) { return(Type_Find_Index_Result); }
+    else if(sgl_generated_string_compare("stbsp__context", 14, s, l)) { return(Type_stbsp__context); }
+    else if(sgl_generated_string_compare("File", 4, s, l)) { return(Type_File); }
+    else if(sgl_generated_string_compare("Key", 3, s, l)) { return(Type_Key); }
+    else if(sgl_generated_string_compare("Platform_Callbacks", 18, s, l)) { return(Type_Platform_Callbacks); }
+    else if(sgl_generated_string_compare("Bitmap", 6, s, l)) { return(Type_Bitmap); }
+    else if(sgl_generated_string_compare("Settings", 8, s, l)) { return(Type_Settings); }
+    else if(sgl_generated_string_compare("Window_Info", 11, s, l)) { return(Type_Window_Info); }
+    else if(sgl_generated_string_compare("API", 3, s, l)) { return(Type_API); }
+    else if(sgl_generated_string_compare("Memory_Index", 12, s, l)) { return(Type_Memory_Index); }
+    else if(sgl_generated_string_compare("Config", 6, s, l)) { return(Type_Config); }
+    else if(sgl_generated_string_compare("Image", 5, s, l)) { return(Type_Image); }
+    else if(sgl_generated_string_compare("Bitmap_Header", 13, s, l)) { return(Type_Bitmap_Header); }
+    else if(sgl_generated_string_compare("V2", 2, s, l)) { return(Type_V2); }
+    else if(sgl_generated_string_compare("V3", 2, s, l)) { return(Type_V3); }
+    else if(sgl_generated_string_compare("V4", 2, s, l)) { return(Type_V4); }
+    else if(sgl_generated_string_compare("Lane_F32", 8, s, l)) { return(Type_Lane_F32); }
+    else if(sgl_generated_string_compare("Lane_U32", 8, s, l)) { return(Type_Lane_U32); }
+    else if(sgl_generated_string_compare("Lane_V2", 7, s, l)) { return(Type_Lane_V2); }
+    else if(sgl_generated_string_compare("Lane_V3", 7, s, l)) { return(Type_Lane_V3); }
+    else if(sgl_generated_string_compare("Lane_V4", 7, s, l)) { return(Type_Lane_V4); }
+    else if(sgl_generated_string_compare("Lane_M2x2", 9, s, l)) { return(Type_Lane_M2x2); }
+    else if(sgl_generated_string_compare("Win32_Work_Queue_Entry", 22, s, l)) { return(Type_Win32_Work_Queue_Entry); }
+    else if(sgl_generated_string_compare("Win32_Work_Queue", 16, s, l)) { return(Type_Win32_Work_Queue); }
+    else if(sgl_generated_string_compare("Win32_Loaded_Code", 17, s, l)) { return(Type_Win32_Loaded_Code); }
+    else if(sgl_generated_string_compare("Win32_Debug_Window", 18, s, l)) { return(Type_Win32_Debug_Window); }
+    else if(sgl_generated_string_compare("Win32_API", 9, s, l)) { return(Type_Win32_API); }
+    else if(sgl_generated_string_compare("Win32_Screen_Capture_Thread_Parameters", 38, s, l)) { return(Type_Win32_Screen_Capture_Thread_Parameters); }
+    else if(sgl_generated_string_compare("Win32_System_Callbacks", 22, s, l)) { return(Type_Win32_System_Callbacks); }
+    else if(sgl_generated_string_compare("V2u", 3, s, l)) { return(Type_V2u); }
+    else if(sgl_generated_string_compare("BB", 2, s, l)) { return(Type_BB); }
+    else if(sgl_generated_string_compare("Render_Entity", 13, s, l)) { return(Type_Render_Entity); }
+    else if(sgl_generated_string_compare("Image_Letter", 12, s, l)) { return(Type_Image_Letter); }
+    else if(sgl_generated_string_compare("Rect", 4, s, l)) { return(Type_Rect); }
+    else if(sgl_generated_string_compare("Image_Rect", 10, s, l)) { return(Type_Image_Rect); }
+    else if(sgl_generated_string_compare("Word", 4, s, l)) { return(Type_Word); }
+    else if(sgl_generated_string_compare("Line", 4, s, l)) { return(Type_Line); }
+    else if(sgl_generated_string_compare("Render_Entity_For_Size", 22, s, l)) { return(Type_Render_Entity_For_Size); }
+    else if(sgl_generated_string_compare("Render_Image", 12, s, l)) { return(Type_Render_Image); }
+    else if(sgl_generated_string_compare("Internal", 8, s, l)) { return(Type_Internal); }
+    else if(sgl_generated_string_compare("Font", 4, s, l)) { return(Type_Font); }
+    else if(sgl_generated_string_compare("Renderer", 8, s, l)) { return(Type_Renderer); }
+    else if(sgl_generated_string_compare("Win32_Create_Directory_Result", 29, s, l)) { return(Type_Win32_Create_Directory_Result); }
+    else if(sgl_generated_string_compare("Command_Line_Result", 19, s, l)) { return(Type_Command_Line_Result); }
+    return(Type_unknown);
 }

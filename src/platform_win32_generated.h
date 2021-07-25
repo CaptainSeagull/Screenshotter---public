@@ -1,97 +1,99 @@
-enum sglg_Type {
-    sglg_Type_unknown,
-    sglg_Type_char,
-    sglg_Type_int,
-    sglg_Type_unsigned,
-    sglg_Type_signed,
-    sglg_Type_short,
-    sglg_Type_long,
-    sglg_Type_float,
-    sglg_Type_double,
-    sglg_Type_wchar_t,
-    sglg_Type_bool,
-    sglg_Type_void,
-    sglg_Type_uint8_t,
-    sglg_Type_uint16_t,
-    sglg_Type_uint32_t,
-    sglg_Type_uint64_t,
-    sglg_Type_int8_t,
-    sglg_Type_int16_t,
-    sglg_Type_int32_t,
-    sglg_Type_int64_t,
-    sglg_Type_uintptr_t,
-    sglg_Type_intptr_t,
-    sglg_Type_Memory_Arena_Error,
-    sglg_Type_Memory_Group,
-    sglg_Type_Memory,
-    sglg_Type_Internal_Push_Info,
-    sglg_Type_String,
-    sglg_Type_String_To_Int_Result,
-    sglg_Type_String_To_Float_Result,
-    sglg_Type_Find_Index_Result,
-    sglg_Type_stbsp__context,
-    sglg_Type_Int,
-    sglg_Type_File,
-    sglg_Type_Key,
-    sglg_Type_Platform_Callbacks,
-    sglg_Type_Bitmap,
-    sglg_Type_Settings,
-    sglg_Type_Window_Info,
-    sglg_Type_API,
-    sglg_Type_Memory_Index,
-    sglg_Type_Config,
-    sglg_Type_Image,
-    sglg_Type_Bitmap_Header,
-    sglg_Type_V2,
-    sglg_Type_V3,
-    sglg_Type_V4,
-    sglg_Type_Lane_F32,
-    sglg_Type_Lane_U32,
-    sglg_Type_Lane_V2,
-    sglg_Type_Lane_V3,
-    sglg_Type_Lane_V4,
-    sglg_Type_Lane_M2x2,
-    sglg_Type_Win32_Work_Queue_Entry,
-    sglg_Type_Win32_Work_Queue,
-    sglg_Type_Void,
-    sglg_Type_Win32_Loaded_Code,
-    sglg_Type_Win32_Debug_Window,
-    sglg_Type_Win32_API,
-    sglg_Type_Win32_Screen_Capture_Thread_Parameters,
-    sglg_Type_BOOL,
-    sglg_Type_LRESULT,
-    sglg_Type_ATOM,
-    sglg_Type_HWND,
-    sglg_Type_HDC,
-    sglg_Type_HBITMAP,
-    sglg_Type_HGDIOBJ,
-    sglg_Type_HRESULT,
-    sglg_Type_PIDLIST_ABSOLUTE,
-    sglg_Type_HGLRC,
-    sglg_Type_Win32_System_Callbacks,
-    sglg_Type_V2u,
-    sglg_Type_BB,
-    sglg_Type_Render_Entity,
-    sglg_Type_Image_Letter,
-    sglg_Type_Rect,
-    sglg_Type_Image_Rect,
-    sglg_Type_Word,
-    sglg_Type_Line,
-    sglg_Type_Render_Entity_For_Size,
-    sglg_Type_Render_Image,
-    sglg_Type_Internal,
-    sglg_Type_Font,
-    sglg_Type_Renderer,
+enum Type {
+    Type_unknown,
+    Type_char,
+    Type_int,
+    Type_unsigned,
+    Type_signed,
+    Type_short,
+    Type_long,
+    Type_float,
+    Type_double,
+    Type_wchar_t,
+    Type_bool,
+    Type_void,
+    Type_uint8_t,
+    Type_uint16_t,
+    Type_uint32_t,
+    Type_uint64_t,
+    Type_int8_t,
+    Type_int16_t,
+    Type_int32_t,
+    Type_int64_t,
+    Type_uintptr_t,
+    Type_intptr_t,
+    Type_Memory_Arena_Error,
+    Type_Memory_Group,
+    Type_Memory,
+    Type_Internal_Push_Info,
+    Type_String,
+    Type_String_To_Int_Result,
+    Type_String_To_Float_Result,
+    Type_Find_Index_Result,
+    Type_stbsp__context,
+    Type_Int,
+    Type_File,
+    Type_Key,
+    Type_Platform_Callbacks,
+    Type_Bitmap,
+    Type_Settings,
+    Type_Window_Info,
+    Type_API,
+    Type_Memory_Index,
+    Type_Config,
+    Type_Image,
+    Type_Bitmap_Header,
+    Type_V2,
+    Type_V3,
+    Type_V4,
+    Type_Lane_F32,
+    Type_Lane_U32,
+    Type_Lane_V2,
+    Type_Lane_V3,
+    Type_Lane_V4,
+    Type_Lane_M2x2,
+    Type_Win32_Work_Queue_Entry,
+    Type_Win32_Work_Queue,
+    Type_Void,
+    Type_Win32_Loaded_Code,
+    Type_Win32_Debug_Window,
+    Type_Win32_API,
+    Type_Win32_Screen_Capture_Thread_Parameters,
+    Type_BOOL,
+    Type_LRESULT,
+    Type_ATOM,
+    Type_HWND,
+    Type_HDC,
+    Type_HBITMAP,
+    Type_HGDIOBJ,
+    Type_HRESULT,
+    Type_PIDLIST_ABSOLUTE,
+    Type_HGLRC,
+    Type_Win32_System_Callbacks,
+    Type_V2u,
+    Type_BB,
+    Type_Render_Entity,
+    Type_Image_Letter,
+    Type_Rect,
+    Type_Image_Rect,
+    Type_Word,
+    Type_Line,
+    Type_Render_Entity_For_Size,
+    Type_Render_Image,
+    Type_Internal,
+    Type_Font,
+    Type_Renderer,
+    Type_Win32_Create_Directory_Result,
+    Type_Command_Line_Result,
 };
 
 // Utils
-#define SGLG_ENTITY_PATTERN(name)
-#define SGLG_PREPROC_CONCAT(a, b) a##b
-#define SGLG_ENUM_COUNT(name) SGLG_PREPROC_CONCAT(sglg_internal_enum_, name)
+#define ENTITY_PATTERN(Type) PREPROC_CONCAT(UNION_OF_SUBCLASSES_INTERNAL_Memory_Arena_Error_count, Type)
+#define PREPROC_CONCAT(a, b) a##b
+#define ENUM_COUNT(name) PREPROC_CONCAT(internal_enum_, name)
 static int sgl_generated_string_compare(char const *a, uint32_t a_len, char const *b, uint32_t b_len);
-static uint64_t sglg_get_enum_count(sglg_Type type);
-static uint64_t sglg_type_to_size(sglg_Type type);
-static sglg_Type sglg_string_to_type(char const *s, uint64_t l);
+static uint64_t get_enum_count(Type type);
+static uint64_t type_to_size(Type type);
+static Type string_to_type(char const *s, uint64_t l);
 
 // Forward declared typedefs
 typedef char * STBSP_SPRINTFCB ( char * buf , void * user , int len ) ;
@@ -217,6 +219,8 @@ struct Render_Image;
 struct Internal;
 struct Font;
 struct Renderer;
+struct Win32_Create_Directory_Result;
+struct Command_Line_Result;
 
 // Forward declaration of functions
 uint64_t get_memory_base_size(void );
@@ -860,16 +864,32 @@ float square_root(float a );
  static Lane_F32 minf32(Lane_F32 a , Lane_F32 b );
  static Lane_F32 gather_f32_internal(void * ptr , uint64_t stride , Lane_U32 indices );
  static File win32_read_file(Memory * memory , U32 memory_index_to_use , String fname , Bool null_terminate );
+ static Bool win32_write_file(Memory * memory , String fname , U8 * data , U64 size );
+ static Int win32_get_processor_count(Void );
+ static U64 win32_locked_add(U64 volatile * a , U64 b );
+ static F32 win32_safe_div(F32 a , F32 b );
+ static Bool win32_add_work_queue_entry(API * api , Void * data , Void * cb );
+ static Bool win32_do_next_work_queue_entry(Win32_Work_Queue * queue );
+ static Void win32_complete_all_work(API * api );
+ static Win32_Loaded_Code win32_load_code(Char * source_fname , Char * temp_fname );
+ static Win32_Create_Directory_Result win32_create_directory(Memory * memory , String root , String dir , Bool save_directory_string  );
+ static Int win32_directory_index_to_use(Memory * mem , String session_prefix , String input_target_directory );
+ static Bool run_screenshotting(API * api , Memory * memory , Config * config , Win32_System_Callbacks * sys_cb , String root_directory , U64 iteration_count );
+ static String win32_create_root_directory(Memory * memory , String target_directory );
+ static Void string_replace(Char * input , Int length , Char t , Char s );
+ static String win32_browse_for_directory(Memory * memory , String initial_path_input );
+ static Win32_System_Callbacks load_system_callbacks(Void );
+ static Command_Line_Result parse_command_line(Memory * memory );
 void  __stdcall WinMainCRTStartup(Void );
-static char const *sglg_Memory_Arena_Error_to_string(Memory_Arena_Error e);
-static int sglg_Memory_Arena_Error_count(Memory_Arena_Error e);
-static char const *sglg_Key_to_string(Key e);
-static Int sglg_Key_count(Key e);
-static char const *sglg_Memory_Index_to_string(Memory_Index e);
-static Int sglg_Memory_Index_count(Memory_Index e);
+static char const *Memory_Arena_Error_to_string(Memory_Arena_Error e);
+static int Memory_Arena_Error_count(Memory_Arena_Error e);
+static char const *Key_to_string(Key e);
+static Int Key_count(Key e);
+static char const *Memory_Index_to_string(Memory_Index e);
+static Int Memory_Index_count(Memory_Index e);
 
 // Helpers
-#define sglg_internal_enum_Memory_Arena_Error (7)
-#define sglg_internal_enum_Key (58)
-#define sglg_internal_enum_Memory_Index (3)
-#define SGLG_ENTITY_OUTPUT_INTERNAL_Render_Entity union { Rect _Rect; Image_Rect _Image_Rect; Word _Word; Line _Line; }; 
+#define internal_enum_Memory_Arena_Error (6)
+#define internal_enum_Key (58)
+#define internal_enum_Memory_Index (3)
+#define UNION_OF_SUBCLASSES_INTERNAL_Render_Entity union { Rect _Rect; Image_Rect _Image_Rect; Word _Word; Line _Line; }; 

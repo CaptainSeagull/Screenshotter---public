@@ -1,88 +1,88 @@
-enum sglg_Type {
-    sglg_Type_unknown,
-    sglg_Type_char,
-    sglg_Type_int,
-    sglg_Type_unsigned,
-    sglg_Type_signed,
-    sglg_Type_short,
-    sglg_Type_long,
-    sglg_Type_float,
-    sglg_Type_double,
-    sglg_Type_wchar_t,
-    sglg_Type_bool,
-    sglg_Type_void,
-    sglg_Type_uint8_t,
-    sglg_Type_uint16_t,
-    sglg_Type_uint32_t,
-    sglg_Type_uint64_t,
-    sglg_Type_int8_t,
-    sglg_Type_int16_t,
-    sglg_Type_int32_t,
-    sglg_Type_int64_t,
-    sglg_Type_uintptr_t,
-    sglg_Type_intptr_t,
-    sglg_Type_Memory_Arena_Error,
-    sglg_Type_Memory_Group,
-    sglg_Type_Memory,
-    sglg_Type_Internal_Push_Info,
-    sglg_Type_String,
-    sglg_Type_String_To_Int_Result,
-    sglg_Type_String_To_Float_Result,
-    sglg_Type_Find_Index_Result,
-    sglg_Type_stbsp__context,
-    sglg_Type_Int,
-    sglg_Type_File,
-    sglg_Type_Key,
-    sglg_Type_Platform_Callbacks,
-    sglg_Type_Bitmap,
-    sglg_Type_Settings,
-    sglg_Type_Window_Info,
-    sglg_Type_API,
-    sglg_Type_Memory_Index,
-    sglg_Type_Config,
-    sglg_Type_Image,
-    sglg_Type_Bitmap_Header,
-    sglg_Type___m128i,
-    sglg_Type___m128,
-    sglg_Type_V2,
-    sglg_Type_V3,
-    sglg_Type_V4,
-    sglg_Type_Lane_F32,
-    sglg_Type_Lane_U32,
-    sglg_Type_Lane_V2,
-    sglg_Type_Lane_V3,
-    sglg_Type_Lane_V4,
-    sglg_Type_Lane_M2x2,
-    sglg_Type_stbtt_pack_context,
-    sglg_Type_stbtt_fontinfo,
-    sglg_Type_stbrp_rect,
-    sglg_Type_stbtt_kerningentry,
-    sglg_Type_V2u,
-    sglg_Type_BB,
-    sglg_Type_Render_Entity,
-    sglg_Type_Image_Letter,
-    sglg_Type_Rect,
-    sglg_Type_Image_Rect,
-    sglg_Type_Word,
-    sglg_Type_Line,
-    sglg_Type_Render_Entity_For_Size,
-    sglg_Type_Render_Image,
-    sglg_Type_Internal,
-    sglg_Type_Font,
-    sglg_Type_Renderer,
-    sglg_Type_Image_Letter_Result,
-    sglg_Type_Entry,
-    sglg_Type_DLL_Data,
+enum Type {
+    Type_unknown,
+    Type_char,
+    Type_int,
+    Type_unsigned,
+    Type_signed,
+    Type_short,
+    Type_long,
+    Type_float,
+    Type_double,
+    Type_wchar_t,
+    Type_bool,
+    Type_void,
+    Type_uint8_t,
+    Type_uint16_t,
+    Type_uint32_t,
+    Type_uint64_t,
+    Type_int8_t,
+    Type_int16_t,
+    Type_int32_t,
+    Type_int64_t,
+    Type_uintptr_t,
+    Type_intptr_t,
+    Type_Memory_Arena_Error,
+    Type_Memory_Group,
+    Type_Memory,
+    Type_Internal_Push_Info,
+    Type_String,
+    Type_String_To_Int_Result,
+    Type_String_To_Float_Result,
+    Type_Find_Index_Result,
+    Type_stbsp__context,
+    Type_Int,
+    Type_File,
+    Type_Key,
+    Type_Platform_Callbacks,
+    Type_Bitmap,
+    Type_Settings,
+    Type_Window_Info,
+    Type_API,
+    Type_Memory_Index,
+    Type_Config,
+    Type_Image,
+    Type_Bitmap_Header,
+    Type___m128i,
+    Type___m128,
+    Type_V2,
+    Type_V3,
+    Type_V4,
+    Type_Lane_F32,
+    Type_Lane_U32,
+    Type_Lane_V2,
+    Type_Lane_V3,
+    Type_Lane_V4,
+    Type_Lane_M2x2,
+    Type_stbtt_pack_context,
+    Type_stbtt_fontinfo,
+    Type_stbrp_rect,
+    Type_stbtt_kerningentry,
+    Type_V2u,
+    Type_BB,
+    Type_Render_Entity,
+    Type_Image_Letter,
+    Type_Rect,
+    Type_Image_Rect,
+    Type_Word,
+    Type_Line,
+    Type_Render_Entity_For_Size,
+    Type_Render_Image,
+    Type_Internal,
+    Type_Font,
+    Type_Renderer,
+    Type_Image_Letter_Result,
+    Type_Entry,
+    Type_DLL_Data,
 };
 
 // Utils
-#define SGLG_ENTITY_PATTERN(name)
-#define SGLG_PREPROC_CONCAT(a, b) a##b
-#define SGLG_ENUM_COUNT(name) SGLG_PREPROC_CONCAT(sglg_internal_enum_, name)
+#define ENTITY_PATTERN(Type) PREPROC_CONCAT(UNION_OF_SUBCLASSES_INTERNAL_Memory_Arena_Error_count, Type)
+#define PREPROC_CONCAT(a, b) a##b
+#define ENUM_COUNT(name) PREPROC_CONCAT(internal_enum_, name)
 static int sgl_generated_string_compare(char const *a, uint32_t a_len, char const *b, uint32_t b_len);
-static uint64_t sglg_get_enum_count(sglg_Type type);
-static uint64_t sglg_type_to_size(sglg_Type type);
-static sglg_Type sglg_string_to_type(char const *s, uint64_t l);
+static uint64_t get_enum_count(Type type);
+static uint64_t type_to_size(Type type);
+static Type string_to_type(char const *s, uint64_t l);
 
 // Forward declared typedefs
 typedef char * STBSP_SPRINTFCB ( char * buf , void * user , int len ) ;
@@ -842,6 +842,26 @@ float square_root(float a );
  static uint8_t* stbtt_GetCodepointSDF(const stbtt_fontinfo * info , float scale , int codepoint , int padding , uint8_t onedge_value , float pixel_dist_scale , int * width , int * height , int * xoff , int * yoff );
  static int stbtt_FindMatchingFont(const uint8_t * fontdata , const char * name , int flags );
  static int stbtt_CompareUTF8toUTF16_bigendian(const char * s1 , int len1 , const char * s2 , int len2 );
+ static uint16_t ttUSHORT(uint8_t * p );
+ static int16_t ttSHORT(uint8_t * p );
+ static uint32_t ttULONG(uint8_t * p );
+ static int32_t ttLONG(uint8_t * p );
+ static int stbtt__isfont(uint8_t * font );
+ static uint32_t stbtt__find_table(uint8_t * data , uint32_t fontstart , const char * tag );
+ static int stbtt_GetFontOffsetForIndex_internal(uint8_t * font_collection , int index );
+ static int stbtt_GetNumberOfFonts_internal(uint8_t * font_collection );
+ static int stbtt_FindGlyphIndex(const stbtt_fontinfo * info , int unicode_codepoint );
+ static int stbtt__GetGlyfOffset(const stbtt_fontinfo * info , int glyph_index );
+ static int stbtt__GetGlyphInfoT2(const stbtt_fontinfo * info , int glyph_index , int * x0 , int * y0 , int * x1 , int * y1 );
+ static int stbtt_GetGlyphBox(const stbtt_fontinfo * info , int glyph_index , int * x0 , int * y0 , int * x1 , int * y1 );
+ static int stbtt_GetCodepointBox(const stbtt_fontinfo * info , int codepoint , int * x0 , int * y0 , int * x1 , int * y1 );
+ static int stbtt_IsGlyphEmpty(const stbtt_fontinfo * info , int glyph_index );
+ static int stbtt__GetGlyphInfoT2(const stbtt_fontinfo * info , int glyph_index , int * x0 , int * y0 , int * x1 , int * y1 );
+ static void stbtt_GetGlyphHMetrics(const stbtt_fontinfo * info , int glyph_index , int * advanceWidth , int * leftSideBearing );
+ static int stbtt_GetKerningTableLength(const stbtt_fontinfo * info );
+ static int stbtt__GetGlyphKernInfoAdvance(const stbtt_fontinfo * info , int glyph1 , int glyph2 );
+ static int32_t stbtt__GetCoverageIndex(uint8_t * coverageTable , int glyph );
+ static int32_t stbtt__GetGlyphClass(uint8_t * classDefTable , int glyph );
  static V2u v2u(V2 v );
  static V2u v2u(U32 x , U32 y );
  static Render_Entity* new_node(Memory * memory );
@@ -884,15 +904,15 @@ extern "C" Void init_platform_settings(Settings * settings );
  static Void update(API * api , Renderer * renderer );
 extern "C" Void handle_input_and_render(API * api );
 void  __stdcall _DllMainCRTStartup(void );
-static char const *sglg_Memory_Arena_Error_to_string(Memory_Arena_Error e);
-static int sglg_Memory_Arena_Error_count(Memory_Arena_Error e);
-static char const *sglg_Key_to_string(Key e);
-static Int sglg_Key_count(Key e);
-static char const *sglg_Memory_Index_to_string(Memory_Index e);
-static Int sglg_Memory_Index_count(Memory_Index e);
+static char const *Memory_Arena_Error_to_string(Memory_Arena_Error e);
+static int Memory_Arena_Error_count(Memory_Arena_Error e);
+static char const *Key_to_string(Key e);
+static Int Key_count(Key e);
+static char const *Memory_Index_to_string(Memory_Index e);
+static Int Memory_Index_count(Memory_Index e);
 
 // Helpers
-#define sglg_internal_enum_Memory_Arena_Error (7)
-#define sglg_internal_enum_Key (58)
-#define sglg_internal_enum_Memory_Index (3)
-#define SGLG_ENTITY_OUTPUT_INTERNAL_Render_Entity union { Rect _Rect; Image_Rect _Image_Rect; Word _Word; Line _Line; }; 
+#define internal_enum_Memory_Arena_Error (6)
+#define internal_enum_Key (58)
+#define internal_enum_Memory_Index (3)
+#define UNION_OF_SUBCLASSES_INTERNAL_Render_Entity union { Rect _Rect; Image_Rect _Image_Rect; Word _Word; Line _Line; }; 

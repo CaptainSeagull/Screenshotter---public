@@ -110,7 +110,7 @@ push_image_internal(Renderer *renderer, Image image) {
 }
 
 internal Render_Entity *
-create_render_entity(Renderer *renderer, Render_Entity **parent, sglg_Type type) {
+create_render_entity(Renderer *renderer, Render_Entity **parent, Type type) {
     Render_Entity *render_entity = add_child_to_node(renderer->memory, parent);
     ASSERT_IF(render_entity) {
         render_entity->visible = true;
@@ -125,7 +125,7 @@ internal Rect *
 push_solid_rectangle(Renderer *renderer, Render_Entity *parent,
                      Int x, Int y, Int width, Int height,
                      U32 inner_colour) {
-    Rect *rect = (Rect *)create_render_entity(renderer, &parent, sglg_Type_Rect);
+    Rect *rect = (Rect *)create_render_entity(renderer, &parent, Type_Rect);
     ASSERT_IF(rect) {
         rect->x = x;
         rect->y = y;
@@ -141,7 +141,7 @@ internal Line *
 push_line(Renderer *renderer, Render_Entity *parent,
           Int x1, Int y1, Int x2, Int y2,
           F32 thickness) {
-    Line *line = (Line *)create_render_entity(renderer, &parent, sglg_Type_Line);
+    Line *line = (Line *)create_render_entity(renderer, &parent, Type_Line);
     ASSERT_IF(line) {
         line->x = x1;
         line->y = y1;
@@ -272,7 +272,7 @@ push_word(Renderer *renderer, Render_Entity *parent, U64 font_id, Int x, Int y, 
 
 internal Word *
 push_words(Renderer *renderer, Render_Entity *parent, U64 font_id, Int x, Int y, Int height, String *strings, Int string_count) {
-    Word *word = (Word *)create_render_entity(renderer, &parent, sglg_Type_Word);
+    Word *word = (Word *)create_render_entity(renderer, &parent, Type_Word);
     ASSERT_IF(word) {
         word->x = x;
         word->y = y;
@@ -394,7 +394,7 @@ push_image_rect(Renderer *renderer, Render_Entity *parent,
                 U64 image_id) {
     Image_Rect *image_rect = 0;
     ASSERT_IF(find_image_from_id(renderer, image_id)) { // Make sure the image ID is valid
-        image_rect = (Image_Rect *)create_render_entity(renderer, &parent, sglg_Type_Image_Rect);
+        image_rect = (Image_Rect *)create_render_entity(renderer, &parent, Type_Image_Rect);
         ASSERT_IF(image_rect) {
             image_rect->x = x;
             image_rect->y = y;
@@ -451,9 +451,9 @@ find_render_entity_internal(Render_Entity *render_entity, U64 id) {
     return(res);
 }
 
-#define find_render_entity(renderer, id, Type) (Type *)find_render_entity_(renderer, id, CONCAT(sglg_Type_, Type))
+#define find_render_entity(renderer, id, Type) (Type *)find_render_entity_(renderer, id, CONCAT(Type_, Type))
 internal Render_Entity *
-find_render_entity_(Renderer *renderer, U64 id, sglg_Type expected_type) {
+find_render_entity_(Renderer *renderer, U64 id, Type expected_type) {
     Render_Entity *r = find_render_entity_internal(renderer->root, id);
     ASSERT(r && r->type == expected_type);
     return(r);
@@ -531,7 +531,7 @@ render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bit
     if(render_entity->visible) {
 
         switch(render_entity->type) {
-            case sglg_Type_Rect: {
+            case Type_Rect: {
                 Rect *rect = (Rect *)render_entity;
 
                 U32 width = rect->width;
@@ -596,7 +596,7 @@ render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bit
                 }
             } break;
 
-            case sglg_Type_Line: {
+            case Type_Line: {
                 Line *line = (Line *)render_entity;
 
                 F32 rise = maxf32(absolute(line->y2 - line->y), absolute(line->y - line->y2));
@@ -641,7 +641,7 @@ render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bit
 
             } break;
 
-            case sglg_Type_Image_Rect: {
+            case Type_Image_Rect: {
                 Image_Rect *img_rect = (Image_Rect *)render_entity;
                 Render_Image *img = find_image_from_id(renderer, img_rect->image_id);
                 ASSERT(img);
@@ -763,7 +763,7 @@ render_node_and_siblings(Render_Entity *render_entity, Renderer *renderer, Bitma
                        (next->height) ? next->height : 0xFFFF
                      };
 
-            if(next->type == sglg_Type_Word) {
+            if(next->type == Type_Word) {
                 int k = 0;
             }
 

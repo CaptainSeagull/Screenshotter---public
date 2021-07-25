@@ -100,7 +100,8 @@ enum Memory_Arena_Error {
     Memory_Arena_Error_internal_error,
     Memory_Arena_Error_wrong_free_order,
 
-    Memory_Arena_Error_count
+    // TODO: Enabling this seems to make mirror forward declare it as a function... the error seems to be specific to _this_ text...?
+    //Memory_Arena_Error_count
 };
 
 struct Memory_Group {

@@ -64,6 +64,8 @@ if "%RELEASE_FLAG%"=="true" (
 IF NOT EXIST "build" mkdir "build"
 
 pushd "tools"
+del "../src/main_generated*"
+del "../src/platform_win32_generated*"
 mirror.exe ../src/main.cpp ../src/platform_win32.cpp
 popd
 

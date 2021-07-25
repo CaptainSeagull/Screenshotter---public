@@ -69,9 +69,7 @@ win32_read_file(Memory *memory, U32 memory_index_to_use, String fname, Bool null
                 if(file_memory) {
                     DWORD bytes_read = 0;
                     if(ReadFile(fhandle, file_memory, fsize32, &bytes_read, 0)) {
-                        if(bytes_read != fsize32) {
-                            ASSERT(0);
-                        } else {
+                        ASSERT_IF(bytes_read == fsize32) {
                             res.fname = fname; // TODO: Change to full path not relative.
                             res.size = fsize32;
                             res.e = (U8 *)file_memory;
@@ -751,19 +749,28 @@ win32_directory_browse_callback(HWND hwnd, UINT uMsg, LPARAM lParam, LPARAM lpDa
     return 0;
 }
 
+internal Void
+string_replace(Char *input, Int length, Char t, Char s) {
+    for(Int i = 0; (i < length); ++i) {
+        if(input[i] == t) {
+            input[i] = s;
+        }
+    }
+}
+
 internal String
-win32_browse_for_directory(Memory *memory, String initial_path) {
+win32_browse_for_directory(Memory *memory, String initial_path_input) {
     String res = {};
 
-    // TODO: Replace '/' in input path with '\\'.
-    Char *initial_path_copy = (Char *)memory_push_string(memory, Memory_Index_internal_temp, initial_path);
-    ASSERT(initial_path_copy);
-    if(initial_path_copy) {
+    Char *initial_path = (Char *)memory_push_string(memory, Memory_Index_internal_temp, initial_path_input);
+    ASSERT_IF(initial_path) {
+        string_replace(initial_path, initial_path_input.len, '/', '\\');
+
         BROWSEINFO bi = { };
-        bi.lpszTitle = "Select directory...";
+        bi.lpszTitle = "Browser";
         bi.ulFlags   = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE;
         bi.lpfn      = win32_directory_browse_callback;
-        bi.lParam    = (LPARAM)initial_path_copy;
+        bi.lParam    = (LPARAM)initial_path;
 
         LPITEMIDLIST pidl = global_sys_cb->SHBrowseForFolder(&bi);
         if(pidl) {
@@ -783,7 +790,7 @@ win32_browse_for_directory(Memory *memory, String initial_path) {
             }
         }
 
-        memory_pop(memory, initial_path_copy);
+        memory_pop(memory, initial_path);
     }
 
     return(res);
@@ -879,6 +886,89 @@ load_system_callbacks(Void) {
     return(r);
 }
 
+struct Command_Line_Result {
+    Int argc;
+    Char **argv;
+    Bool success;
+};
+
+internal Command_Line_Result
+parse_command_line(Memory *memory) {
+    Command_Line_Result res = {};
+
+    // Get the command line arguments.
+    Char *cmdline = GetCommandLineA();
+    Int args_len = string_length(cmdline);
+
+    // Count number of arguments.
+    Int original_cnt = 1;
+    Bool in_quotes = false;
+    for(U64 i = 0; (i < args_len); ++i) {
+        if(cmdline[i] == '"') {
+            in_quotes = !in_quotes;
+        } else if(cmdline[i] == ' ') {
+            if(!in_quotes) {
+                ++original_cnt;
+            }
+        }
+    }
+
+    // Create copy of args.
+    Char *arg_cpy = (Char *)memory_push(memory, Memory_Index_permanent, args_len + 1);
+    ASSERT_IF(arg_cpy) {
+        string_copy(arg_cpy, cmdline);
+
+        for(Int i = 0; (i < args_len); ++i) {
+            if(arg_cpy[i] == '"') {
+                in_quotes = !in_quotes;
+            } else if(arg_cpy[i] == ' ') {
+                if(!in_quotes) {
+                    arg_cpy[i] = 0;
+                }
+            }
+        }
+
+        // Setup pointers.
+        in_quotes = false;
+        U64 mem_size = original_cnt * 2;
+        Int argc = 1;
+        Char **argv = (Char **)memory_push(memory, Memory_Index_permanent, (sizeof(Char *) * mem_size));
+        ASSERT_IF(argv) {
+            Char **cur = argv;
+            *cur++ = arg_cpy;
+            for(Int i = 0; (i < args_len); ++i) {
+                if(!arg_cpy[i]) {
+                    Char *str = arg_cpy + i + 1;
+                    if(!string_contains(str, '*')) {
+                        *cur = str;
+                        ++cur;
+                        ++argc;
+                    } else {
+                        WIN32_FIND_DATA find_data = {};
+                        HANDLE fhandle = FindFirstFile(str, &find_data);
+
+                        if(fhandle != INVALID_HANDLE_VALUE) {
+                            do {
+                                ASSERT(argc + 1 < mem_size);
+
+                                *cur = find_data.cFileName;
+                                ++cur;
+                                ++argc;
+                            } while(FindNextFile(fhandle, &find_data));
+                        }
+                    }
+                }
+            }
+
+            res.success = true;
+            res.argc = argc;
+            res.argv = argv;
+        }
+    }
+
+    return(res);
+}
+
 int CALLBACK
 WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd) {
     int res = 0xFF;
@@ -895,82 +985,15 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
         ASSERT(SGLG_ENUM_COUNT(Memory_Index) == ARRAY_COUNT(group_inputs));
         Memory memory = create_memory_base(all_memory, group_inputs, ARRAY_COUNT(group_inputs));
 
-        Bool successfully_parsed_command_line = false;
+        Command_Line_Result clr = parse_command_line(&memory);
+        if(clr.success) {
+            res = 0;
 
-        // Get the command line arguments.
-        Char *cmdline = GetCommandLineA();
-        Int args_len = string_length(cmdline);
+            Win32_System_Callbacks sys_cb = load_system_callbacks();
+            global_sys_cb = &sys_cb;
 
-        // Count number of arguments.
-        Int original_cnt = 1;
-        Bool in_quotes = false;
-        for(U64 i = 0; (i < args_len); ++i) {
-            if(cmdline[i] == '"') {
-                in_quotes = !in_quotes;
-            } else if(cmdline[i] == ' ') {
-                if(!in_quotes) {
-                    ++original_cnt;
-                }
-            }
-        }
-
-        // Create copy of args.
-        Char *arg_cpy = (Char *)memory_push(&memory, Memory_Index_permanent, args_len + 1);
-        if(arg_cpy) {
-            string_copy(arg_cpy, cmdline);
-
-            for(Int i = 0; (i < args_len); ++i) {
-                if(arg_cpy[i] == '"') {
-                    in_quotes = !in_quotes;
-                } else if(arg_cpy[i] == ' ') {
-                    if(!in_quotes) {
-                        arg_cpy[i] = 0;
-                    }
-                }
-            }
-
-            // Setup pointers.
-            in_quotes = false;
-            U64 mem_size = original_cnt * 2;
-            Int argc = 1;
-            Char **argv = (Char **)memory_push(&memory, Memory_Index_permanent, (sizeof(Char *) * mem_size));
-            ASSERT_IF(argv) {
-                Char **cur = argv;
-                *cur++ = arg_cpy;
-                for(Int i = 0; (i < args_len); ++i) {
-                    if(!arg_cpy[i]) {
-                        Char *str = arg_cpy + i + 1;
-                        if(!string_contains(str, '*')) {
-                            *cur = str;
-                            ++cur;
-                            ++argc;
-                        } else {
-                            WIN32_FIND_DATA find_data = {};
-                            HANDLE fhandle = FindFirstFile(str, &find_data);
-
-                            if(fhandle != INVALID_HANDLE_VALUE) {
-                                do {
-                                    ASSERT(argc + 1 < mem_size);
-
-                                    *cur = find_data.cFileName;
-                                    ++cur;
-                                    ++argc;
-                                } while(FindNextFile(fhandle, &find_data));
-                            }
-                        }
-                    }
-                }
-
-                successfully_parsed_command_line = true;
-                res = 0; // 0 is success
-            }
-        }
-
-        // _Real_ entry point for program...
-        if(successfully_parsed_command_line) {
-            Char _path[1024] = {}; // TODO: MAX_PATH?
-            GetModuleFileNameA(0, _path, ARRAY_COUNT(_path));
-            String path = create_string(_path);
+            Char path[1024] = {}; // TODO: MAX_PATH?
+            GetModuleFileNameA(0, path, ARRAY_COUNT(path));
             Find_Index_Result fir = find_index(path, '\\', true);
             ASSERT(fir.success);
 
@@ -982,14 +1005,11 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
             Char src_dll_path[1024] = {};
             Char tmp_dll_path[1024] = {};
 
-            string_copy(src_dll_path, _path);
+            string_copy(src_dll_path, path);
             string_copy(&src_dll_path[last_slash], "screenshotter.dll");
-            string_copy(tmp_dll_path, _path);
+            string_copy(tmp_dll_path, path);
             string_copy(&tmp_dll_path[last_slash], "screenshotter_temp.dll");
             Win32_Loaded_Code loaded_code = win32_load_code(src_dll_path, tmp_dll_path);
-
-            Win32_System_Callbacks sys_cb = load_system_callbacks();
-            global_sys_cb = &sys_cb;
 
             API api = {};
             Settings settings = {};
@@ -1004,8 +1024,7 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
 
             loaded_code.init_platform_settings(&settings);
             api.screen_bitmap.memory = memory_push(&memory, Memory_Index_permanent, MAX_SCREEN_BITMAP_SIZE);
-            ASSERT(api.screen_bitmap.memory);
-            if(api.screen_bitmap.memory) {
+            ASSERT_IF(api.screen_bitmap.memory) {
                 global_api = &api;
 
                 LARGE_INTEGER perf_cnt_freq_res;
@@ -1022,7 +1041,7 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
                 Int frame_rate = 60; // TODO: Make configurable.
                 Int game_update_hz = frame_rate;
                 F32 target_seconds_per_frame = 1.0f / (F32)game_update_hz;
-                F32 target_ms_per_frame = 16.66f; //(1.0f / (F32)frame_rate) * 1000.0f;
+                F32 target_ms_per_frame = (1.0f / (F32)frame_rate) * 1000.0f;
 
                 // Make the frame rate more granular.
                 {
@@ -1081,8 +1100,6 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
                         api.cb.add_work_queue_entry = win32_add_work_queue_entry;
                         api.cb.complete_all_work = win32_complete_all_work;
 
-                        api.cb.browse_for_directory = win32_browse_for_directory;
-
                         api.randomish_seed = win32_get_wall_clock().QuadPart;
                         //api.randomish_seed = xorshift64(&api.randomish_seed); // TODO: Copy over xorshift64
 
@@ -1092,11 +1109,10 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
 
                         config.include_title_bar = true;
                         config.target_output_directory = "C:\\tmp"; // TODO: Hardcoded
+                        config.new_target_output_directory = config.target_output_directory;
                         // TODO: Create directory here if it doesn't already exist?
                         config.amount_to_sleep = 1000;
 
-                        // TODO: Read core_count from settings. Maybe pass in actual core_count to settings but let
-                        //       DLL overwrite it.
                         for(Int i = 0; (i < settings.thread_count - 1); ++i) {
                             HANDLE h = CreateThread(0, 0, win32_thread_proc, &win32_api.queue, 0, 0);
                             ASSERT(h && h != INVALID_HANDLE_VALUE);
@@ -1185,6 +1201,10 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
                                     F32 pos_x = (F32)pt.x / (F32)api.window_width;
                                     F32 pos_y = (F32)pt.y / (F32)api.window_height;
 
+                                    // TODO: Is it a good idea to set these to -1 or have a "window_in_screen" variable?
+                                    api.mouse_pos_x = -1;
+                                    api.mouse_pos_y = -1;
+
                                     // Only store this if we're inside the window
                                     if((pos_x >= 0 && pos_x <= 1) && (pos_y >= 0 && pos_y <= 1)) {
                                         api.mouse_pos_x = clamp01(pos_x);
@@ -1197,6 +1217,15 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
 
                                 api.window_width = cr.right - cr.left;
                                 api.window_height = cr.bottom - cr.top;
+
+                                if(api.launch_browse_for_directory) {
+                                    String new_directory = win32_browse_for_directory(&memory, config.target_output_directory);
+                                    if(new_directory.len > 0) {
+                                        config.new_target_output_directory = new_directory;
+                                    }
+
+                                    api.launch_browse_for_directory = false;
+                                }
 
                                 loaded_code.handle_input_and_render(&api);
 

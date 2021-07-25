@@ -77,6 +77,8 @@
     LICENSE at end of file.
 */
 
+// TODO: Include a "spareness" system, where we make huge gaps between allocations.
+
 #if !defined(_MEMORY_ARENA_H_INCLUDE)
 #define _MEMORY_ARENA_H_INCLUDE
 

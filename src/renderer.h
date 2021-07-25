@@ -1,5 +1,9 @@
 
 #define RGBA(r,g,b,a) (U32)(a << 24 | r << 16 | g << 8 | b << 0)
+#if defined(RGB)
+    #undef RGB
+#endif
+#define RGB(r,g,b) RGBA(r,g,b,0xFF)
 
 struct V2u {
     U32 x, y;

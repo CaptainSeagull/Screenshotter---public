@@ -2,6 +2,14 @@
 // TODO: sglg_Type_Bool is missing in screenshotter_generated.h. Investigate this...
 #include <stdint.h>
 
+#define ASSERT(exp) { }
+#if ALLOW_ASSERTS
+    #undef ASSERT
+    #define ASSERT(exp) do { if(!(exp)) {*(uint64_t volatile *)0 = 0; } } while(0)
+    #define MEMORY_ARENA_ALLOW_ASSERT
+    #define STRING_ALLOW_ASSERT
+#endif
+
 #include "../shared/memory_arena.h"
 #include "../shared/string.h"
 #include "../shared/stb_sprintf.h"
@@ -24,14 +32,6 @@ typedef int64_t S64;
 
 typedef float F32;
 typedef double F64;
-
-#define ASSERT(exp) { }
-#if ALLOW_ASSERTS
-    #undef ASSERT
-    #define ASSERT(exp) do { if(!(exp)) {*(uint64_t volatile *)0 = 0; } } while(0)
-    #define MEMORY_ARENA_ALLOW_ASSERT
-    #define STRING_ALLOW_ASSERT
-#endif
 
 #define internal_global static
 #define internal static

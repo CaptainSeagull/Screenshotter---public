@@ -206,7 +206,7 @@ make_letter_image(Memory *memory, stbtt_fontinfo *font, Char ch) {
 #endif
             }
 
-            stbtt_FreeBitmap(mono_bmp, 0);
+            stbtt_FreeBitmap(mono_bmp, memory);
 
             res.image_letter = image_letter;
             res.success = true;
@@ -223,6 +223,7 @@ push_font(API *api, Renderer *renderer, File file) {
     Memory *memory = api->memory;
 
     stbtt_fontinfo font_info = {};
+    font_info.userdata = memory;
     Bool success = stbtt_InitFont(&font_info, file.e, stbtt_GetFontOffsetForIndex(file.e, 0));
     if(success) {
         ASSERT_IF(renderer->font_count + 1 < renderer->font_count_max) {

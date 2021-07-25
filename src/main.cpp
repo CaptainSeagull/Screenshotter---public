@@ -10,18 +10,12 @@
 #define LANE_WIDTH 4 // TODO: Mirror isn't handling this being different correctly.
 #include "../shared/lane/lane.cpp"
 
-internal API *global_api;
-internal void *my_malloc(uint64_t size) { return memory_push(global_api->memory, Memory_Index_permanent, size); }
-internal void my_free(void *d) { /* Do nothing... */ }
 #define STBTT_STATIC
 #define STB_TRUETYPE_IMPLEMENTATION
-#define STBTT_malloc(x,u) ((void)(u),my_malloc(x))
-#define STBTT_free(x,u)   ((void)(u),my_free(x))
+#define STBTT_malloc(x,u)  memory_push((Memory *)u, Memory_Index_permanent, x)
+#define STBTT_free(x,u)    {}
+
 #define STBTT_assert ASSERT
-//#define STBTT_sqrt square_root
-//#define STBTT_ifloor floor
-//#define STBTT_iceil ceil
-//#define STBTT_pow // TODO: No replacement - custom pow replacement requires int for exponant.
 #include "../shared/stb_truetype.h"
 
 #include "main_generated.h"
@@ -177,7 +171,6 @@ setup(API *api, DLL_Data *data, Renderer *renderer) {
 
 internal Void
 update(API *api, Renderer *renderer) {
-#if 1
     DLL_Data *data = (DLL_Data *)api->dll_data;
     Config *config = api->config;
     Memory *memory = api->memory;
@@ -190,28 +183,26 @@ update(API *api, Renderer *renderer) {
     white_window->width = api->window_width;
     white_window->height = api->window_height;
 
+    if(config->new_target_output_directory.len > 0) {
+        Word *directory_word = find_render_entity(renderer, data->directory_word_id, Word);
+        ASSERT(directory_word);
+
+        String strings[] = { "Output Directory: ", config->new_target_output_directory };
+        update_words(renderer, directory_word, strings, ARRAY_COUNT(strings));
+    }
+
     // Button
     Rect *button = find_render_entity(renderer, data->button_id, Rect); ASSERT(button);
-    button->inner_colour = 0xFFFFFFFF;
+
+    // TODO: After opening the file browser this isn't reset back to white until the curser goes over the window. Investigate!
+    button->inner_colour = RGB(255, 255, 255);
     if(mouse_x > button->x && mouse_x < button->x + button->width) {
         if(mouse_y > button->y && mouse_y < button->y + button->height) {
-            button->inner_colour = 0x0000FFFF;
+            button->inner_colour = RGB(0, 0, 255);
             if(api->key[key_mouse_left]) {
-                // TODO: Calling "browse_for_directory" is blocking, so because we call it before "render" we don't see the red "click". Maybe
-                //       make a delayed version?
-                button->inner_colour = 0xFFFF0000;
+                button->inner_colour = RGB(255, 0, 0);
                 if(!api->previous_key[key_mouse_left]) {
-                    String new_directory = api->cb.browse_for_directory(memory, config->target_output_directory);
-                    if(new_directory.len > 0) {
-                        Word *directory_word = find_render_entity(renderer, data->directory_word_id, Word);
-                        ASSERT(directory_word);
-
-                        config->new_target_output_directory = new_directory;
-
-                        String strings[] = { "Output Directory: ", new_directory };
-
-                        update_words(renderer, directory_word, strings, ARRAY_COUNT(strings));
-                    }
+                    api->launch_browse_for_directory = true;
                 }
             }
         }
@@ -244,24 +235,24 @@ update(API *api, Renderer *renderer) {
             config->windows[config->target_window_count++] = data->windows[list_i].info;
         }
     }
-#endif
 
     render(renderer, &api->screen_bitmap);
 }
 
 extern "C" Void
 handle_input_and_render(API *api) {
-    global_api = api;
-
     DLL_Data *data = (DLL_Data *)api->dll_data;
     Config *config = api->config;
-    config->target_window_count = 0;
-
     Renderer *renderer = &data->renderer;
+
+    config->target_window_count = 0;
 
 #if INTERNAL
     Memory_Group *temp_group = get_memory_group(api->memory, Memory_Index_temp);
-    ASSERT(temp_group->used == 0);
+    if(temp_group->used != 0) {
+        Internal_Push_Info *push_info = (Internal_Push_Info *)temp_group->base;
+        ASSERT(0);
+    }
 #endif
 
     if(api->init) {
@@ -270,7 +261,6 @@ handle_input_and_render(API *api) {
         update(api, renderer);
     }
 }
-
 
 extern "C" { int _fltused = 0; }
 void __stdcall

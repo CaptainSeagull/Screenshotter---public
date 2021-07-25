@@ -87,7 +87,7 @@ enum Type {
 };
 
 // Utils
-#define ENTITY_PATTERN(Type) PREPROC_CONCAT(UNION_OF_SUBCLASSES_INTERNAL_Memory_Arena_Error_count, Type)
+#define ENTITY_PATTERN(Type) PREPROC_CONCAT(UNION_OF_SUBCLASSES_INTERNAL_, Type)
 #define PREPROC_CONCAT(a, b) a##b
 #define ENUM_COUNT(name) PREPROC_CONCAT(internal_enum_, name)
 static int sgl_generated_string_compare(char const *a, uint32_t a_len, char const *b, uint32_t b_len);

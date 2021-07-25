@@ -78,8 +78,8 @@ struct String {
     STRING_SIZE_TYPE len = 0;
 
     inline String() {}
-    String(char *c_string);
-    String(char const *c_string);
+    inline String(char *c_string);
+    inline String(char const *c_string);
 };
 
 struct String_To_Int_Result {

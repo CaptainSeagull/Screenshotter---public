@@ -77,8 +77,6 @@
     LICENSE at end of file.
 */
 
-// TODO: Include a "spareness" system, where we make huge gaps between allocations.
-
 #if !defined(_MEMORY_ARENA_H_INCLUDE)
 #define _MEMORY_ARENA_H_INCLUDE
 
@@ -99,6 +97,8 @@ enum Memory_Arena_Error {
     Memory_Arena_Error_invalid_input,
     Memory_Arena_Error_internal_error,
     Memory_Arena_Error_wrong_free_order,
+
+    Memory_Arena_Error_count
 };
 
 struct Memory_Group {

@@ -495,7 +495,7 @@ extern "C" {
 #endif
 
 // private structure
-typedef struct {
+typedef struct stbtt__buf {
     uint8_t *data;
     int cursor;
     int size;
@@ -612,7 +612,7 @@ STBTT_DEF int  stbtt_PackFontRanges(stbtt_pack_context *spc, const uint8_t *font
 // calls to stbtt_PackFontRange. Note that you can call this multiple
 // times within a single PackBegin/PackEnd.
 
-STBTT_DEF void stbtt_PackSetOversampling(stbtt_pack_context *spc, unsigned int h_oversample, unsigned int v_oversample);
+STBTT_DEF void stbtt_PackSetOversampling(stbtt_pack_context *spc, uint32_t h_oversample, uint32_t v_oversample);
 // Oversampling a font increases the quality by allowing higher-quality subpixel
 // positioning, and is especially valuable at smaller text sizes.
 //
@@ -663,7 +663,7 @@ struct stbtt_pack_context {
     int   stride_in_bytes;
     int   padding;
     int   skip_missing;
-    unsigned int   h_oversample, v_oversample;
+    uint32_t   h_oversample, v_oversample;
     uint8_t *pixels;
     void  *nodes;
 };
@@ -3806,7 +3806,7 @@ STBTT_DEF void stbtt_PackEnd  (stbtt_pack_context *spc) {
     STBTT_free(spc->pack_info, spc->user_allocator_context);
 }
 
-STBTT_DEF void stbtt_PackSetOversampling(stbtt_pack_context *spc, unsigned int h_oversample, unsigned int v_oversample) {
+STBTT_DEF void stbtt_PackSetOversampling(stbtt_pack_context *spc, uint32_t h_oversample, uint32_t v_oversample) {
     STBTT_assert(h_oversample <= STBTT_MAX_OVERSAMPLE);
     STBTT_assert(v_oversample <= STBTT_MAX_OVERSAMPLE);
     if (h_oversample <= STBTT_MAX_OVERSAMPLE)
@@ -3821,14 +3821,14 @@ STBTT_DEF void stbtt_PackSetSkipMissingCodepoints(stbtt_pack_context *spc, int s
 
 #define STBTT__OVER_MASK  (STBTT_MAX_OVERSAMPLE-1)
 
-static void stbtt__h_prefilter(uint8_t *pixels, int w, int h, int stride_in_bytes, unsigned int kernel_width) {
+static void stbtt__h_prefilter(uint8_t *pixels, int w, int h, int stride_in_bytes, uint32_t kernel_width) {
     uint8_t buffer[STBTT_MAX_OVERSAMPLE];
     int safe_w = w - kernel_width;
     int j;
     STBTT_memset(buffer, 0, STBTT_MAX_OVERSAMPLE); // suppress bogus warning from VS2013 -analyze
     for (j = 0; j < h; ++j) {
         int i;
-        unsigned int total;
+        uint32_t total;
         STBTT_memset(buffer, 0, kernel_width);
 
         total = 0;
@@ -3882,14 +3882,14 @@ static void stbtt__h_prefilter(uint8_t *pixels, int w, int h, int stride_in_byte
     }
 }
 
-static void stbtt__v_prefilter(uint8_t *pixels, int w, int h, int stride_in_bytes, unsigned int kernel_width) {
+static void stbtt__v_prefilter(uint8_t *pixels, int w, int h, int stride_in_bytes, uint32_t kernel_width) {
     uint8_t buffer[STBTT_MAX_OVERSAMPLE];
     int safe_h = h - kernel_width;
     int j;
     STBTT_memset(buffer, 0, STBTT_MAX_OVERSAMPLE); // suppress bogus warning from VS2013 -analyze
     for (j = 0; j < w; ++j) {
         int i;
-        unsigned int total;
+        uint32_t total;
         STBTT_memset(buffer, 0, kernel_width);
 
         total = 0;

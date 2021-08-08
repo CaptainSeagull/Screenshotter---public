@@ -97,8 +97,6 @@ enum Memory_Arena_Error {
     Memory_Arena_Error_invalid_input,
     Memory_Arena_Error_internal_error,
     Memory_Arena_Error_wrong_free_order,
-
-    Memory_Arena_Error_count
 };
 
 struct Memory_Group {

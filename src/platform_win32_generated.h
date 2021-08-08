@@ -41,7 +41,6 @@ enum Type {
     Type_Memory_Index,
     Type_Config,
     Type_Image,
-    Type_Bitmap_Header,
     Type_V2,
     Type_V3,
     Type_V4,
@@ -87,10 +86,11 @@ enum Type {
 };
 
 // Utils
+#include <stdint.h>
 #define ENTITY_PATTERN(Type) PREPROC_CONCAT(UNION_OF_SUBCLASSES_INTERNAL_, Type)
 #define PREPROC_CONCAT(a, b) a##b
 #define ENUM_COUNT(name) PREPROC_CONCAT(internal_enum_, name)
-static int sgl_generated_string_compare(char const *a, uint32_t a_len, char const *b, uint32_t b_len);
+static int generated_string_compare(char const *a, uint32_t a_len, char const *b, uint32_t b_len);
 static uint64_t get_enum_count(Type type);
 static uint64_t type_to_size(Type type);
 static Type string_to_type(char const *s, uint64_t l);
@@ -189,7 +189,6 @@ enum Memory_Index : Int;
 
 struct Config;
 struct Image;
-struct Bitmap_Header;
 union V2;
 union V3;
 union V4;
@@ -275,14 +274,17 @@ int string_copy(char const * dst , char * src );
 int string_copy(char * dst , char * src , int len );
 char to_lower(char a );
 char to_upper(char a );
-int stbsp_sprintf(char * buf , char const * fmt , ... );
-int stbsp_snprintf(char * buf , int count , char const * fmt , ... );
+int stbsp_vsprintf(char * buf , char const * fmt , va_list va );
+int stbsp_vsnprintf(char * buf , int count , char const * fmt , va_list va );
+int stbsp_vsprintfcb(STBSP_SPRINTFCB * callback , void * user , char * buf , char const * fmt , va_list va );
 void stbsp_set_separators(char comma , char period );
  static int32_t stbsp__real_to_str(char const * * start , uint32_t * len , char * out , int32_t * decimal_pos , double value , uint32_t frac_digits );
  static int32_t stbsp__real_to_parts(int64_t * bits , int32_t * expo , double value );
 void stbsp_set_separators(char pcomma , char pperiod );
+int stbsp_vsprintfcb(STBSP_SPRINTFCB * callback , void * user , char * buf , char const * fmt , va_list va );
  static char* stbsp__clamp_callback(char * buf , void * user , int len );
-int stbsp_snprintf(char * buf , int count , char const * fmt , ... );
+int stbsp_vsnprintf(char * buf , int count , char const * fmt , va_list va );
+int stbsp_vsprintf(char * buf , char const * fmt , va_list va );
  static int32_t stbsp__real_to_parts(int64_t * bits , int32_t * expo , double value );
  static U32 safe_truncate_size_64(U64 v );
  static Void zero(Void * m , U64 s );
@@ -863,11 +865,18 @@ float square_root(float a );
  static Lane_F32 maxf32(Lane_F32 a , Lane_F32 b );
  static Lane_F32 minf32(Lane_F32 a , Lane_F32 b );
  static Lane_F32 gather_f32_internal(void * ptr , uint64_t stride , Lane_U32 indices );
+void* memset(void * dst , int c , size_t cnt );
+void* memcpy(void * dst , const void * src , size_t cnt );
  static File win32_read_file(Memory * memory , U32 memory_index_to_use , String fname , Bool null_terminate );
  static Bool win32_write_file(Memory * memory , String fname , U8 * data , U64 size );
  static Int win32_get_processor_count(Void );
  static U64 win32_locked_add(U64 volatile * a , U64 b );
  static F32 win32_safe_div(F32 a , F32 b );
+ static Void win32_update_window(Memory * memory , HDC dc , RECT * wnd_rect , Void * input_bitmap_memory , BITMAPINFO * bitmap_info , Int bitmap_width , Int bitmap_height );
+ static Key win32_key_to_our_key(WPARAM k );
+ static F32 win32_get_seconds_elapsed(LARGE_INTEGER start , LARGE_INTEGER end , int64_t perf_cnt_freq );
+ static Void win32_get_window_dimension(HWND wnd , Int * w , Int * h , Win32_System_Callbacks * sys_cb );
+ static Void win32_init_opengl(HWND window , Win32_System_Callbacks * sys_cb );
  static Bool win32_add_work_queue_entry(API * api , Void * data , Void * cb );
  static Bool win32_do_next_work_queue_entry(Win32_Work_Queue * queue );
  static Void win32_complete_all_work(API * api );
@@ -876,10 +885,12 @@ float square_root(float a );
  static Int win32_directory_index_to_use(Memory * mem , String session_prefix , String input_target_directory );
  static Bool run_screenshotting(API * api , Memory * memory , Config * config , Win32_System_Callbacks * sys_cb , String root_directory , U64 iteration_count );
  static String win32_create_root_directory(Memory * memory , String target_directory );
+ static int  CALLBACK win32_directory_browse_callback(HWND hwnd , UINT uMsg , LPARAM lParam , LPARAM lpData );
  static Void string_replace(Char * input , Int length , Char t , Char s );
  static String win32_browse_for_directory(Memory * memory , String initial_path_input );
  static Win32_System_Callbacks load_system_callbacks(Void );
  static Command_Line_Result parse_command_line(Memory * memory );
+int  CALLBACK WinMain(HINSTANCE hInstance , HINSTANCE hPrevInstance , LPSTR lpCmdLine , int nShowCmd );
 void  __stdcall WinMainCRTStartup(Void );
 static char const *Memory_Arena_Error_to_string(Memory_Arena_Error e);
 static int Memory_Arena_Error_count(Memory_Arena_Error e);
@@ -893,3 +904,216 @@ static Int Memory_Index_count(Memory_Index e);
 #define internal_enum_Key (58)
 #define internal_enum_Memory_Index (3)
 #define UNION_OF_SUBCLASSES_INTERNAL_Render_Entity union { Rect _Rect; Image_Rect _Image_Rect; Word _Word; Line _Line; }; 
+
+// Forward declare print struct
+static void print_type_char(char *buf, int max_size, char *param, char *name);
+
+static void print_type_int(char *buf, int max_size, int *param, char *name);
+
+static void print_type_short(char *buf, int max_size, short *param, char *name);
+
+static void print_type_float(char *buf, int max_size, float *param, char *name);
+
+static void print_type_double(char *buf, int max_size, double *param, char *name);
+
+static void print_type_bool(char *buf, int max_size, bool *param, char *name);
+
+static void print_type_uint8_t(char *buf, int max_size, uint8_t *param, char *name);
+
+static void print_type_uint16_t(char *buf, int max_size, uint16_t *param, char *name);
+
+static void print_type_uint32_t(char *buf, int max_size, uint32_t *param, char *name);
+
+static void print_type_uint64_t(char *buf, int max_size, uint64_t *param, char *name);
+
+static void print_type_int8_t(char *buf, int max_size, int8_t *param, char *name);
+
+static void print_type_int16_t(char *buf, int max_size, int16_t *param, char *name);
+
+static void print_type_int32_t(char *buf, int max_size, int32_t *param, char *name);
+
+static void print_type_int64_t(char *buf, int max_size, int64_t *param, char *name);
+
+static void print_type_uintptr_t(char *buf, int max_size, uintptr_t *param, char *name);
+
+static void print_type_intptr_t(char *buf, int max_size, intptr_t *param, char *name);
+
+static void print_type_Int(char *buf, int max_size, Int *param, char *name);
+
+static void print_type_Char(char *buf, int max_size, Char *param, char *name);
+
+static void print_type_Uintptr(char *buf, int max_size, Uintptr *param, char *name);
+
+static void print_type_U8(char *buf, int max_size, U8 *param, char *name);
+
+static void print_type_U16(char *buf, int max_size, U16 *param, char *name);
+
+static void print_type_U32(char *buf, int max_size, U32 *param, char *name);
+
+static void print_type_U64(char *buf, int max_size, U64 *param, char *name);
+
+static void print_type_S8(char *buf, int max_size, S8 *param, char *name);
+
+static void print_type_S16(char *buf, int max_size, S16 *param, char *name);
+
+static void print_type_S32(char *buf, int max_size, S32 *param, char *name);
+
+static void print_type_S64(char *buf, int max_size, S64 *param, char *name);
+
+static void print_type_F32(char *buf, int max_size, F32 *param, char *name);
+
+static void print_type_F64(char *buf, int max_size, F64 *param, char *name);
+
+static void print_type_Lane_U32_Internal(char *buf, int max_size, Lane_U32_Internal *param, char *name);
+
+static void print_type_Lane_F32_Internal(char *buf, int max_size, Lane_F32_Internal *param, char *name);
+
+static void print_type_Memory_Arena_Error(char *buf, int *written, int max_size, Memory_Arena_Error *param, char *name);
+static int print_type(char *buf, int max_size, Memory_Arena_Error *param);
+
+static void print_type_Memory_Group(char *buf, int *written, int max_size, Memory_Group *param, char *name);
+static int print_type(char *buf, int max_size, Memory_Group *param);
+
+static void print_type_Memory(char *buf, int *written, int max_size, Memory *param, char *name);
+static int print_type(char *buf, int max_size, Memory *param);
+
+static void print_type_Internal_Push_Info(char *buf, int *written, int max_size, Internal_Push_Info *param, char *name);
+static int print_type(char *buf, int max_size, Internal_Push_Info *param);
+
+static void print_type_String(char *buf, int *written, int max_size, String *param, char *name);
+static int print_type(char *buf, int max_size, String *param);
+
+static void print_type_String_To_Int_Result(char *buf, int *written, int max_size, String_To_Int_Result *param, char *name);
+static int print_type(char *buf, int max_size, String_To_Int_Result *param);
+
+static void print_type_String_To_Float_Result(char *buf, int *written, int max_size, String_To_Float_Result *param, char *name);
+static int print_type(char *buf, int max_size, String_To_Float_Result *param);
+
+static void print_type_Find_Index_Result(char *buf, int *written, int max_size, Find_Index_Result *param, char *name);
+static int print_type(char *buf, int max_size, Find_Index_Result *param);
+
+static void print_type_stbsp__context(char *buf, int *written, int max_size, stbsp__context *param, char *name);
+static int print_type(char *buf, int max_size, stbsp__context *param);
+
+static void print_type_File(char *buf, int *written, int max_size, File *param, char *name);
+static int print_type(char *buf, int max_size, File *param);
+
+static void print_type_Key(char *buf, int *written, int max_size, Key *param, char *name);
+static int print_type(char *buf, int max_size, Key *param);
+
+static void print_type_Platform_Callbacks(char *buf, int *written, int max_size, Platform_Callbacks *param, char *name);
+static int print_type(char *buf, int max_size, Platform_Callbacks *param);
+
+static void print_type_Bitmap(char *buf, int *written, int max_size, Bitmap *param, char *name);
+static int print_type(char *buf, int max_size, Bitmap *param);
+
+static void print_type_Settings(char *buf, int *written, int max_size, Settings *param, char *name);
+static int print_type(char *buf, int max_size, Settings *param);
+
+static void print_type_Window_Info(char *buf, int *written, int max_size, Window_Info *param, char *name);
+static int print_type(char *buf, int max_size, Window_Info *param);
+
+static void print_type_API(char *buf, int *written, int max_size, API *param, char *name);
+static int print_type(char *buf, int max_size, API *param);
+
+static void print_type_Memory_Index(char *buf, int *written, int max_size, Memory_Index *param, char *name);
+static int print_type(char *buf, int max_size, Memory_Index *param);
+
+static void print_type_Config(char *buf, int *written, int max_size, Config *param, char *name);
+static int print_type(char *buf, int max_size, Config *param);
+
+static void print_type_Image(char *buf, int *written, int max_size, Image *param, char *name);
+static int print_type(char *buf, int max_size, Image *param);
+
+static void print_type_V2(char *buf, int *written, int max_size, V2 *param, char *name);
+static int print_type(char *buf, int max_size, V2 *param);
+
+static void print_type_V3(char *buf, int *written, int max_size, V3 *param, char *name);
+static int print_type(char *buf, int max_size, V3 *param);
+
+static void print_type_V4(char *buf, int *written, int max_size, V4 *param, char *name);
+static int print_type(char *buf, int max_size, V4 *param);
+
+static void print_type_Lane_F32(char *buf, int *written, int max_size, Lane_F32 *param, char *name);
+static int print_type(char *buf, int max_size, Lane_F32 *param);
+
+static void print_type_Lane_U32(char *buf, int *written, int max_size, Lane_U32 *param, char *name);
+static int print_type(char *buf, int max_size, Lane_U32 *param);
+
+static void print_type_Lane_V2(char *buf, int *written, int max_size, Lane_V2 *param, char *name);
+static int print_type(char *buf, int max_size, Lane_V2 *param);
+
+static void print_type_Lane_V3(char *buf, int *written, int max_size, Lane_V3 *param, char *name);
+static int print_type(char *buf, int max_size, Lane_V3 *param);
+
+static void print_type_Lane_V4(char *buf, int *written, int max_size, Lane_V4 *param, char *name);
+static int print_type(char *buf, int max_size, Lane_V4 *param);
+
+static void print_type_Lane_M2x2(char *buf, int *written, int max_size, Lane_M2x2 *param, char *name);
+static int print_type(char *buf, int max_size, Lane_M2x2 *param);
+
+static void print_type_Win32_Work_Queue_Entry(char *buf, int *written, int max_size, Win32_Work_Queue_Entry *param, char *name);
+static int print_type(char *buf, int max_size, Win32_Work_Queue_Entry *param);
+
+static void print_type_Win32_Work_Queue(char *buf, int *written, int max_size, Win32_Work_Queue *param, char *name);
+static int print_type(char *buf, int max_size, Win32_Work_Queue *param);
+
+static void print_type_Win32_Loaded_Code(char *buf, int *written, int max_size, Win32_Loaded_Code *param, char *name);
+static int print_type(char *buf, int max_size, Win32_Loaded_Code *param);
+
+static void print_type_Win32_Debug_Window(char *buf, int *written, int max_size, Win32_Debug_Window *param, char *name);
+static int print_type(char *buf, int max_size, Win32_Debug_Window *param);
+
+static void print_type_Win32_API(char *buf, int *written, int max_size, Win32_API *param, char *name);
+static int print_type(char *buf, int max_size, Win32_API *param);
+
+static void print_type_Win32_Screen_Capture_Thread_Parameters(char *buf, int *written, int max_size, Win32_Screen_Capture_Thread_Parameters *param, char *name);
+static int print_type(char *buf, int max_size, Win32_Screen_Capture_Thread_Parameters *param);
+
+static void print_type_Win32_System_Callbacks(char *buf, int *written, int max_size, Win32_System_Callbacks *param, char *name);
+static int print_type(char *buf, int max_size, Win32_System_Callbacks *param);
+
+static void print_type_V2u(char *buf, int *written, int max_size, V2u *param, char *name);
+static int print_type(char *buf, int max_size, V2u *param);
+
+static void print_type_BB(char *buf, int *written, int max_size, BB *param, char *name);
+static int print_type(char *buf, int max_size, BB *param);
+
+static void print_type_Render_Entity(char *buf, int *written, int max_size, Render_Entity *param, char *name);
+static int print_type(char *buf, int max_size, Render_Entity *param);
+
+static void print_type_Image_Letter(char *buf, int *written, int max_size, Image_Letter *param, char *name);
+static int print_type(char *buf, int max_size, Image_Letter *param);
+
+static void print_type_Rect(char *buf, int *written, int max_size, Rect *param, char *name);
+static int print_type(char *buf, int max_size, Rect *param);
+
+static void print_type_Image_Rect(char *buf, int *written, int max_size, Image_Rect *param, char *name);
+static int print_type(char *buf, int max_size, Image_Rect *param);
+
+static void print_type_Word(char *buf, int *written, int max_size, Word *param, char *name);
+static int print_type(char *buf, int max_size, Word *param);
+
+static void print_type_Line(char *buf, int *written, int max_size, Line *param, char *name);
+static int print_type(char *buf, int max_size, Line *param);
+
+static void print_type_Render_Entity_For_Size(char *buf, int *written, int max_size, Render_Entity_For_Size *param, char *name);
+static int print_type(char *buf, int max_size, Render_Entity_For_Size *param);
+
+static void print_type_Render_Image(char *buf, int *written, int max_size, Render_Image *param, char *name);
+static int print_type(char *buf, int max_size, Render_Image *param);
+
+static void print_type_Internal(char *buf, int *written, int max_size, Internal *param, char *name);
+static int print_type(char *buf, int max_size, Internal *param);
+
+static void print_type_Font(char *buf, int *written, int max_size, Font *param, char *name);
+static int print_type(char *buf, int max_size, Font *param);
+
+static void print_type_Renderer(char *buf, int *written, int max_size, Renderer *param, char *name);
+static int print_type(char *buf, int max_size, Renderer *param);
+
+static void print_type_Win32_Create_Directory_Result(char *buf, int *written, int max_size, Win32_Create_Directory_Result *param, char *name);
+static int print_type(char *buf, int max_size, Win32_Create_Directory_Result *param);
+
+static void print_type_Command_Line_Result(char *buf, int *written, int max_size, Command_Line_Result *param, char *name);
+static int print_type(char *buf, int max_size, Command_Line_Result *param);

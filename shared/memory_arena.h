@@ -118,15 +118,17 @@ struct Memory {
 MEMORY_PUBLIC_DEC uint64_t get_memory_base_size(int group_count);
 MEMORY_PUBLIC_DEC Memory create_memory_base(void *base_memory, uintptr_t *inputs, uintptr_t inputs_count);
 MEMORY_PUBLIC_DEC Memory_Group *get_memory_group(Memory *memory, uintptr_t buffer_index);
-#define memory_push_type(memory, buffer_index, Type) \
-    memory_push_type_array(memory, buffer_index, Type, 1)
-#define memory_push_type_array(memory, buffer_index, Type, count) \
-    (Type *)memory_push_size(memory, buffer_index, sizeof(Type) * count)
+
+// TODO: Document these
+#define memory_push_type(memory, buffer_index, Type, ...) \
+    (Type *)memory_push_internal(memory, buffer_index, sizeof(Type), (char *)__FILE__, __LINE__, ##__VA_ARGS__)
 #define memory_push_size(memory, buffer_index, size) \
     memory_push_internal(memory, buffer_index, size, (char *)__FILE__, __LINE__)
-MEMORY_PUBLIC_DEC void *memory_push_internal(Memory *memory, uintptr_t buffer_index, uintptr_t size, char *fname, int line, uintptr_t alignment = MEMORY_ARENA_DEFAULT_MEMORY_ALIGNMENT);
+// TODO: Add a push_size_with_alignment macro
 MEMORY_PUBLIC_DEC void memory_pop(Memory *memory, void *memory_buffer);
 MEMORY_PUBLIC_DEC void memory_clear_entire_group(Memory *memory, uintptr_t buffer_index);
+
+MEMORY_PUBLIC_DEC void *memory_push_internal(Memory *memory, uintptr_t buffer_index, uintptr_t size, char *fname, int line, uintptr_t count = 1);
 
 #if defined(MEMORY_ARENA_IMPLEMENTATION)
 
@@ -234,19 +236,22 @@ MEMORY_PUBLIC_DEC Memory_Group *get_memory_group(Memory *memory, uintptr_t buffe
     return(res);
 }
 
-MEMORY_PUBLIC_DEC void *memory_push_internal(Memory *memory, uintptr_t buffer_index, uintptr_t size, char *file, int line,
-                                             uintptr_t alignment/*=MEMORY_ARENA_DEFAULT_MEMORY_ALIGNMENT*/) {
+MEMORY_PUBLIC_DEC void *memory_push_internal(Memory *memory, uintptr_t buffer_index, uintptr_t size, char *file, int line, uintptr_t count/*= 1*/) {
     void *res = 0;
 
-    if(memory && size > 0) {
+    uintptr_t alignment = MEMORY_ARENA_DEFAULT_MEMORY_ALIGNMENT;
+
+    uintptr_t size_to_use = (size * count);
+
+    if(memory && size_to_use > 0) {
         Memory_Group *group = get_memory_group(memory, buffer_index);
         if(group) {
             uintptr_t alignment_offset = internal_get_alignment_offset(memory, memory->base, group->used, alignment);
-            if(group->used + alignment_offset + size < group->size) {
+            if(group->used + alignment_offset + size_to_use < group->size) {
                 // We store Internal_Push_Info before the memory returned from this method.
                 Internal_Push_Info *push_info = (Internal_Push_Info *)(((uint8_t *)group->base) + group->used + alignment_offset);
                 push_info->base = (((uint8_t *)push_info) + sizeof(Internal_Push_Info)); // Only store this so we can assert it in memory_pop
-                push_info->size = size + sizeof(Internal_Push_Info);
+                push_info->size = size_to_use + sizeof(Internal_Push_Info);
                 push_info->alignment_offset = alignment_offset;
                 push_info->buffer_index = buffer_index;
                 push_info->file = file;
@@ -256,7 +261,7 @@ MEMORY_PUBLIC_DEC void *memory_push_internal(Memory *memory, uintptr_t buffer_in
 
                 res = push_info->base;
 
-                memory_arena_zero(res, size); // Memory returned from memory_push should always be 0
+                memory_arena_zero(res, size_to_use); // Memory returned from memory_push should always be 0
             }
 #if defined(MEMORY_ARENA_WRITE_ERRORS)
             else {

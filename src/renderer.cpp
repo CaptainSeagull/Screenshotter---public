@@ -56,11 +56,11 @@ create_renderer(Renderer *renderer, Memory *memory) {
     ASSERT(renderer->root);
 
     renderer->image_count_max = 512;
-    renderer->images = memory_push_type_array(renderer->memory, Memory_Index_permanent, Render_Image, renderer->image_count_max);
+    renderer->images = memory_push_type(renderer->memory, Memory_Index_permanent, Render_Image, renderer->image_count_max);
     ASSERT(renderer->images);
 
     renderer->font_count_max = 8;
-    renderer->fonts = memory_push_type_array(renderer->memory, Memory_Index_permanent, Font, renderer->font_count_max);
+    renderer->fonts = memory_push_type(renderer->memory, Memory_Index_permanent, Font, renderer->font_count_max);
     ASSERT(renderer->fonts);
 
     add_child_to_node(memory, &renderer->root);
@@ -171,7 +171,7 @@ make_letter_image(Memory *memory, stbtt_fontinfo *font, Char ch) {
         Image_Letter image_letter = {};
         image_letter.img.width = w;
         image_letter.img.height = h;
-        image_letter.img.pixels = memory_push_type_array(memory, Memory_Index_permanent, U32, w * h);
+        image_letter.img.pixels = memory_push_type(memory, Memory_Index_permanent, U32, w * h);
         ASSERT_IF(image_letter.img.pixels) {
 
 #define FLIP_IMAGE 0

@@ -48,7 +48,7 @@ write_image_to_disk(API *api, Memory *memory, Image *image, String file_name) {
     header.size_of_bitmap = output_pixel_size;
 
     U64 to_write_size = sizeof(Bitmap_Header) + output_pixel_size;
-    U8 *to_write = memory_push_type_array(memory, Memory_Index_temp, U8, to_write_size);
+    U8 *to_write = memory_push_type(memory, Memory_Index_temp, U8, to_write_size);
     copy(to_write, &header, sizeof(header));
     copy(to_write + sizeof(header), image->pixels, output_pixel_size);
 
@@ -74,7 +74,7 @@ load_image(API *api, String file_name) {
 
         Void *data_start = (U8 *)raw_bitmap.e + header->bitmap_offset;
 
-        U32 *bitmap_memory = memory_push_type_array(memory, Memory_Index_permanent, U32, header->width * header->height);
+        U32 *bitmap_memory = memory_push_type(memory, Memory_Index_permanent, U32, header->width * header->height);
         ASSERT(bitmap_memory);
 
         img.width = header->width;
@@ -104,7 +104,7 @@ load_image(API *api, String file_name) {
         // TODO: This is super dumb... should just flip the image while we're gathering it. Lazy though...
         Bool should_flip_image = true;
         if(should_flip_image) {
-            U32 *bitmap_memory_temp = memory_push_type_array(memory, Memory_Index_permanent, U32, img.width * img.height * 1);
+            U32 *bitmap_memory_temp = memory_push_type(memory, Memory_Index_permanent, U32, img.width * img.height * 1);
             ASSERT(bitmap_memory_temp);
 
             copy(bitmap_memory_temp, img.pixels, img.width * img.height * sizeof(U32));

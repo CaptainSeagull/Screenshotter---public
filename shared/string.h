@@ -100,7 +100,7 @@ struct Find_Index_Result {
 STRING_PUBLIC_DEC String create_string(char *str, STRING_SIZE_TYPE len = 0);
 STRING_PUBLIC_DEC String create_string(char const *str, STRING_SIZE_TYPE len = 0);
 
-STRING_PUBLIC_DEC String create_substring(String str, STRING_SIZE_TYPE start, STRING_SIZE_TYPE end = 1);
+STRING_PUBLIC_DEC String create_substring(String str, STRING_SIZE_TYPE start, STRING_SIZE_TYPE end = -1);
 
 STRING_PUBLIC_DEC int/*bool*/ string_compare(String a, String b);
 STRING_PUBLIC_DEC int/*bool*/ operator==(String a, String b);
@@ -156,7 +156,7 @@ create_string(char const *str, STRING_SIZE_TYPE len/*= 0*/) {
 }
 
 STRING_PUBLIC_DEC String
-create_substring(String str, STRING_SIZE_TYPE start, STRING_SIZE_TYPE end/*= 1*/) {
+create_substring(String str, STRING_SIZE_TYPE start, STRING_SIZE_TYPE end/*= -1*/) {
     if(end == -1) { end = str.len; }
 
     String r = create_string(str.e + start, end - start);

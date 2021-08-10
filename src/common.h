@@ -40,6 +40,11 @@ typedef double F64;
 #define ARRAY_COUNT(arr) (sizeof(arr) / (sizeof(*(arr))))
 #define CONCAT(a, b) a##b
 
+#define MAX(a, b) (((a) > (b)) ? (a) : (b))
+#define MIN(a, b) (((a) > (b)) ? (a) : (b))
+#define CLAMP(a, l, u) MIN(MAX(a, l), u)
+#define CLAMP01(a) CLAMP(a, 0, 1)
+
 #define BYTES(v)     ((v)            * (8LL))
 #define KILOBYTES(v) ((v)            * (1024LL))
 #define MEGABYTES(v) ((KILOBYTES(v)) * (1024LL))

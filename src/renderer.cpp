@@ -243,7 +243,7 @@ push_font(API *api, Renderer *renderer, File file) {
 
                         font->letter_ids[ascii_to_idx(letter_i)] = image->id;
 
-                        font->full_height = maxu32(font->full_height, image->height);
+                        font->full_height = MAX(font->full_height, image->height);
                     }
                 }
             }
@@ -557,8 +557,8 @@ render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bit
 #if 0
                                 F64 a = (F64)((U8 *)&rect->inner_colour)[3] / 255.0;
 
-                                U32 l = minu32(rect->inner_colour, *screen_pixel);
-                                U32 u = maxu32(rect->inner_colour, *screen_pixel);
+                                U32 l = MIN(rect->inner_colour, *screen_pixel);
+                                U32 u = MAX(rect->inner_colour, *screen_pixel);
                                 U32 d = a * (u - l);
                                 U32 inner_colour = l + d;
 #else
@@ -580,8 +580,8 @@ render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bit
                                     U32 s = ((U8 *)screen_pixel)[i];
                                     U32 b = ((U8 *)&bitmap_pixel)[i];
 
-                                    U32 l = minu32(b, s);
-                                    U32 u = maxu32(b, s);
+                                    U32 l = MIN(b, s);
+                                    U32 u = MAX(b, s);
                                     U32 d = a * (u - l);
                                     U32 o = l + d;
                                     ((U8 *)&colour)[i] = o;
@@ -698,8 +698,8 @@ render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bit
                                         U8 bitmap_pixel8 = ((U8 *)bitmap_pixel)[i];
                                         U8 screen_pixel8 = ((U8 *)screen_pixel)[i];
 
-                                        U32 lower = minu32(bitmap_pixel8, screen_pixel8);
-                                        U32 upper = maxu32(bitmap_pixel8, screen_pixel8);
+                                        U32 lower = MIN(bitmap_pixel8, screen_pixel8);
+                                        U32 upper = MAX(bitmap_pixel8, screen_pixel8);
 
                                         U32 delta = alphaf32 * (upper - lower);
                                         U32 output_colour_tmp = lower + delta;
@@ -733,10 +733,10 @@ render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bit
 
 internal BB
 get_overlap(BB a, BB b) {
-    Int x = maxu32(a.x, b.x);
-    Int y = maxu32(a.y, b.y);
-    Int w = minu32(a.width, b.width);
-    Int h = minu32(a.height, b.height);
+    Int x = MAX(a.x, b.x);
+    Int y = MAX(a.y, b.y);
+    Int w = MIN(a.width, b.width);
+    Int h = MIN(a.height, b.height);
 
     BB r = { x, y, w, h };
     return(r);

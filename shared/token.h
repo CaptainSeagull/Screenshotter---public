@@ -483,7 +483,6 @@ token_type_to_string(Token_Type type) {
         case Token_Type_backslash: { res = "Token_Type_backslash"; } break;
         case Token_Type_error: { res = "Token_Type_error"; } break;
         case Token_Type_end_of_stream: { res = "Token_Type_end_of_stream"; } break;
-        case Token_Type_count: { res = "Token_Type_count"; } break;
 
         default: { TOKEN_ASSERT(0); } break;
     }

@@ -115,11 +115,16 @@ struct Memory {
     Memory_Arena_Error error;
 };
 
-MEMORY_PUBLIC_DEC uint64_t get_memory_base_size(void);
+MEMORY_PUBLIC_DEC uint64_t get_memory_base_size(int group_count);
 MEMORY_PUBLIC_DEC Memory create_memory_base(void *base_memory, uintptr_t *inputs, uintptr_t inputs_count);
 MEMORY_PUBLIC_DEC Memory_Group *get_memory_group(Memory *memory, uintptr_t buffer_index);
-#define memory_push(memory, buffer_index, size, ...) memory_push_(memory, buffer_index, size, __FILE__, __LINE__, ##__VA_ARGS__)
-MEMORY_PUBLIC_DEC void *memory_push_(Memory *memory, uintptr_t buffer_index, uintptr_t size, char *fname, int line, uintptr_t alignment = MEMORY_ARENA_DEFAULT_MEMORY_ALIGNMENT);
+#define memory_push_type(memory, buffer_index, Type) \
+    memory_push_type_array(memory, buffer_index, Type, 1)
+#define memory_push_type_array(memory, buffer_index, Type, count) \
+    (Type *)memory_push_size(memory, buffer_index, sizeof(Type) * count)
+#define memory_push_size(memory, buffer_index, size) \
+    memory_push_internal(memory, buffer_index, size, (char *)__FILE__, __LINE__)
+MEMORY_PUBLIC_DEC void *memory_push_internal(Memory *memory, uintptr_t buffer_index, uintptr_t size, char *fname, int line, uintptr_t alignment = MEMORY_ARENA_DEFAULT_MEMORY_ALIGNMENT);
 MEMORY_PUBLIC_DEC void memory_pop(Memory *memory, void *memory_buffer);
 MEMORY_PUBLIC_DEC void memory_clear_entire_group(Memory *memory, uintptr_t buffer_index);
 
@@ -127,7 +132,7 @@ MEMORY_PUBLIC_DEC void memory_clear_entire_group(Memory *memory, uintptr_t buffe
 
 #if !defined(MEMORY_ARENA_ASSERT)
     #if defined(MEMORY_ARENA_ALLOW_ASSERT)
-        #define MEMORY_ARENA_ASSERT(exp) { if(!(exp)) {*(uint64_t volatile *)0 = 0; } }
+        #define MEMORY_ARENA_ASSERT(exp) do { if(!(exp)) {*(uint64_t volatile *)0 = 0; } } while(0)
     #else
         #define MEMORY_ARENA_ASSERT(exp) {}
     #endif
@@ -162,8 +167,8 @@ static uintptr_t internal_get_alignment_offset(Memory *memory, void *memory_base
     return(res);
 }
 
-MEMORY_PUBLIC_DEC uint64_t get_memory_base_size(void) {
-    uint64_t res = sizeof(Memory_Group) * 2; // 2x for padding
+MEMORY_PUBLIC_DEC uint64_t get_memory_base_size(int group_count) {
+    uint64_t res = sizeof(Memory_Group) * group_count;
     return(res);
 }
 
@@ -229,8 +234,8 @@ MEMORY_PUBLIC_DEC Memory_Group *get_memory_group(Memory *memory, uintptr_t buffe
     return(res);
 }
 
-MEMORY_PUBLIC_DEC void *memory_push_(Memory *memory, uintptr_t buffer_index, uintptr_t size, char *file, int line,
-                                     uintptr_t alignment/*=MEMORY_ARENA_DEFAULT_MEMORY_ALIGNMENT*/) {
+MEMORY_PUBLIC_DEC void *memory_push_internal(Memory *memory, uintptr_t buffer_index, uintptr_t size, char *file, int line,
+                                             uintptr_t alignment/*=MEMORY_ARENA_DEFAULT_MEMORY_ALIGNMENT*/) {
     void *res = 0;
 
     if(memory && size > 0) {

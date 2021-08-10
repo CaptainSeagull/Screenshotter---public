@@ -64,9 +64,8 @@ win32_read_file(Memory *memory, U32 memory_index_to_use, String fname, Bool null
             LARGE_INTEGER fsize;
             if(GetFileSizeEx(fhandle, &fsize)) {
                 DWORD fsize32 = safe_truncate_size_64(fsize.QuadPart);
-                Void *file_memory = memory_push(memory, memory_index_to_use, (null_terminate) ? fsize32 + 1 : fsize32);
-                ASSERT(file_memory);
-                if(file_memory) {
+                Void *file_memory = memory_push_size(memory, memory_index_to_use, (null_terminate) ? fsize32 + 1 : fsize32);
+                ASSERT_IF(file_memory) {
                     DWORD bytes_read = 0;
                     if(ReadFile(fhandle, file_memory, fsize32, &bytes_read, 0)) {
                         ASSERT_IF(bytes_read == fsize32) {
@@ -159,7 +158,7 @@ win32_update_window(Memory *memory, Win32_System_Callbacks *sys_cb,
     Bool should_flip_image = true;
 
     if(should_flip_image) {
-        bitmap_memory = memory_push(memory, Memory_Index_temp, bitmap_width * bitmap_height * 4);
+        bitmap_memory = memory_push_type_array(memory, Memory_Index_temp, U32, bitmap_width * bitmap_height);
         flip_image(bitmap_memory, input_bitmap_memory, bitmap_width, bitmap_height);
     }
 
@@ -501,7 +500,7 @@ internal HWND
 win32_find_window_from_class_name(Memory *memory, String window_title, Win32_System_Callbacks *sys_cb) {
     HWND window = 0;
 
-    Char *window_title_raw = (Char *)memory_push(memory, Memory_Index_temp, window_title.len + 1); // Nul-terminate
+    Char *window_title_raw = memory_push_type_array(memory, Memory_Index_temp, Char, window_title.len + 1); // Nul-terminate
     ASSERT(window_title_raw);
     if(window_title_raw) {
         string_copy(window_title_raw, window_title.e, window_title.len);
@@ -524,7 +523,8 @@ win32_create_directory(Memory *memory, String root, String dir, Bool save_direct
 
     // Create the per-app directories
     Int max_size = root.len + 256; // 256 is padding
-    Char *output_file_directory = (Char *)memory_push(memory, (save_directory_string) ? Memory_Index_permanent : Memory_Index_temp, max_size);
+    Char *output_file_directory = memory_push_type_array(memory, (save_directory_string) ? Memory_Index_permanent : Memory_Index_temp,
+                                                         Char, max_size);
     ASSERT(output_file_directory);
     if(output_file_directory) {
         Int bytes_written = stbsp_snprintf(output_file_directory, max_size, "%.*s\\%.*s",
@@ -586,8 +586,8 @@ internal U64
 win32_file_index_to_use(Memory *memory, String root_directory, String program_title) {
     U64 res = 0;
     Int output_path_with_wildcard_max_size = 1024;
-    Char *output_path_with_wildcard = (Char *)memory_push(memory, Memory_Index_temp,
-                                                          output_path_with_wildcard_max_size);
+    Char *output_path_with_wildcard = memory_push_type_array(memory, Memory_Index_temp, Char,
+                                                             output_path_with_wildcard_max_size);
     ASSERT_IF(output_path_with_wildcard) {
         Int bytes_written = stbsp_snprintf(output_path_with_wildcard, output_path_with_wildcard_max_size,
                                            "%.*s/%.*s/*.bmp",
@@ -659,7 +659,7 @@ run_screenshotting(API *api, Memory *memory, Win32_System_Callbacks *sys_cb, Str
 
                 // TODO: The hell is this doing?? Why not just width * height * 4??
                 U32 image_size = ((width * bmp_header.biBitCount + 31) / 32) * 4 * height;
-                U8 *image_data = (U8 *)memory_push(memory, Memory_Index_temp, image_size);
+                U8 *image_data = (U8 *)memory_push_type_array(memory, Memory_Index_temp, U8, image_size);
                 ASSERT_IF(image_data) {
                     sys_cb->GetDIBits(dc, bitmap, 0, height, image_data, (BITMAPINFO *)&bmp_header, DIB_RGB_COLORS);
 
@@ -678,7 +678,7 @@ run_screenshotting(API *api, Memory *memory, Win32_System_Callbacks *sys_cb, Str
                         U64 iteration_count = win32_file_index_to_use(memory, root_directory, program_title);
 
                         Int output_filename_size = root_directory.len + 256; // 256 is just arbitrary padding
-                        Char *output_filename = (Char *)memory_push(memory, Memory_Index_temp, output_filename_size);
+                        Char *output_filename = memory_push_type_array(memory, Memory_Index_temp, Char, output_filename_size);
                         ASSERT_IF(output_filename) {
                             Int bytes_written = stbsp_snprintf(output_filename, output_filename_size, "%.*s/%.*s/%I64d.bmp",
                                                                root_directory.len, root_directory.e,
@@ -713,7 +713,7 @@ win32_create_root_directory(Memory *memory, String target_directory) {
 
     Int idx = win32_directory_index_to_use(memory, prefix, target_directory);
     Int size = target_directory.len + prefix.len + 32; // TODO: 32 is padding for number
-    Char *directory = (Char *)memory_push(memory, Memory_Index_permanent, size);
+    Char *directory = memory_push_type_array(memory, Memory_Index_permanent, Char, size);
     ASSERT_IF(directory) {
         Int written = stbsp_snprintf(directory, size, "%.*s%d",
                                      prefix.len, prefix.e,
@@ -739,8 +739,8 @@ enum_windows_proc(HWND hwnd, LPARAM param) {
 
     Int max_string_length = 1024;
 
-    Char *title = (Char *)memory_push(memory, Memory_Index_permanent, max_string_length);
-    Char *class_name = (Char *)memory_push(memory, Memory_Index_permanent, max_string_length);
+    Char *title = memory_push_type_array(memory, Memory_Index_permanent, Char, max_string_length);
+    Char *class_name = memory_push_type_array(memory, Memory_Index_permanent, Char, max_string_length);
     ASSERT_IF(title && class_name) {
         if(global_sys_cb->IsWindowVisible(hwnd)) {
             global_sys_cb->GetWindowText(hwnd, (LPSTR)title, max_string_length);
@@ -944,7 +944,7 @@ parse_command_line(Memory *memory) {
     }
 
     // Create copy of args.
-    Char *arg_cpy = (Char *)memory_push(memory, Memory_Index_permanent, args_len + 1);
+    Char *arg_cpy = memory_push_type_array(memory, Memory_Index_permanent, Char, args_len + 1);
     ASSERT_IF(arg_cpy) {
         string_copy(arg_cpy, cmdline);
 
@@ -962,7 +962,7 @@ parse_command_line(Memory *memory) {
         in_quotes = false;
         U64 mem_size = original_cnt * 2;
         Int argc = 1;
-        Char **argv = (Char **)memory_push(memory, Memory_Index_permanent, (sizeof(Char *) * mem_size));
+        Char **argv = memory_push_type_array(memory, Memory_Index_permanent, Char *, mem_size);
         ASSERT_IF(argv) {
             Char **cur = argv;
             *cur++ = arg_cpy;
@@ -1007,7 +1007,7 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
     U64 permanent_size = GIGABYTES(4);
     U64 temp_size = GIGABYTES(4);
     U64 internal_temp_size = MEGABYTES(128);
-    U64 total_size = get_memory_base_size() + permanent_size + temp_size + internal_temp_size;
+    U64 total_size = get_memory_base_size(3) + permanent_size + temp_size + internal_temp_size;
 
     Void *all_memory = VirtualAlloc(0, total_size, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
     if(all_memory) {
@@ -1053,7 +1053,7 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
             settings.window_width = 1080 / 2;
 
             loaded_code.init_platform_settings(&settings);
-            api.screen_bitmap.memory = memory_push(&memory, Memory_Index_permanent, MAX_SCREEN_BITMAP_SIZE);
+            api.screen_bitmap.memory = memory_push_size(&memory, Memory_Index_permanent, MAX_SCREEN_BITMAP_SIZE);
             ASSERT_IF(api.screen_bitmap.memory) {
                 global_api = &api;
 
@@ -1108,11 +1108,11 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
 
                         Win32_API win32_api = {};
                         win32_api.queue.entry_count = 2048;
-                        win32_api.queue.entries = (Win32_Work_Queue_Entry *)memory_push(&memory, Memory_Index_permanent,
-                                                                                        sizeof(Win32_Work_Queue_Entry) * win32_api.queue.entry_count);
+                        win32_api.queue.entries = memory_push_type_array(&memory, Memory_Index_permanent, Win32_Work_Queue_Entry,
+                                                                         win32_api.queue.entry_count);
                         ASSERT(win32_api.queue.entries);
                         if(settings.dll_data_struct_size) {
-                            api.dll_data = memory_push(&memory, Memory_Index_permanent, settings.dll_data_struct_size);
+                            api.dll_data = memory_push_size(&memory, Memory_Index_permanent, settings.dll_data_struct_size);
                             ASSERT(api.dll_data); // TODO: Error handling.
                         }
                         api.platform_specific = (Void *)&win32_api;

@@ -13,7 +13,7 @@ v2u(U32 x, U32 y) {
 
 internal Render_Entity *
 new_node(Memory *memory) {
-    Render_Entity *render_entity = (Render_Entity *)memory_push(memory, Memory_Index_permanent, sizeof(Render_Entity_For_Size));
+    Render_Entity *render_entity = (Render_Entity *)memory_push_size(memory, Memory_Index_permanent, sizeof(Render_Entity_For_Size));
     ASSERT(render_entity);
 
     return(render_entity);
@@ -52,15 +52,15 @@ internal Void
 create_renderer(Renderer *renderer, Memory *memory) {
     renderer->_internal.entity_id_count = 1; // Use 0 for invalid
     renderer->memory = memory;
-    renderer->root = (Render_Entity * )memory_push(renderer->memory, Memory_Index_permanent, sizeof(Render_Entity));
+    renderer->root = (Render_Entity *)memory_push_size(memory, Memory_Index_permanent, sizeof(Render_Entity_For_Size));
     ASSERT(renderer->root);
 
     renderer->image_count_max = 512;
-    renderer->images = (Render_Image *)memory_push(renderer->memory, Memory_Index_permanent, sizeof(Render_Image) * renderer->image_count_max);
+    renderer->images = memory_push_type_array(renderer->memory, Memory_Index_permanent, Render_Image, renderer->image_count_max);
     ASSERT(renderer->images);
 
     renderer->font_count_max = 8;
-    renderer->fonts = (Font *)memory_push(renderer->memory, Memory_Index_permanent, sizeof(Font) * renderer->font_count_max);
+    renderer->fonts = memory_push_type_array(renderer->memory, Memory_Index_permanent, Font, renderer->font_count_max);
     ASSERT(renderer->fonts);
 
     add_child_to_node(memory, &renderer->root);
@@ -171,7 +171,7 @@ make_letter_image(Memory *memory, stbtt_fontinfo *font, Char ch) {
         Image_Letter image_letter = {};
         image_letter.img.width = w;
         image_letter.img.height = h;
-        image_letter.img.pixels = (U32 *)memory_push(memory, Memory_Index_permanent, w * h * 4);
+        image_letter.img.pixels = memory_push_type_array(memory, Memory_Index_permanent, U32, w * h);
         ASSERT_IF(image_letter.img.pixels) {
 
 #define FLIP_IMAGE 0

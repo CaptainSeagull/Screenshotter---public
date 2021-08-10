@@ -12,7 +12,7 @@
 
 #define STBTT_STATIC
 #define STB_TRUETYPE_IMPLEMENTATION
-#define STBTT_malloc(x,u)  memory_push((Memory *)u, Memory_Index_permanent, x)
+#define STBTT_malloc(x,u) memory_push_size((Memory *)u, Memory_Index_permanent, x)
 #define STBTT_free(x,u)    {}
 
 #define STBTT_assert ASSERT

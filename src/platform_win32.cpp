@@ -1,4 +1,3 @@
-
 #define MEMORY_ARENA_IMPLEMENTATION
 #if INTERNAL
     #define MEMORY_ARENA_WRITE_ERRORS
@@ -17,6 +16,7 @@
 #include <intrin.h>
 
 #include "platform_win32.h"
+#define SNPRINTF stbsp_snprintf
 #include "platform_win32_generated.h"
 #include "renderer.h"
 
@@ -148,7 +148,8 @@ win32_safe_div(F32 a, F32 b) {
 }
 
 internal Void
-win32_update_window(Memory *memory, HDC dc, RECT  *wnd_rect, Void *input_bitmap_memory, BITMAPINFO *bitmap_info,
+win32_update_window(Memory *memory, Win32_System_Callbacks *sys_cb,
+                    HDC dc, RECT  *wnd_rect, Void *input_bitmap_memory, BITMAPINFO *bitmap_info,
                     Int bitmap_width, Int bitmap_height) {
     Int wnd_w = wnd_rect->right - wnd_rect->left;
     Int wnd_h = wnd_rect->bottom - wnd_rect->top;
@@ -166,30 +167,30 @@ win32_update_window(Memory *memory, HDC dc, RECT  *wnd_rect, Void *input_bitmap_
 
     // Could be moved to platform-independent code.
     {
-        global_sys_cb->glViewport(0, 0, wnd_w, wnd_h);
+        sys_cb->glViewport(0, 0, wnd_w, wnd_h);
 
-        global_sys_cb->glBindTexture(GL_TEXTURE_2D, global_gl_blit_texture_handle);
+        sys_cb->glBindTexture(GL_TEXTURE_2D, global_gl_blit_texture_handle);
 
-        global_sys_cb->glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, bitmap_width, bitmap_height, 0, GL_BGRA_EXT, GL_UNSIGNED_BYTE, bitmap_memory);
+        sys_cb->glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, bitmap_width, bitmap_height, 0, GL_BGRA_EXT, GL_UNSIGNED_BYTE, bitmap_memory);
 
-        global_sys_cb->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        global_sys_cb->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        global_sys_cb->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,     GL_CLAMP);
-        global_sys_cb->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,     GL_CLAMP);
+        sys_cb->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        sys_cb->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        sys_cb->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,     GL_CLAMP);
+        sys_cb->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,     GL_CLAMP);
 
-        global_sys_cb->glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+        sys_cb->glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 
-        global_sys_cb->glEnable(GL_TEXTURE_2D); // TODO: Move above glBindTexture?
+        sys_cb->glEnable(GL_TEXTURE_2D); // TODO: Move above glBindTexture?
 #if INTERNAL
-        global_sys_cb->glClearColor(1.0f, 0.0f, 1.0f, 0.0f);
+        sys_cb->glClearColor(1.0f, 0.0f, 1.0f, 0.0f);
 #else
-        global_sys_cb->glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+        sys_cb->glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 #endif
-        global_sys_cb->glClear(GL_COLOR_BUFFER_BIT);
+        sys_cb->glClear(GL_COLOR_BUFFER_BIT);
 
-        global_sys_cb->glMatrixMode(GL_MODELVIEW); global_sys_cb->glLoadIdentity();
+        sys_cb->glMatrixMode(GL_MODELVIEW); sys_cb->glLoadIdentity();
 
-        global_sys_cb->glMatrixMode(GL_PROJECTION);
+        sys_cb->glMatrixMode(GL_PROJECTION);
 
         // This is pre-transposted
         F32 proj[16] = {win32_safe_div(2.0f, bitmap_width), 0,                                   0, 0,
@@ -197,10 +198,10 @@ win32_update_window(Memory *memory, HDC dc, RECT  *wnd_rect, Void *input_bitmap_
                         0,                                  0,                                   1, 0,
                         -1,                                 -1,                                  0, 1
                        };
-        global_sys_cb->glLoadMatrixf(proj);
-        global_sys_cb->glMatrixMode(GL_TEXTURE); global_sys_cb->glLoadIdentity();
+        sys_cb->glLoadMatrixf(proj);
+        sys_cb->glMatrixMode(GL_TEXTURE); sys_cb->glLoadIdentity();
 
-        global_sys_cb->glBegin(GL_TRIANGLES);
+        sys_cb->glBegin(GL_TRIANGLES);
 
         // TODO: How to handle aspect ratio - black bars or crop?
 
@@ -210,25 +211,25 @@ win32_update_window(Memory *memory, HDC dc, RECT  *wnd_rect, Void *input_bitmap_
         F32 max_y = bitmap_height;
 
         F32 colour[4] = { 1, 1, 1, 1 };
-        global_sys_cb->glColor4f(colour[0], colour[1], colour[2], colour[3]);
+        sys_cb->glColor4f(colour[0], colour[1], colour[2], colour[3]);
 
-        global_sys_cb->glTexCoord2f(0, 0); global_sys_cb->glVertex2f(min_x, min_y);
-        global_sys_cb->glTexCoord2f(1, 0); global_sys_cb->glVertex2f(max_x, min_y);
-        global_sys_cb->glTexCoord2f(1, 1); global_sys_cb->glVertex2f(max_x, max_y);
+        sys_cb->glTexCoord2f(0, 0); sys_cb->glVertex2f(min_x, min_y);
+        sys_cb->glTexCoord2f(1, 0); sys_cb->glVertex2f(max_x, min_y);
+        sys_cb->glTexCoord2f(1, 1); sys_cb->glVertex2f(max_x, max_y);
 
-        global_sys_cb->glTexCoord2f(0, 0); global_sys_cb->glVertex2f(min_x, min_y);
-        global_sys_cb->glTexCoord2f(1, 1); global_sys_cb->glVertex2f(max_x, max_y);
-        global_sys_cb->glTexCoord2f(0, 1); global_sys_cb->glVertex2f(min_x, max_y);
-        global_sys_cb->glEnd();
+        sys_cb->glTexCoord2f(0, 0); sys_cb->glVertex2f(min_x, min_y);
+        sys_cb->glTexCoord2f(1, 1); sys_cb->glVertex2f(max_x, max_y);
+        sys_cb->glTexCoord2f(0, 1); sys_cb->glVertex2f(min_x, max_y);
+        sys_cb->glEnd();
     }
 
-    global_sys_cb->SwapBuffers(dc);
+    sys_cb->SwapBuffers(dc);
 #else
     // TODO: Bitblt may be faster than StretchDIBits
-    global_sys_cb->StretchDIBits(dc,
-                                 0, 0, bitmap_width, bitmap_height,
-                                 0, 0, wnd_w, wnd_h,
-                                 bitmap_memory, bitmap_info, DIB_RGB_COLORS, SRCCOPY);
+    sys_cb->StretchDIBits(dc,
+                          0, 0, bitmap_width, bitmap_height,
+                          0, 0, wnd_w, wnd_h,
+                          bitmap_memory, bitmap_info, DIB_RGB_COLORS, SRCCOPY);
 #endif
 
     if(should_flip_image) {
@@ -581,100 +582,127 @@ win32_directory_index_to_use(Memory *mem, String session_prefix, String input_ta
     return(res);
 }
 
-internal Bool
-run_screenshotting(API *api, Memory *memory, Config *config, Win32_System_Callbacks *sys_cb, String root_directory, U64 iteration_count) {
-    Bool res = false;
+internal U64
+win32_file_index_to_use(Memory *memory, String root_directory, String program_title) {
+    U64 res = 0;
+    Int output_path_with_wildcard_max_size = 1024;
+    Char *output_path_with_wildcard = (Char *)memory_push(memory, Memory_Index_temp,
+                                                          output_path_with_wildcard_max_size);
+    ASSERT_IF(output_path_with_wildcard) {
+        Int bytes_written = stbsp_snprintf(output_path_with_wildcard, output_path_with_wildcard_max_size,
+                                           "%.*s/%.*s/*.bmp",
+                                           root_directory.len, root_directory.e,
+                                           program_title.len, program_title.e);
+        WIN32_FIND_DATA find_data = {};
+        HANDLE handle = FindFirstFile(output_path_with_wildcard, &find_data);
 
-    for(Int window_i = 0; (window_i < config->target_window_count); ++window_i) {
-        ASSERT(config->windows[window_i].class_name.len > 0 &&
-               config->windows[window_i].title.len > 0);
-        HWND window = win32_find_window_from_class_name(memory, config->windows[window_i].class_name, sys_cb);
-
-        RECT rect = {};
-        sys_cb->GetClientRect(window, &rect);
-        Int width = rect.right - rect.left;
-        Int height = rect.bottom - rect.top;
-
-        // TODO: If the window is minified then the width/height will be 0
-        //       See https://www.codeproject.com/Articles/20651/Capturing-Minimized-Window-A-Kid-s-Trick for how to handle.
-        if(width > 0 && height > 0) {
-            HDC dc = sys_cb->GetDC(0);
-            HDC capture_dc = sys_cb->CreateCompatibleDC(dc);
-            HBITMAP bitmap =  sys_cb->CreateCompatibleBitmap(dc, rect.right - rect.left, rect.bottom - rect.top);
-
-            HGDIOBJ gdiObj = sys_cb->SelectObject(capture_dc, bitmap);
-
-            sys_cb->PrintWindow(window, capture_dc, (config->include_title_bar) ? 0 : PW_CLIENTONLY);
-
-            // TODO: This sometimes captures the current window, not the target for some reason...
-            //BitBlt(capture_dc, 0, 0, width, height, dc, 0, 0, SRCCOPY | CAPTUREBLT);
-            //SelectObject(capture_dc, gdiObj);
-#if 0
-            // Test code to copy to clipboard.
-            OpenClipboard(0);
-            EmptyClipboard();
-            SetClipboardData(CF_BITMAP, bitmap);
-            CloseClipboard();
-#endif
-            BITMAPINFOHEADER bmp_header = {};
-            bmp_header.biSize = sizeof(BITMAPINFOHEADER);
-            bmp_header.biWidth = width;
-            bmp_header.biHeight = height;
-            bmp_header.biPlanes = 1;
-            bmp_header.biBitCount = 32;
-
-            U32 image_size = ((width * bmp_header.biBitCount + 31) / 32) * 4 * height; // TODO: Why 31 / 32?? Why not just width * height * 4?
-            U8 *image_data = (U8 *)memory_push(memory, Memory_Index_temp, image_size);
-            ASSERT(image_data);
-            if(image_data) {
-                sys_cb->GetDIBits(dc, bitmap, 0, height, image_data, (BITMAPINFO *)&bmp_header, DIB_RGB_COLORS);
-
-                // Try and create using the Window title. And if that fails use the classname.
-                Bool created_directory = false;
-                String program_title = config->windows[window_i].title;
-                Win32_Create_Directory_Result create_dir_r = win32_create_directory(memory, root_directory, program_title);
-                created_directory = create_dir_r.success;
-                if(!created_directory) {
-                    program_title = config->windows[window_i].class_name;
-                    create_dir_r = win32_create_directory(memory, root_directory, program_title);
-                    created_directory = create_dir_r.success;
-                }
-
-                if(created_directory) {
-
-                    Int output_filename_size = root_directory.len + 256; // 256 is padding
-                    Char *output_filename = (Char *)memory_push(memory, Memory_Index_temp, output_filename_size);
-                    ASSERT(output_filename);
-                    if(output_filename) {
-
-                        // TODO: Instead of using iteration_count it'd be better to read the previous highest-number in the file and
-                        //       just +1 to that.
-                        Int bytes_written = stbsp_snprintf(output_filename, output_filename_size, "%.*s/%.*s/%I64d.bmp",
-                                                           root_directory.len, root_directory.e,
-                                                           program_title.len, program_title.e,
-                                                           iteration_count);
-                        ASSERT(bytes_written < output_filename_size);
-
-                        Image image = {};
-                        image.width = width;
-                        image.height = height;
-                        image.pixels = (U32 * )image_data;
-                        write_image_to_disk(api, memory, &image, output_filename);
-
-                        res = true;
-
-                        memory_pop(memory, output_filename);
+        if(handle != INVALID_HANDLE_VALUE) {
+            do {
+                String fname_with_extension = find_data.cFileName;
+                if(fname_with_extension.len >= 4) {
+                    String fname = create_substring(fname_with_extension, 0, fname_with_extension.len - 4); // -4 to remove .bmp extension
+                    String_To_Int_Result r = string_to_int(fname);
+                    if(r.success) {
+                        res = maxu32(res, r.v + 1);
                     }
                 }
-
-                memory_pop(memory, image_data);
-            }
-
-            sys_cb->ReleaseDC(0, dc);
+            } while(FindNextFile(handle, &find_data));
         }
+
+
+        memory_pop(memory, output_path_with_wildcard);
     }
 
     return(res);
+}
+
+internal Void
+run_screenshotting(API *api, Memory *memory, Win32_System_Callbacks *sys_cb, String root_directory) {
+    for(Int window_i = 0; (window_i < api->window_count); ++window_i) {
+        Window_Info *wnd = &api->windows[window_i];
+        ASSERT((wnd->class_name.len > 0) && (wnd->title.len > 0));
+        if(wnd->should_screenshot) {
+            HWND hwnd = win32_find_window_from_class_name(memory, wnd->class_name, sys_cb);
+
+            RECT rect = {};
+            sys_cb->GetClientRect(hwnd, &rect);
+            Int width = rect.right - rect.left;
+            Int height = rect.bottom - rect.top;
+
+            // TODO: If the window is minified then the width/height will be 0
+            //       See https://www.codeproject.com/Articles/20651/Capturing-Minimized-Window-A-Kid-s-Trick for how to handle.
+            if(width > 0 && height > 0) {
+                HDC dc = sys_cb->GetDC(0);
+                HDC capture_dc = sys_cb->CreateCompatibleDC(dc);
+                HBITMAP bitmap =  sys_cb->CreateCompatibleBitmap(dc, rect.right - rect.left, rect.bottom - rect.top);
+
+                HGDIOBJ gdiObj = sys_cb->SelectObject(capture_dc, bitmap);
+
+                sys_cb->PrintWindow(hwnd, capture_dc, (api->include_title_bar) ? 0 : PW_CLIENTONLY);
+
+                // TODO: This sometimes captures the current window, not the target for some reason...
+                //BitBlt(capture_dc, 0, 0, width, height, dc, 0, 0, SRCCOPY | CAPTUREBLT);
+                //SelectObject(capture_dc, gdiObj);
+#if 0
+                // Test code to copy to clipboard.
+                OpenClipboard(0);
+                EmptyClipboard();
+                SetClipboardData(CF_BITMAP, bitmap);
+                CloseClipboard();
+#endif
+                BITMAPINFOHEADER bmp_header = {};
+                bmp_header.biSize = sizeof(BITMAPINFOHEADER);
+                bmp_header.biWidth = width;
+                bmp_header.biHeight = height;
+                bmp_header.biPlanes = 1;
+                bmp_header.biBitCount = 32;
+
+                // TODO: The hell is this doing?? Why not just width * height * 4??
+                U32 image_size = ((width * bmp_header.biBitCount + 31) / 32) * 4 * height;
+                U8 *image_data = (U8 *)memory_push(memory, Memory_Index_temp, image_size);
+                ASSERT_IF(image_data) {
+                    sys_cb->GetDIBits(dc, bitmap, 0, height, image_data, (BITMAPINFO *)&bmp_header, DIB_RGB_COLORS);
+
+                    // Try and create using the Window title. And if that fails use the classname.
+                    Bool created_directory = false;
+                    String program_title = wnd->title;
+                    Win32_Create_Directory_Result create_dir_r = win32_create_directory(memory, root_directory, program_title);
+                    created_directory = create_dir_r.success;
+                    if(!created_directory) {
+                        program_title = wnd->class_name;
+                        create_dir_r = win32_create_directory(memory, root_directory, program_title);
+                        created_directory = create_dir_r.success;
+                    }
+
+                    if(created_directory) {
+                        U64 iteration_count = win32_file_index_to_use(memory, root_directory, program_title);
+
+                        Int output_filename_size = root_directory.len + 256; // 256 is just arbitrary padding
+                        Char *output_filename = (Char *)memory_push(memory, Memory_Index_temp, output_filename_size);
+                        ASSERT_IF(output_filename) {
+                            Int bytes_written = stbsp_snprintf(output_filename, output_filename_size, "%.*s/%.*s/%I64d.bmp",
+                                                               root_directory.len, root_directory.e,
+                                                               program_title.len, program_title.e,
+                                                               iteration_count);
+                            ASSERT((bytes_written > 0) && (bytes_written < output_filename_size));
+
+                            Image image = {};
+                            image.width = width;
+                            image.height = height;
+                            image.pixels = (U32 * )image_data;
+                            write_image_to_disk(api, memory, &image, output_filename);
+
+                            memory_pop(memory, output_filename);
+                        }
+                    }
+
+                    memory_pop(memory, image_data);
+                }
+
+                sys_cb->ReleaseDC(0, dc);
+            }
+        }
+    }
 }
 
 internal String
@@ -766,8 +794,8 @@ win32_browse_for_directory(Memory *memory, String initial_path_input) {
     ASSERT_IF(initial_path) {
         string_replace(initial_path, initial_path_input.len, '/', '\\');
 
-        BROWSEINFO bi = { };
-        bi.lpszTitle = "Browser";
+        BROWSEINFO bi = {};
+        bi.lpszTitle = "Browser for folder";
         bi.ulFlags   = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE;
         bi.lpfn      = win32_directory_browse_callback;
         bi.lParam    = (LPARAM)initial_path;
@@ -787,6 +815,8 @@ win32_browse_for_directory(Memory *memory, String initial_path_input) {
             Char *internal_string = memory_push_string(memory, Memory_Index_permanent, path);
             ASSERT_IF(internal_string) {
                 res = internal_string;
+            } else {
+                // TODO: Log an internal error here
             }
         }
 
@@ -856,9 +886,9 @@ load_system_callbacks(Void) {
     }
 
 #if USE_OPENGL_WINDOW
-    ASSERT_IF(r.success) {
+    SPECIAL_IF(r.success) {
         HMODULE opengl32 = LoadLibraryA("opengl32.dll");
-        ASSERT_IF(opengl32) {
+        SPECIAL_IF(opengl32) {
             LOAD(opengl32, wglCreateContext);
             LOAD(opengl32, wglMakeCurrent);
             LOAD(opengl32, glBegin);
@@ -1104,14 +1134,12 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
                         //api.randomish_seed = xorshift64(&api.randomish_seed); // TODO: Copy over xorshift64
 
                         // TODO: Load config from settings on disk.
-                        Config config = {};
-                        api.config = &config;
 
-                        config.include_title_bar = true;
-                        config.target_output_directory = "C:\\tmp"; // TODO: Hardcoded
-                        config.new_target_output_directory = config.target_output_directory;
+                        api.include_title_bar = true;
+                        api.target_output_directory = "C:\\tmp"; // TODO: Hardcoded
+                        api.new_target_output_directory = api.target_output_directory;
                         // TODO: Create directory here if it doesn't already exist?
-                        config.amount_to_sleep = 1000;
+                        api.amount_to_sleep = 1000;
 
                         for(Int i = 0; (i < settings.thread_count - 1); ++i) {
                             HANDLE h = CreateThread(0, 0, win32_thread_proc, &win32_api.queue, 0, 0);
@@ -1124,7 +1152,6 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
                         sys_cb.EnumWindows(enum_windows_proc, (LPARAM)&api); // TODO: Pass sys_cb and API in here
 
                         U64 iteration_count = 0;
-                        U64 iteration_count_reset = 0;
                         F32 seconds_elapsed_for_last_frame = 0;
                         while(api.running) {
                             // TODO: Do rendering in separate thread and only have main thread process window messages? Maybe a good option
@@ -1185,6 +1212,7 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
                             window_title_group->used = 0;
                             api.window_count = 0;
 
+                            // TODO: Dynamically handle windows being opened/closed
                             EnumWindows(enum_windows_proc, (LPARAM)&api);*/
 
                             // Actual rendering
@@ -1219,9 +1247,9 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
                                 api.window_height = cr.bottom - cr.top;
 
                                 if(api.launch_browse_for_directory) {
-                                    String new_directory = win32_browse_for_directory(&memory, config.target_output_directory);
+                                    String new_directory = win32_browse_for_directory(&memory, api.target_output_directory);
                                     if(new_directory.len > 0) {
-                                        config.new_target_output_directory = new_directory;
+                                        api.new_target_output_directory = new_directory;
                                     }
 
                                     api.launch_browse_for_directory = false;
@@ -1234,7 +1262,7 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
 
                                 HDC dc = sys_cb.GetDC(wnd);
 
-                                win32_update_window(&memory, dc, &cr, api.screen_bitmap.memory, &global_bmp_info,
+                                win32_update_window(&memory, &sys_cb, dc, &cr, api.screen_bitmap.memory, &global_bmp_info,
                                                     api.screen_bitmap.width, api.screen_bitmap.height);
 
 #if SHOW_FPS
@@ -1242,9 +1270,10 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
                                     Char buf[1024] = {};
                                     Int bytes_written = stbsp_snprintf(buf, ARRAY_COUNT(buf), "%s - %f",
                                                                        window_title, seconds_elapsed_for_last_frame);
-                                    ASSERT(bytes_written < ARRAY_COUNT(buf));
-                                    Bool success = sys_cb.SetWindowTextA(wnd, buf);
-                                    ASSERT(success);
+                                    ASSERT_IF(bytes_written < ARRAY_COUNT(buf)) {
+                                        Bool success = sys_cb.SetWindowTextA(wnd, buf);
+                                        ASSERT(success);
+                                    }
                                 }
 #endif
 
@@ -1253,20 +1282,17 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
 
                             // Screenshotting
                             {
-                                if(config.new_target_output_directory.len > 0) {
-                                    String new_dir = win32_create_root_directory(&memory, config.new_target_output_directory);
+                                if(api.new_target_output_directory.len > 0) {
+                                    String new_dir = win32_create_root_directory(&memory, api.new_target_output_directory);
                                     ASSERT_IF(new_dir.len > 0) {
-                                        config.target_output_directory = config.new_target_output_directory;
-                                        config.target_output_directory_full = new_dir;
-                                        config.new_target_output_directory = "";
+                                        api.target_output_directory = api.new_target_output_directory;
+                                        api.target_output_directory_full = new_dir;
+                                        api.new_target_output_directory = "";
                                     }
                                 }
 
-                                ++iteration_count_reset;
-                                if(iteration_count_reset == 60) {
-                                    run_screenshotting(&api, &memory, &config, &sys_cb, config.target_output_directory_full, iteration_count);
-                                    ++iteration_count;
-                                    iteration_count_reset = 0;
+                                if(iteration_count++ % 60 == 0) {
+                                    run_screenshotting(&api, &memory, &sys_cb, api.target_output_directory_full);
                                 }
                             }
 

@@ -204,7 +204,6 @@ static uint64_t type_to_size(Type type) {
         case Type_Window_Info: { return(sizeof(Window_Info)); } break;
         case Type_API: { return(sizeof(API)); } break;
         case Type_Memory_Index: { return(sizeof(Memory_Index)); } break;
-        case Type_Config: { return(sizeof(Config)); } break;
         case Type_Image: { return(sizeof(Image)); } break;
         case Type_V2: { return(sizeof(V2)); } break;
         case Type_V3: { return(sizeof(V3)); } break;
@@ -220,7 +219,6 @@ static uint64_t type_to_size(Type type) {
         case Type_Win32_Loaded_Code: { return(sizeof(Win32_Loaded_Code)); } break;
         case Type_Win32_Debug_Window: { return(sizeof(Win32_Debug_Window)); } break;
         case Type_Win32_API: { return(sizeof(Win32_API)); } break;
-        case Type_Win32_Screen_Capture_Thread_Parameters: { return(sizeof(Win32_Screen_Capture_Thread_Parameters)); } break;
         case Type_Win32_System_Callbacks: { return(sizeof(Win32_System_Callbacks)); } break;
         case Type_V2u: { return(sizeof(V2u)); } break;
         case Type_BB: { return(sizeof(BB)); } break;
@@ -259,7 +257,6 @@ static Type string_to_type(char const *s, uint64_t l) {
     else if(generated_string_compare("Window_Info", 11, s, l)) { return(Type_Window_Info); }
     else if(generated_string_compare("API", 3, s, l)) { return(Type_API); }
     else if(generated_string_compare("Memory_Index", 12, s, l)) { return(Type_Memory_Index); }
-    else if(generated_string_compare("Config", 6, s, l)) { return(Type_Config); }
     else if(generated_string_compare("Image", 5, s, l)) { return(Type_Image); }
     else if(generated_string_compare("V2", 2, s, l)) { return(Type_V2); }
     else if(generated_string_compare("V3", 2, s, l)) { return(Type_V3); }
@@ -275,7 +272,6 @@ static Type string_to_type(char const *s, uint64_t l) {
     else if(generated_string_compare("Win32_Loaded_Code", 17, s, l)) { return(Type_Win32_Loaded_Code); }
     else if(generated_string_compare("Win32_Debug_Window", 18, s, l)) { return(Type_Win32_Debug_Window); }
     else if(generated_string_compare("Win32_API", 9, s, l)) { return(Type_Win32_API); }
-    else if(generated_string_compare("Win32_Screen_Capture_Thread_Parameters", 38, s, l)) { return(Type_Win32_Screen_Capture_Thread_Parameters); }
     else if(generated_string_compare("Win32_System_Callbacks", 22, s, l)) { return(Type_Win32_System_Callbacks); }
     else if(generated_string_compare("V2u", 3, s, l)) { return(Type_V2u); }
     else if(generated_string_compare("BB", 2, s, l)) { return(Type_BB); }
@@ -709,6 +705,7 @@ static void print_type_Window_Info(char *buf, int *written, int max_size, Window
 
     print_type_String(buf, written, max_size, (String *)&param->title, "title");
     print_type_String(buf, written, max_size, (String *)&param->class_name, "class_name");
+    print_type_Int(buf, written, max_size, (Int *)&param->should_screenshot, "should_screenshot");
 }
 #endif
 static int print_type(char *buf, int max_size, Window_Info *param) {
@@ -750,6 +747,11 @@ static void print_type_API(char *buf, int *written, int max_size, API *param, ch
         print_type_Window_Info(buf, written, max_size, (Window_Info *)&param->windows[i], "");
     }
     print_type_Int(buf, written, max_size, (Int *)&param->launch_browse_for_directory, "launch_browse_for_directory");
+    print_type_Int(buf, written, max_size, (Int *)&param->include_title_bar, "include_title_bar");
+    print_type_int(buf, written, max_size, (int *)&param->amount_to_sleep, "amount_to_sleep");
+    print_type_String(buf, written, max_size, (String *)&param->target_output_directory, "target_output_directory");
+    print_type_String(buf, written, max_size, (String *)&param->target_output_directory_full, "target_output_directory_full");
+    print_type_String(buf, written, max_size, (String *)&param->new_target_output_directory, "new_target_output_directory");
 }
 #endif
 static int print_type(char *buf, int max_size, API *param) {
@@ -768,29 +770,6 @@ static void print_type_Memory_Index(char *buf, int *written, int max_size, Memor
 static int print_type(char *buf, int max_size, Memory_Index *param) {
     int written = 0;
     print_type_Memory_Index(buf, &written, max_size, param, "");
-    return(written);
-}
-
-#if !defined(override_print_type_Config)
-static void print_type_Config(char *buf, int *written, int max_size, Config *param, char *name) {
-    int r = SNPRINTF(buf + *written, max_size - *written, "Config %s:\n", name);
-    if(r != -1) { *written += r; }
-
-    { int r2 = SNPRINTF(buf + *written, max_size - *written, "Window_Info windows[%d]\n", (int)(sizeof(param->windows) / (sizeof(*(param->windows))))); if(r2 != -1) { *written += r2; } }
-    for(int i = 0; (i < (sizeof(param->windows) / (sizeof(*(param->windows))))); ++i) {
-        print_type_Window_Info(buf, written, max_size, (Window_Info *)&param->windows[i], "");
-    }
-    print_type_int(buf, written, max_size, (int *)&param->target_window_count, "target_window_count");
-    print_type_Int(buf, written, max_size, (Int *)&param->include_title_bar, "include_title_bar");
-    print_type_int(buf, written, max_size, (int *)&param->amount_to_sleep, "amount_to_sleep");
-    print_type_String(buf, written, max_size, (String *)&param->target_output_directory, "target_output_directory");
-    print_type_String(buf, written, max_size, (String *)&param->target_output_directory_full, "target_output_directory_full");
-    print_type_String(buf, written, max_size, (String *)&param->new_target_output_directory, "new_target_output_directory");
-}
-#endif
-static int print_type(char *buf, int max_size, Config *param) {
-    int written = 0;
-    print_type_Config(buf, &written, max_size, param, "");
     return(written);
 }
 
@@ -1020,23 +999,6 @@ static void print_type_Win32_API(char *buf, int *written, int max_size, Win32_AP
 static int print_type(char *buf, int max_size, Win32_API *param) {
     int written = 0;
     print_type_Win32_API(buf, &written, max_size, param, "");
-    return(written);
-}
-
-#if !defined(override_print_type_Win32_Screen_Capture_Thread_Parameters)
-static void print_type_Win32_Screen_Capture_Thread_Parameters(char *buf, int *written, int max_size, Win32_Screen_Capture_Thread_Parameters *param, char *name) {
-    int r = SNPRINTF(buf + *written, max_size - *written, "Win32_Screen_Capture_Thread_Parameters %s:\n", name);
-    if(r != -1) { *written += r; }
-
-    if(param->config) { print_type_Config(buf, written, max_size, (Config *)param->config, "config"); }
-    else { int r2 = SNPRINTF(buf + *written, max_size - *written, "Config config: (NULL)\n"); if(r2 != -1) { *written += r2; } }
-    if(param->api) { print_type_API(buf, written, max_size, (API *)param->api, "api"); }
-    else { int r2 = SNPRINTF(buf + *written, max_size - *written, "API api: (NULL)\n"); if(r2 != -1) { *written += r2; } }
-}
-#endif
-static int print_type(char *buf, int max_size, Win32_Screen_Capture_Thread_Parameters *param) {
-    int written = 0;
-    print_type_Win32_Screen_Capture_Thread_Parameters(buf, &written, max_size, param, "");
     return(written);
 }
 

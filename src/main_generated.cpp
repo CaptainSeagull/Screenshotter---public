@@ -204,7 +204,6 @@ static uint64_t type_to_size(Type type) {
         case Type_Window_Info: { return(sizeof(Window_Info)); } break;
         case Type_API: { return(sizeof(API)); } break;
         case Type_Memory_Index: { return(sizeof(Memory_Index)); } break;
-        case Type_Config: { return(sizeof(Config)); } break;
         case Type_Image: { return(sizeof(Image)); } break;
         case Type_V2: { return(sizeof(V2)); } break;
         case Type_V3: { return(sizeof(V3)); } break;
@@ -258,7 +257,6 @@ static Type string_to_type(char const *s, uint64_t l) {
     else if(generated_string_compare("Window_Info", 11, s, l)) { return(Type_Window_Info); }
     else if(generated_string_compare("API", 3, s, l)) { return(Type_API); }
     else if(generated_string_compare("Memory_Index", 12, s, l)) { return(Type_Memory_Index); }
-    else if(generated_string_compare("Config", 6, s, l)) { return(Type_Config); }
     else if(generated_string_compare("Image", 5, s, l)) { return(Type_Image); }
     else if(generated_string_compare("V2", 2, s, l)) { return(Type_V2); }
     else if(generated_string_compare("V3", 2, s, l)) { return(Type_V3); }
@@ -697,6 +695,7 @@ static void print_type_Window_Info(char *buf, int *written, int max_size, Window
 
     print_type_String(buf, written, max_size, (String *)&param->title, "title");
     print_type_String(buf, written, max_size, (String *)&param->class_name, "class_name");
+    print_type_Int(buf, written, max_size, (Int *)&param->should_screenshot, "should_screenshot");
 }
 #endif
 static int print_type(char *buf, int max_size, Window_Info *param) {
@@ -738,6 +737,11 @@ static void print_type_API(char *buf, int *written, int max_size, API *param, ch
         print_type_Window_Info(buf, written, max_size, (Window_Info *)&param->windows[i], "");
     }
     print_type_Int(buf, written, max_size, (Int *)&param->launch_browse_for_directory, "launch_browse_for_directory");
+    print_type_Int(buf, written, max_size, (Int *)&param->include_title_bar, "include_title_bar");
+    print_type_int(buf, written, max_size, (int *)&param->amount_to_sleep, "amount_to_sleep");
+    print_type_String(buf, written, max_size, (String *)&param->target_output_directory, "target_output_directory");
+    print_type_String(buf, written, max_size, (String *)&param->target_output_directory_full, "target_output_directory_full");
+    print_type_String(buf, written, max_size, (String *)&param->new_target_output_directory, "new_target_output_directory");
 }
 #endif
 static int print_type(char *buf, int max_size, API *param) {
@@ -756,29 +760,6 @@ static void print_type_Memory_Index(char *buf, int *written, int max_size, Memor
 static int print_type(char *buf, int max_size, Memory_Index *param) {
     int written = 0;
     print_type_Memory_Index(buf, &written, max_size, param, "");
-    return(written);
-}
-
-#if !defined(override_print_type_Config)
-static void print_type_Config(char *buf, int *written, int max_size, Config *param, char *name) {
-    int r = SNPRINTF(buf + *written, max_size - *written, "Config %s:\n", name);
-    if(r != -1) { *written += r; }
-
-    { int r2 = SNPRINTF(buf + *written, max_size - *written, "Window_Info windows[%d]\n", (int)(sizeof(param->windows) / (sizeof(*(param->windows))))); if(r2 != -1) { *written += r2; } }
-    for(int i = 0; (i < (sizeof(param->windows) / (sizeof(*(param->windows))))); ++i) {
-        print_type_Window_Info(buf, written, max_size, (Window_Info *)&param->windows[i], "");
-    }
-    print_type_int(buf, written, max_size, (int *)&param->target_window_count, "target_window_count");
-    print_type_Int(buf, written, max_size, (Int *)&param->include_title_bar, "include_title_bar");
-    print_type_int(buf, written, max_size, (int *)&param->amount_to_sleep, "amount_to_sleep");
-    print_type_String(buf, written, max_size, (String *)&param->target_output_directory, "target_output_directory");
-    print_type_String(buf, written, max_size, (String *)&param->target_output_directory_full, "target_output_directory_full");
-    print_type_String(buf, written, max_size, (String *)&param->new_target_output_directory, "new_target_output_directory");
-}
-#endif
-static int print_type(char *buf, int max_size, Config *param) {
-    int written = 0;
-    print_type_Config(buf, &written, max_size, param, "");
     return(written);
 }
 
@@ -1243,7 +1224,8 @@ static void print_type_Entry(char *buf, int *written, int max_size, Entry *param
     print_type_uint64_t(buf, written, max_size, (uint64_t *)&param->green_window_id, "green_window_id");
     print_type_uint64_t(buf, written, max_size, (uint64_t *)&param->yellow_window_id, "yellow_window_id");
     print_type_Int(buf, written, max_size, (Int *)&param->highlighted, "highlighted");
-    print_type_Window_Info(buf, written, max_size, (Window_Info *)&param->info, "info");
+    if(param->info) { print_type_Window_Info(buf, written, max_size, (Window_Info *)param->info, "info"); }
+    else { int r2 = SNPRINTF(buf + *written, max_size - *written, "Window_Info info: (NULL)\n"); if(r2 != -1) { *written += r2; } }
 }
 #endif
 static int print_type(char *buf, int max_size, Entry *param) {

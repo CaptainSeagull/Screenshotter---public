@@ -46,11 +46,6 @@ struct Win32_API {
     Win32_Work_Queue queue;
 };
 
-struct Win32_Screen_Capture_Thread_Parameters {
-    Config *config;
-    API *api;
-};
-
 #define ADD(name) name##_t *name;
 
 // User32

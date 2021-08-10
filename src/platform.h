@@ -105,9 +105,8 @@ struct Settings {
 struct Window_Info {
     String title;
     String class_name;
+    Bool should_screenshot;
 };
-
-struct Config;
 
 // TODO: Tidy API struct
 struct API {
@@ -142,6 +141,16 @@ struct API {
 
     Bool launch_browse_for_directory;
 
-    Config *config;
+    Bool include_title_bar;
+    Int amount_to_sleep;
+
+    // TODO: Wrap the directory stuff in some functions and make these private
+
+    // target_output_directory is what the user select. target_output_directory_full includes "Screenshotter_x" at the end.
+    String target_output_directory;
+    String target_output_directory_full;
+
+    // When changing the directory just change this.
+    String new_target_output_directory;
 };
 

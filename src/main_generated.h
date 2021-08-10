@@ -39,7 +39,6 @@ enum Type {
     Type_Window_Info,
     Type_API,
     Type_Memory_Index,
-    Type_Config,
     Type_Image,
     Type___m128i,
     Type___m128,
@@ -128,7 +127,6 @@ struct Window_Info;
 struct API;
 enum Memory_Index : Int;
 
-struct Config;
 struct Image;
 union V2;
 union V3;
@@ -1075,9 +1073,6 @@ static int print_type(char *buf, int max_size, API *param);
 
 static void print_type_Memory_Index(char *buf, int *written, int max_size, Memory_Index *param, char *name);
 static int print_type(char *buf, int max_size, Memory_Index *param);
-
-static void print_type_Config(char *buf, int *written, int max_size, Config *param, char *name);
-static int print_type(char *buf, int max_size, Config *param);
 
 static void print_type_Image(char *buf, int *written, int max_size, Image *param, char *name);
 static int print_type(char *buf, int max_size, Image *param);

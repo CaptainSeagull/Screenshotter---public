@@ -33,22 +33,6 @@ set(Void *dst, U8 v, U64 size) {
     }
 }
 
-// TODO: Originally separate from API so I could pass to thread. Since I'm not threading anymore, move into API?
-struct Config {
-    Window_Info windows[256];
-    Int target_window_count;
-
-    Bool include_title_bar;
-    Int amount_to_sleep;
-
-    // target_output_directory is what the user select. target_output_directory_full includes "Screenshotter_x" at the end.
-    String target_output_directory;
-    String target_output_directory_full;
-
-    // When changing the directory just change this.
-    String new_target_output_directory;
-};
-
 internal Void
 flip_image(Void *dst_pixels, Void *src_pixels, Int width, Int height) {
     Int pitch = width * 4;

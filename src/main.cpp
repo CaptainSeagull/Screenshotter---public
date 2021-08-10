@@ -18,6 +18,7 @@
 #define STBTT_assert ASSERT
 #include "../shared/stb_truetype.h"
 
+#define SNPRINTF stbsp_snprintf
 #include "main_generated.h"
 #include "renderer.h"
 #include "renderer.cpp"
@@ -27,7 +28,7 @@ struct Entry {
     U64 yellow_window_id;
     Bool highlighted;
 
-    Window_Info info;
+    Window_Info *info; // TODO: Storing this here may cause issues later on if we remove/add items.
 };
 
 struct DLL_Data {
@@ -64,7 +65,6 @@ load_font(API *api, Renderer *renderer, String fname) {
 
 internal Void
 setup(API *api, DLL_Data *data, Renderer *renderer) {
-    Config *config = api->config;
     Memory *memory = api->memory;
 
     create_renderer(renderer, memory);
@@ -102,8 +102,8 @@ setup(API *api, DLL_Data *data, Renderer *renderer) {
     push_line(renderer, white_background, 0, 50, api->window_width, 50, 3.0f);
 
     Word *directory_word = 0;
-    if(config->target_output_directory.len > 0) {
-        String strings[] = { "Output Directory: ", config->target_output_directory };
+    if(api->target_output_directory.len > 0) {
+        String strings[] = { "Output Directory: ", api->target_output_directory };
 
         directory_word = push_words(renderer, white_background,
                                     arial_id, 40, 60, 25,
@@ -147,7 +147,7 @@ setup(API *api, DLL_Data *data, Renderer *renderer) {
 
                 data->windows[data->list_count].yellow_window_id = yellow_window->id;
                 data->windows[data->list_count].green_window_id = green_window->id;
-                data->windows[data->list_count].info = api->windows[wnd_i];
+                data->windows[data->list_count].info = &api->windows[wnd_i];
 
                 ++data->list_count;
 
@@ -172,7 +172,6 @@ setup(API *api, DLL_Data *data, Renderer *renderer) {
 internal Void
 update(API *api, Renderer *renderer) {
     DLL_Data *data = (DLL_Data *)api->dll_data;
-    Config *config = api->config;
     Memory *memory = api->memory;
 
     Int mouse_x = (Int)(api->mouse_pos_x * (F32)api->window_width);
@@ -183,18 +182,17 @@ update(API *api, Renderer *renderer) {
     white_window->width = api->window_width;
     white_window->height = api->window_height;
 
-    if(config->new_target_output_directory.len > 0) {
+    if(api->new_target_output_directory.len > 0) {
         Word *directory_word = find_render_entity(renderer, data->directory_word_id, Word);
         ASSERT(directory_word);
 
-        String strings[] = { "Output Directory: ", config->new_target_output_directory };
+        String strings[] = { "Output Directory: ", api->new_target_output_directory };
         update_words(renderer, directory_word, strings, ARRAY_COUNT(strings));
     }
 
     // Button
     Rect *button = find_render_entity(renderer, data->button_id, Rect); ASSERT(button);
 
-    // TODO: After opening the file browser this isn't reset back to white until the curser goes over the window. Investigate!
     button->inner_colour = RGB(255, 255, 255);
     if(mouse_x > button->x && mouse_x < button->x + button->width) {
         if(mouse_y > button->y && mouse_y < button->y + button->height) {
@@ -210,6 +208,8 @@ update(API *api, Renderer *renderer) {
 
     // Yellow highlighting
     for(U32 list_i = 0; (list_i < data->list_count); ++list_i) {
+        data->windows[list_i].info->should_screenshot = false;
+
         Rect *yellow_window = find_render_entity(renderer, data->windows[list_i].yellow_window_id, Rect);
         Rect *green_window = find_render_entity(renderer, data->windows[list_i].green_window_id, Rect);
 
@@ -232,7 +232,7 @@ update(API *api, Renderer *renderer) {
         }
 
         if(green_window->visible) {
-            config->windows[config->target_window_count++] = data->windows[list_i].info;
+            data->windows[list_i].info->should_screenshot = true;
         }
     }
 
@@ -242,10 +242,7 @@ update(API *api, Renderer *renderer) {
 extern "C" Void
 handle_input_and_render(API *api) {
     DLL_Data *data = (DLL_Data *)api->dll_data;
-    Config *config = api->config;
     Renderer *renderer = &data->renderer;
-
-    config->target_window_count = 0;
 
 #if INTERNAL
     Memory_Group *temp_group = get_memory_group(api->memory, Memory_Index_temp);

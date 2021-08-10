@@ -39,7 +39,6 @@ enum Type {
     Type_Window_Info,
     Type_API,
     Type_Memory_Index,
-    Type_Config,
     Type_Image,
     Type_V2,
     Type_V3,
@@ -56,7 +55,6 @@ enum Type {
     Type_Win32_Loaded_Code,
     Type_Win32_Debug_Window,
     Type_Win32_API,
-    Type_Win32_Screen_Capture_Thread_Parameters,
     Type_BOOL,
     Type_LRESULT,
     Type_ATOM,
@@ -187,7 +185,6 @@ struct Window_Info;
 struct API;
 enum Memory_Index : Int;
 
-struct Config;
 struct Image;
 union V2;
 union V3;
@@ -203,7 +200,6 @@ struct Win32_Work_Queue;
 struct Win32_Loaded_Code;
 struct Win32_Debug_Window;
 struct Win32_API;
-struct Win32_Screen_Capture_Thread_Parameters;
 struct Win32_System_Callbacks;
 struct V2u;
 struct BB;
@@ -872,7 +868,7 @@ void* memcpy(void * dst , const void * src , size_t cnt );
  static Int win32_get_processor_count(Void );
  static U64 win32_locked_add(U64 volatile * a , U64 b );
  static F32 win32_safe_div(F32 a , F32 b );
- static Void win32_update_window(Memory * memory , HDC dc , RECT * wnd_rect , Void * input_bitmap_memory , BITMAPINFO * bitmap_info , Int bitmap_width , Int bitmap_height );
+ static Void win32_update_window(Memory * memory , Win32_System_Callbacks * sys_cb , HDC dc , RECT * wnd_rect , Void * input_bitmap_memory , BITMAPINFO * bitmap_info , Int bitmap_width , Int bitmap_height );
  static Key win32_key_to_our_key(WPARAM k );
  static F32 win32_get_seconds_elapsed(LARGE_INTEGER start , LARGE_INTEGER end , int64_t perf_cnt_freq );
  static Void win32_get_window_dimension(HWND wnd , Int * w , Int * h , Win32_System_Callbacks * sys_cb );
@@ -883,7 +879,8 @@ void* memcpy(void * dst , const void * src , size_t cnt );
  static Win32_Loaded_Code win32_load_code(Char * source_fname , Char * temp_fname );
  static Win32_Create_Directory_Result win32_create_directory(Memory * memory , String root , String dir , Bool save_directory_string  );
  static Int win32_directory_index_to_use(Memory * mem , String session_prefix , String input_target_directory );
- static Bool run_screenshotting(API * api , Memory * memory , Config * config , Win32_System_Callbacks * sys_cb , String root_directory , U64 iteration_count );
+ static U64 win32_file_index_to_use(Memory * memory , String root_directory , String program_title );
+ static Void run_screenshotting(API * api , Memory * memory , Win32_System_Callbacks * sys_cb , String root_directory );
  static String win32_create_root_directory(Memory * memory , String target_directory );
  static int  CALLBACK win32_directory_browse_callback(HWND hwnd , UINT uMsg , LPARAM lParam , LPARAM lpData );
  static Void string_replace(Char * input , Int length , Char t , Char s );
@@ -1019,9 +1016,6 @@ static int print_type(char *buf, int max_size, API *param);
 static void print_type_Memory_Index(char *buf, int *written, int max_size, Memory_Index *param, char *name);
 static int print_type(char *buf, int max_size, Memory_Index *param);
 
-static void print_type_Config(char *buf, int *written, int max_size, Config *param, char *name);
-static int print_type(char *buf, int max_size, Config *param);
-
 static void print_type_Image(char *buf, int *written, int max_size, Image *param, char *name);
 static int print_type(char *buf, int max_size, Image *param);
 
@@ -1066,9 +1060,6 @@ static int print_type(char *buf, int max_size, Win32_Debug_Window *param);
 
 static void print_type_Win32_API(char *buf, int *written, int max_size, Win32_API *param, char *name);
 static int print_type(char *buf, int max_size, Win32_API *param);
-
-static void print_type_Win32_Screen_Capture_Thread_Parameters(char *buf, int *written, int max_size, Win32_Screen_Capture_Thread_Parameters *param, char *name);
-static int print_type(char *buf, int max_size, Win32_Screen_Capture_Thread_Parameters *param);
 
 static void print_type_Win32_System_Callbacks(char *buf, int *written, int max_size, Win32_System_Callbacks *param, char *name);
 static int print_type(char *buf, int max_size, Win32_System_Callbacks *param);

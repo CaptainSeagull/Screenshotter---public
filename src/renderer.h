@@ -45,7 +45,7 @@ struct Image_Rect : public Render_Entity {
 };
 
 struct Word : public Render_Entity {
-    String string; // TODO: Not used
+    //String string; // TODO: Not used
     //Int height;
     U64 font_id;
 };

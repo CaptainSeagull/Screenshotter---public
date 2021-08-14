@@ -1088,7 +1088,6 @@ static void print_type_Word(char *buf, int *written, int max_size, Word *param, 
     int r = SNPRINTF(buf + *written, max_size - *written, "Word %s:\n", name);
     if(r != -1) { *written += r; }
 
-    print_type_String(buf, written, max_size, (String *)&param->string, "string");
     print_type_uint64_t(buf, written, max_size, (uint64_t *)&param->font_id, "font_id");
 }
 #endif

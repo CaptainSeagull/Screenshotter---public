@@ -460,24 +460,6 @@ find_render_entity_(Renderer *renderer, U64 id, Type expected_type) {
 }
 
 internal F32
-floor(F32 a) {
-    F32 r = (F32)((S32)a);
-    return(r);
-}
-
-internal F32
-ceil(F32 a) {
-    F32 r = (F32)((S32)(a + 0.5f));
-    return(r);
-}
-
-internal F32
-absolute(F32 a) {
-    F32 r = (a > 0) ? a : -a;
-    return(r);
-}
-
-internal F32
 power(F32 x, Int y) {
     F32 res = 1;
     if(y == 0) {
@@ -599,8 +581,8 @@ render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bit
             case Type_Line: {
                 Line *line = (Line *)render_entity;
 
-                F32 rise = maxf32(absolute(line->y2 - line->y), absolute(line->y - line->y2));
-                F32 run = maxf32(absolute(line->x2 - line->x), absolute(line->x - line->x2));
+                F32 rise = maxf32(ABS(line->y2 - line->y), ABS(line->y - line->y2));
+                F32 run = maxf32(ABS(line->x2 - line->x), ABS(line->x - line->x2));
 
                 F32 m = (run != 0) ? rise / run : 0;
                 F32 y_intercept = line->y - (m * line->x);
@@ -626,11 +608,11 @@ render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bit
                                 F32 y = iter_y + offset.y;
                                 if(run != 0) {
                                     F32 t = ((m * x) + y_intercept);
-                                    if(absolute(y - t) < thickness) {
+                                    if(ABS(y - t) < thickness) {
                                         *screen_pixel = RGBA(0, 0, 0, 0xFF); // TODO: Make colour configruable
                                     }
                                 } else {
-                                    if(absolute(x - x_intercept) < thickness) {
+                                    if(ABS(x - x_intercept) < thickness) {
                                         *screen_pixel = RGBA(0, 0, 0, 0xFF); // TODO: Make colour configruable
                                     }
                                 }

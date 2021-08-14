@@ -42,8 +42,12 @@ typedef double F64;
 
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 #define MIN(a, b) (((a) > (b)) ? (a) : (b))
-#define CLAMP(a, l, u) MIN(MAX(a, l), u)
-#define CLAMP01(a) CLAMP(a, 0, 1)
+#define CLAMP(a, l, u) MIN(MAX((a), (l)), (u))
+#define CLAMP01(a) CLAMP((a), 0, 1)
+
+#define FLOOR(n) (F32)(((S32)(n)))
+#define CEIL(n) (F32)(((S32)(n) + 0.5f))
+#define ABS(n) ((n) > 0) ? ((n)) : (-(n))
 
 #define BYTES(v)     ((v)            * (8LL))
 #define KILOBYTES(v) ((v)            * (1024LL))

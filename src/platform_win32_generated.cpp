@@ -549,7 +549,7 @@ static void print_type_String(char *buf, int *written, int max_size, String *par
 
     if(param->e) { print_type_char(buf, written, max_size, (char *)param->e, "e"); }
     else { int r2 = SNPRINTF(buf + *written, max_size - *written, "char e: (NULL)\n"); if(r2 != -1) { *written += r2; } }
-    print_type_int(buf, written, max_size, (int *)&param->len, "len");
+    print_type_uint32_t(buf, written, max_size, (uint32_t *)&param->len, "len");
 }
 #endif
 static int print_type(char *buf, int max_size, String *param) {
@@ -594,7 +594,7 @@ static void print_type_Find_Index_Result(char *buf, int *written, int max_size, 
     if(r != -1) { *written += r; }
 
     print_type_int(buf, written, max_size, (int *)&param->success, "success");
-    print_type_int(buf, written, max_size, (int *)&param->idx, "idx");
+    print_type_uint32_t(buf, written, max_size, (uint32_t *)&param->index, "index");
 }
 #endif
 static int print_type(char *buf, int max_size, Find_Index_Result *param) {

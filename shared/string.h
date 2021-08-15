@@ -58,7 +58,8 @@
 #endif
 
 #if !defined(STRING_SIZE_TYPE)
-    #define STRING_SIZE_TYPE int
+    #include <stdint.h>
+    #define STRING_SIZE_TYPE uint32_t
 #endif
 
 #if !defined(STRING_PUBLIC_DEC)
@@ -72,8 +73,6 @@
 #endif
 
 struct String {
-    // TODO: Having "= 0" in here means we can't actually create an uninitialised string anymore... maybe better to just get rid
-    //       of constructors?
     char STRING_CONST_MODIFIER *e = 0;
     STRING_SIZE_TYPE len = 0;
 
@@ -94,13 +93,13 @@ struct String_To_Float_Result {
 
 struct Find_Index_Result {
     int/*bool*/ success;
-    STRING_SIZE_TYPE idx;
+    STRING_SIZE_TYPE index;
 };
 
 STRING_PUBLIC_DEC String create_string(char *str, STRING_SIZE_TYPE len = 0);
 STRING_PUBLIC_DEC String create_string(char const *str, STRING_SIZE_TYPE len = 0);
 
-STRING_PUBLIC_DEC String create_substring(String str, STRING_SIZE_TYPE start, STRING_SIZE_TYPE end = -1);
+STRING_PUBLIC_DEC String create_substring(String str, STRING_SIZE_TYPE start, STRING_SIZE_TYPE end = 1);
 
 STRING_PUBLIC_DEC int/*bool*/ string_compare(String a, String b);
 STRING_PUBLIC_DEC int/*bool*/ operator==(String a, String b);
@@ -108,7 +107,7 @@ STRING_PUBLIC_DEC int/*bool*/ operator==(String a, String b);
 STRING_PUBLIC_DEC int/*bool*/ string_contains(String a, String b);
 STRING_PUBLIC_DEC int/*bool*/ string_contains(String str, char target);
 
-STRING_PUBLIC_DEC Find_Index_Result find_index(String str, char target, int/*bool*/ find_last = false);
+STRING_PUBLIC_DEC Find_Index_Result find_index_of_char(String str, char target, int/*bool*/ find_last = false);
 
 STRING_PUBLIC_DEC STRING_SIZE_TYPE string_length(char *str);
 STRING_PUBLIC_DEC STRING_SIZE_TYPE string_length(char const *str);
@@ -156,7 +155,7 @@ create_string(char const *str, STRING_SIZE_TYPE len/*= 0*/) {
 }
 
 STRING_PUBLIC_DEC String
-create_substring(String str, STRING_SIZE_TYPE start, STRING_SIZE_TYPE end/*= -1*/) {
+create_substring(String str, STRING_SIZE_TYPE start, STRING_SIZE_TYPE end/*= 1*/) {
     if(end == -1) { end = str.len; }
 
     String r = create_string(str.e + start, end - start);
@@ -215,13 +214,13 @@ string_contains(String str, char target) {
 }
 
 STRING_PUBLIC_DEC Find_Index_Result
-find_index(String str, char target, int/*bool*/ find_last/*=false*/) {
+find_index_of_char(String str, char target, int/*bool*/ find_last/*= false*/) {
     Find_Index_Result r = {};
 
     if(find_last) {
         for(STRING_SIZE_TYPE i = 0, j = str.len - 1; (i < str.len); ++i, --j) {
             if(str.e[j] == target) {
-                r.idx = j;
+                r.index = j;
                 r.success = true;
                 break; // for
             }
@@ -229,7 +228,7 @@ find_index(String str, char target, int/*bool*/ find_last/*=false*/) {
     } else {
         for(STRING_SIZE_TYPE i = 0; (i < str.len); ++i) {
             if(str.e[i] == target) {
-                r.idx = i;
+                r.index = i;
                 r.success = true;
                 break; // for
             }
@@ -276,7 +275,7 @@ internal_char_to_int(char c) {
 
 STRING_PUBLIC_DEC String_To_Int_Result
 string_to_int(String s) {
-    int a = 0;
+    int integer = 0;
     int/*bool*/ success = false;
     int/*bool*/ is_negative = (s.e[0] == '-') ? true : false;
 
@@ -285,8 +284,8 @@ string_to_int(String s) {
         if(t == -1) {
             break; // for - something went wrong
         } else {
-            a *= 10;
-            a += t;
+            integer *= 10;
+            integer += t;
 
             if(i == (s.len - 1)) {
                 success = true;
@@ -296,7 +295,7 @@ string_to_int(String s) {
 
     String_To_Int_Result r = {};
     if(success) {
-        r.v = (is_negative) ? -a : a;
+        r.v = (is_negative) ? -integer : integer;
         r.success = true;
     }
 
@@ -306,8 +305,8 @@ string_to_int(String s) {
 STRING_PUBLIC_DEC String_To_Float_Result
 string_to_float(String s) {
     // a is before decimal point, b is after.
-    float a = 0.0f, b = 0.0f;
-    int/*Bool*/ a_success = false, b_success = false;
+    float before_dec = 0.0f, after_dec = 0.0f;
+    int/*Bool*/ before_dec_success = false, after_dec_success = false;
     int/*Bool*/ is_negative = (s.e[0] == '-') ? true : false;
 
     // TODO: Maybe we can do this by only having one for loop. We keep track of where the decimal point is
@@ -315,46 +314,46 @@ string_to_float(String s) {
 
     for(STRING_SIZE_TYPE i = (is_negative) ? 1 : 0; (i < s.len); ++i) {
         if(s.e[i] == '.') {
-            a_success = true;
+            before_dec_success = true;
             break;
         } else {
             int t = internal_char_to_int(s.e[i]);
             if(t == -1) {
                 break; // for - something went wrong
             } else {
-                a *= 10.0f;
-                a += (float)t;
+                before_dec *= 10.0f;
+                before_dec += (float)t;
 
                 if(i == (s.len - 1)) {
                     // String had no decimal point
-                    a_success = true;
-                    b_success = true;
+                    before_dec_success = true;
+                    after_dec_success = true;
                 }
             }
         }
     }
 
-    if(!b_success) { // Only called if string has a decimal point
+    if(!after_dec_success) { // Only called if string has a decimal point
         for(STRING_SIZE_TYPE i = 0, j = s.len - 1; (i < s.len); ++i, --j) {
             if(s.e[j] == '.') {
-                b_success = true;
+                after_dec_success = true;
                 break;
             } else {
                 int t = internal_char_to_int(s.e[j]);
                 if(t == -1) {
                     break; // for - something went wrong
                 } else {
-                    b /= 10.0f;
-                    b -= 0.1f * (float)t;
+                    after_dec /= 10.0f;
+                    after_dec -= 0.1f * (float)t;
                 }
             }
         }
     }
 
     String_To_Float_Result r = {};
-    if(a_success && b_success) {
+    if(before_dec_success && after_dec_success) {
         // We calculate b as the negative of itself, so invert it before adding the result together.
-        r.v = a + -b;
+        r.v = before_dec + -after_dec;
         if(is_negative) { r.v = -r.v; }
         r.success = true;
     }

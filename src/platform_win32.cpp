@@ -1025,10 +1025,10 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
 
             Char path[1024] = {}; // TODO: MAX_PATH?
             GetModuleFileNameA(0, path, ARRAY_COUNT(path));
-            Find_Index_Result fir = find_index(path, '\\', true);
+            Find_Index_Result fir = find_index_of_char(path, '\\', true);
             ASSERT(fir.success);
 
-            Int last_slash = fir.idx + 1;
+            Int last_slash = fir.index + 1;
 
             // TODO: Instead of assuming we're running from the data directory and going relative from there could I find the path
             // to the current EXE and load the DLLs from there?

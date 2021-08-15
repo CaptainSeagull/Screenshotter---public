@@ -563,7 +563,7 @@ static void print_type_String_To_Int_Result(char *buf, int *written, int max_siz
     int r = SNPRINTF(buf + *written, max_size - *written, "String_To_Int_Result %s:\n", name);
     if(r != -1) { *written += r; }
 
-    print_type_int(buf, written, max_size, (int *)&param->success, "success");
+    print_type_int64_t(buf, written, max_size, (int64_t *)&param->success, "success");
     print_type_int(buf, written, max_size, (int *)&param->v, "v");
 }
 #endif

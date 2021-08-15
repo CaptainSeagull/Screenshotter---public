@@ -119,6 +119,8 @@ MEMORY_PUBLIC_DEC uint64_t get_memory_base_size(int group_count);
 MEMORY_PUBLIC_DEC Memory create_memory_base(void *base_memory, uintptr_t *inputs, uintptr_t inputs_count);
 MEMORY_PUBLIC_DEC Memory_Group *get_memory_group(Memory *memory, uintptr_t buffer_index);
 
+MEMORY_PUBLIC_DEC uint64_t get_size(void *ptr);
+
 // TODO: Document these
 #define memory_push_type(memory, buffer_index, Type, ...) \
     (Type *)memory_push_internal(memory, buffer_index, sizeof(Type), (char *)__FILE__, __LINE__, ##__VA_ARGS__)
@@ -236,7 +238,8 @@ MEMORY_PUBLIC_DEC Memory_Group *get_memory_group(Memory *memory, uintptr_t buffe
     return(res);
 }
 
-MEMORY_PUBLIC_DEC void *memory_push_internal(Memory *memory, uintptr_t buffer_index, uintptr_t size, char *file, int line, uintptr_t count/*= 1*/) {
+MEMORY_PUBLIC_DEC void *
+memory_push_internal(Memory *memory, uintptr_t buffer_index, uintptr_t size, char *file, int line, uintptr_t count/*= 1*/) {
     void *res = 0;
 
     uintptr_t alignment = MEMORY_ARENA_DEFAULT_MEMORY_ALIGNMENT;
@@ -281,13 +284,21 @@ MEMORY_PUBLIC_DEC void *memory_push_internal(Memory *memory, uintptr_t buffer_in
     return(res);
 }
 
+static Internal_Push_Info *
+internal_get_push_info_for_pointer(void *ptr) {
+    Internal_Push_Info *push_info = (Internal_Push_Info *)(((uint8_t *)ptr) - (sizeof(Internal_Push_Info)));
+    return(push_info);
+}
+
 // TODO: If I store the buffer index in Internal_Push_Info struct we don't need to pass that in.
-MEMORY_PUBLIC_DEC void memory_pop(Memory *memory, void *memory_buffer) {
+MEMORY_PUBLIC_DEC void
+memory_pop(Memory *memory, void *memory_buffer) {
     if(memory) {
         if(memory_buffer) {
             // TODO: Do an MEMORY_ARENA_ASSERT in here to make sure we're "freeing" memory in the correct order.
 
-            Internal_Push_Info *push_info = (Internal_Push_Info *)(((uint8_t *)memory_buffer) - (sizeof(Internal_Push_Info)));
+            //Internal_Push_Info *push_info = (Internal_Push_Info *)(((uint8_t *)memory_buffer) - (sizeof(Internal_Push_Info)));
+            Internal_Push_Info *push_info = internal_get_push_info_for_pointer(memory_buffer);
             Memory_Group *group = get_memory_group(memory, push_info->buffer_index);
             if(group) {
                 uint64_t to_subtract = (push_info->size + push_info->alignment_offset);
@@ -310,6 +321,23 @@ MEMORY_PUBLIC_DEC void memory_pop(Memory *memory, void *memory_buffer) {
         MEMORY_ARENA_ASSERT(0);
     }
 #endif
+}
+
+MEMORY_PUBLIC_DEC uint64_t
+get_size(void *ptr) {
+    uint64_t size = 0;
+    if(ptr) {
+        Internal_Push_Info *push_info = internal_get_push_info_for_pointer(ptr);
+        size = push_info->size - sizeof(Internal_Push_Info);
+    }
+#if defined(MEMORY_ARENA_WRITE_ERRORS)
+    else {
+        // TODO: Pass "Memory" just so we can potentially write errors?
+        MEMORY_ARENA_ASSERT(0);
+    }
+#endif
+
+    return(size);
 }
 
 MEMORY_PUBLIC_DEC void memory_clear_entire_group(Memory *memory, uintptr_t buffer_index) {

@@ -1003,7 +1003,6 @@ int CALLBACK
 WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd) {
     int res = 0xFF;
 
-
     // TODO: Think about these sizes more. Because this app is meant to run in the background it should be as resource-light as possible.
     U64 permanent_size = GIGABYTES(4);
     U64 temp_size = GIGABYTES(4);
@@ -1023,317 +1022,325 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
             Win32_System_Callbacks sys_cb = load_system_callbacks();
             global_sys_cb = &sys_cb;
 
-            Char path[1024] = {}; // TODO: MAX_PATH?
-            GetModuleFileNameA(0, path, ARRAY_COUNT(path));
-            Find_Index_Result fir = find_index_of_char(path, '\\', true);
-            ASSERT(fir.success);
+            Char *path_to_exe = memory_push_type(&memory, Memory_Index_temp, Char, 1024);
+            ASSERT_IF(path_to_exe) {
+                GetModuleFileNameA(0, path_to_exe, get_size(path_to_exe));
+                Find_Index_Result fir = find_index_of_char(path_to_exe, '\\', true);
+                ASSERT_IF(fir.success) {
 
-            Int last_slash = fir.index + 1;
+                    Int last_slash = fir.index + 1;
 
-            // TODO: Instead of assuming we're running from the data directory and going relative from there could I find the path
-            // to the current EXE and load the DLLs from there?
+                    // TODO: Instead of assuming we're running from the data directory and going relative from there could I find the path
+                    // to the current EXE and load the DLLs from there?
 
-            Char src_dll_path[1024] = {};
-            Char tmp_dll_path[1024] = {};
+                    Char *src_dll_path = memory_push_type(&memory, Memory_Index_permanent, Char, 1024);
+                    Char *tmp_dll_path = memory_push_type(&memory, Memory_Index_permanent, Char, 1024);
 
-            string_copy(src_dll_path, path);
-            string_copy(&src_dll_path[last_slash], "screenshotter.dll");
-            string_copy(tmp_dll_path, path);
-            string_copy(&tmp_dll_path[last_slash], "screenshotter_temp.dll");
-            Win32_Loaded_Code loaded_code = win32_load_code(src_dll_path, tmp_dll_path);
+                    ASSERT_IF(src_dll_path && tmp_dll_path) {
 
-            API api = {};
-            Settings settings = {};
+                        string_copy(src_dll_path, path_to_exe);
+                        string_copy(&src_dll_path[last_slash], "screenshotter.dll");
+                        string_copy(tmp_dll_path, path_to_exe);
+                        string_copy(&tmp_dll_path[last_slash], "screenshotter_temp.dll");
+                        Win32_Loaded_Code loaded_code = win32_load_code(src_dll_path, tmp_dll_path);
 
-            SYSTEM_INFO info;
-            GetSystemInfo(&info);
+                        memory_pop(&memory, path_to_exe);
 
-            // Initial sizes
-            settings.thread_count = info.dwNumberOfProcessors;
-            settings.window_width = 1920 / 2;
-            settings.window_width = 1080 / 2;
+                        API api = {};
+                        Settings settings = {};
 
-            loaded_code.init_platform_settings(&settings);
-            api.screen_bitmap.memory = memory_push_size(&memory, Memory_Index_permanent, MAX_SCREEN_BITMAP_SIZE);
-            ASSERT_IF(api.screen_bitmap.memory) {
-                global_api = &api;
+                        SYSTEM_INFO info;
+                        GetSystemInfo(&info);
 
-                LARGE_INTEGER perf_cnt_freq_res;
-                QueryPerformanceFrequency(&perf_cnt_freq_res);
-                U64 perf_cnt_freq = perf_cnt_freq_res.QuadPart;
+                        // Initial sizes
+                        settings.thread_count = info.dwNumberOfProcessors;
+                        settings.window_width = 1920 / 2;
+                        settings.window_width = 1080 / 2;
 
-                WNDCLASS wnd_class = {};
-                wnd_class.style = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
-                wnd_class.hInstance = hInstance;
-                wnd_class.lpszClassName = TEXT("Screenshotter Window Class");
-                wnd_class.lpfnWndProc = win32_window_proc;
+                        loaded_code.init_platform_settings(&settings);
+                        api.screen_bitmap.memory = memory_push_size(&memory, Memory_Index_permanent, MAX_SCREEN_BITMAP_SIZE);
+                        ASSERT_IF(api.screen_bitmap.memory) {
+                            global_api = &api;
 
-                // TODO: Is this part correct?
-                Int frame_rate = 60; // TODO: Make configurable.
-                Int game_update_hz = frame_rate;
-                F32 target_seconds_per_frame = 1.0f / (F32)game_update_hz;
-                F32 target_ms_per_frame = (1.0f / (F32)frame_rate) * 1000.0f;
+                            LARGE_INTEGER perf_cnt_freq_res;
+                            QueryPerformanceFrequency(&perf_cnt_freq_res);
+                            U64 perf_cnt_freq = perf_cnt_freq_res.QuadPart;
 
-                // Make the frame rate more granular.
-                {
-                    HMODULE winmmdll = LoadLibraryA("winmm.dll");
-                    ASSERT_IF(winmmdll) {
-                        typedef MMRESULT timeBeginPeriod_t(UINT uPeriod);
-                        timeBeginPeriod_t *winm_timeBeginPeriod = (timeBeginPeriod_t *)GetProcAddress(winmmdll, "timeBeginPeriod");
-                        ASSERT_IF(winm_timeBeginPeriod) {
-                            winm_timeBeginPeriod(1);
-                        }
+                            WNDCLASS wnd_class = {};
+                            wnd_class.style = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
+                            wnd_class.hInstance = hInstance;
+                            wnd_class.lpszClassName = TEXT("Screenshotter Window Class");
+                            wnd_class.lpfnWndProc = win32_window_proc;
 
-                        FreeLibrary(winmmdll);
-                    }
+                            // TODO: Is this part correct?
+                            Int frame_rate = 60; // TODO: Make configurable.
+                            Int game_update_hz = frame_rate;
+                            F32 target_seconds_per_frame = 1.0f / (F32)game_update_hz;
+                            F32 target_ms_per_frame = (1.0f / (F32)frame_rate) * 1000.0f;
 
-                }
+                            // Make the frame rate more granular.
+                            {
+                                HMODULE winmmdll = LoadLibraryA("winmm.dll");
+                                ASSERT_IF(winmmdll) {
+                                    typedef MMRESULT timeBeginPeriod_t(UINT uPeriod);
+                                    timeBeginPeriod_t *winm_timeBeginPeriod = (timeBeginPeriod_t *)GetProcAddress(winmmdll, "timeBeginPeriod");
+                                    ASSERT_IF(winm_timeBeginPeriod) {
+                                        winm_timeBeginPeriod(1);
+                                    }
 
-                if(sys_cb.RegisterClassA(&wnd_class)) {
-                    Char *window_title = "Screenshotter";
-                    HWND wnd = sys_cb.CreateWindowExA(0, wnd_class.lpszClassName, window_title,
-                                                      WS_OVERLAPPEDWINDOW | WS_VISIBLE | WS_POPUP, CW_USEDEFAULT, CW_USEDEFAULT,
-                                                      settings.window_width, settings.window_height, 0, 0, hInstance, 0);
+                                    FreeLibrary(winmmdll);
+                                }
+
+                            }
+
+                            if(sys_cb.RegisterClassA(&wnd_class)) {
+                                Char *window_title = "Screenshotter";
+                                HWND wnd = sys_cb.CreateWindowExA(0, wnd_class.lpszClassName, window_title,
+                                                                  WS_OVERLAPPEDWINDOW | WS_VISIBLE | WS_POPUP, CW_USEDEFAULT, CW_USEDEFAULT,
+                                                                  settings.window_width, settings.window_height, 0, 0, hInstance, 0);
 
 #if USE_OPENGL_WINDOW
-                    win32_init_opengl(wnd, &sys_cb);
+                                win32_init_opengl(wnd, &sys_cb);
 #endif
 
-                    win32_get_window_dimension(wnd, &api.window_width, &api.window_height, &sys_cb);
+                                win32_get_window_dimension(wnd, &api.window_width, &api.window_height, &sys_cb);
 
-                    if((wnd) && (wnd != INVALID_HANDLE_VALUE)) {
-                        LARGE_INTEGER last_counter = win32_get_wall_clock();
-                        LARGE_INTEGER flip_wall_clock = win32_get_wall_clock();
+                                if((wnd) && (wnd != INVALID_HANDLE_VALUE)) {
+                                    LARGE_INTEGER last_counter = win32_get_wall_clock();
+                                    LARGE_INTEGER flip_wall_clock = win32_get_wall_clock();
 
-                        float ms_per_frame = 16.6666f;
+                                    float ms_per_frame = 16.6666f;
 
-                        Win32_API win32_api = {};
-                        win32_api.queue.entry_count = 2048;
-                        win32_api.queue.entries = memory_push_type(&memory, Memory_Index_permanent, Win32_Work_Queue_Entry,
-                                                                   win32_api.queue.entry_count);
-                        ASSERT(win32_api.queue.entries);
-                        if(settings.dll_data_struct_size) {
-                            api.dll_data = memory_push_size(&memory, Memory_Index_permanent, settings.dll_data_struct_size);
-                            ASSERT(api.dll_data); // TODO: Error handling.
-                        }
-                        api.platform_specific = (Void *)&win32_api;
-
-                        api.max_work_queue_count = win32_api.queue.entry_count;
-                        api.init = true;
-                        api.screen_image_size_change = true;
-                        api.running = true;
-                        api.memory = &memory;
-
-                        api.cb.read_file = win32_read_file;
-                        api.cb.write_file = win32_write_file;
-                        api.cb.locked_add = win32_locked_add;
-
-                        api.cb.add_work_queue_entry = win32_add_work_queue_entry;
-                        api.cb.complete_all_work = win32_complete_all_work;
-
-                        api.randomish_seed = win32_get_wall_clock().QuadPart;
-                        //api.randomish_seed = xorshift64(&api.randomish_seed); // TODO: Copy over xorshift64
-
-                        // TODO: Load config from settings on disk.
-
-                        api.include_title_bar = true;
-                        api.target_output_directory = "C:\\tmp"; // TODO: Hardcoded
-                        api.new_target_output_directory = api.target_output_directory;
-                        // TODO: Create directory here if it doesn't already exist?
-                        api.amount_to_sleep = 1000;
-
-                        for(Int i = 0; (i < settings.thread_count - 1); ++i) {
-                            HANDLE h = CreateThread(0, 0, win32_thread_proc, &win32_api.queue, 0, 0);
-                            ASSERT(h && h != INVALID_HANDLE_VALUE);
-                            if(h && h != INVALID_HANDLE_VALUE) {
-                                CloseHandle(h);
-                            }
-                        }
-
-                        sys_cb.EnumWindows(enum_windows_proc, (LPARAM)&api); // TODO: Pass sys_cb and API in here
-
-                        U64 iteration_count = 0;
-                        F32 seconds_elapsed_for_last_frame = 0;
-                        while(api.running) {
-                            // TODO: Do rendering in separate thread and only have main thread process window messages? Maybe a good option
-                            //       to have, but for Screenshotter we want the app to be as light as possible. So main
-                            //       thread + 'screenshotting' threading should be all that's used.
-
-                            // Unload the screenshotter DLL then reload it in.
-                            FILETIME new_write_time = win32_get_last_write_time(src_dll_path);
-                            if(CompareFileTime(&new_write_time, &loaded_code.dll_last_write_time) != 0) {
-                                if(loaded_code.dll) {
-                                    FreeLibrary(loaded_code.dll);
-
-                                    loaded_code.dll = 0;
-                                    loaded_code.handle_input_and_render = 0;
-                                    loaded_code.init_platform_settings = 0;
-                                }
-
-                                loaded_code = win32_load_code(src_dll_path, tmp_dll_path);
-                            }
-
-
-                            for(Int i = 0; (i < ARRAY_COUNT(api.key)); ++i) {
-                                api.previous_key[i] = api.key[i];
-                            }
-
-                            // Process pending messages
-                            {
-                                MSG msg;
-                                while(sys_cb.PeekMessageA(&msg, wnd, 0, 0, PM_REMOVE)) {
-                                    switch(msg.message) {
-                                        case WM_QUIT: case WM_CLOSE: { api.running = false; } break; // TODO: Does this have to be here and inside the windowproc?
-
-                                        case WM_KEYDOWN: { api.key[win32_key_to_our_key(msg.wParam)] = 1.0f; } break;
-                                        case WM_KEYUP:   { api.key[win32_key_to_our_key(msg.wParam)] = 0.0f; } break;
-
-                                        case WM_LBUTTONDOWN: { api.key[key_mouse_left]   = 1.0f; } break;
-                                        case WM_MBUTTONDOWN: { api.key[key_mouse_middle] = 1.0f; } break;
-                                        case WM_RBUTTONDOWN: { api.key[key_mouse_right]  = 1.0f; } break;
-
-                                        case WM_LBUTTONUP: { api.key[key_mouse_left]   = 0.0f; } break;
-                                        case WM_MBUTTONUP: { api.key[key_mouse_middle] = 0.0f; } break;
-                                        case WM_RBUTTONUP: { api.key[key_mouse_right]  = 0.0f; } break;
-
-                                        default: {
-                                            sys_cb.TranslateMessage(&msg);
-                                            sys_cb.DispatchMessageA(&msg);
-                                        } break;
+                                    Win32_API win32_api = {};
+                                    win32_api.queue.entry_count = 2048;
+                                    win32_api.queue.entries = memory_push_type(&memory, Memory_Index_permanent, Win32_Work_Queue_Entry,
+                                                                               win32_api.queue.entry_count);
+                                    ASSERT(win32_api.queue.entries);
+                                    if(settings.dll_data_struct_size) {
+                                        api.dll_data = memory_push_size(&memory, Memory_Index_permanent, settings.dll_data_struct_size);
+                                        ASSERT(api.dll_data); // TODO: Error handling.
                                     }
-                                }
-                            }
+                                    api.platform_specific = (Void *)&win32_api;
 
-                            // TODO: Zero-ing this memory to re-read it means we actually have to do more work to:
-                            //         1. Regenerate the text in the renderer
-                            //         2. Make sure we're not reading zero'd memory in win32_find_window_from_class_name.
-                            //       Commenting out until I've fixed this bug.
-                            /*Memory_Group *window_title_group = get_memory_group(api.memory, Memory_Index_window_titles);
-                            zero(window_title_group->base, window_title_group->used);
-                            window_title_group->used = 0;
-                            api.window_count = 0;
+                                    api.max_work_queue_count = win32_api.queue.entry_count;
+                                    api.init = true;
+                                    api.screen_image_size_change = true;
+                                    api.running = true;
+                                    api.memory = &memory;
 
-                            // TODO: Dynamically handle windows being opened/closed
-                            EnumWindows(enum_windows_proc, (LPARAM)&api);*/
+                                    api.cb.read_file = win32_read_file;
+                                    api.cb.write_file = win32_write_file;
+                                    api.cb.locked_add = win32_locked_add;
 
-                            // Actual rendering
-                            {
-                                // Get mouse position
-                                {
-                                    POINT pt;
-                                    sys_cb.GetCursorPos(&pt);
-                                    sys_cb.ScreenToClient(wnd, &pt);
+                                    api.cb.add_work_queue_entry = win32_add_work_queue_entry;
+                                    api.cb.complete_all_work = win32_complete_all_work;
 
-                                    api.previous_mouse_pos_x = api.mouse_pos_x;
-                                    api.previous_mouse_pos_y = api.mouse_pos_y;
+                                    api.randomish_seed = win32_get_wall_clock().QuadPart;
+                                    //api.randomish_seed = xorshift64(&api.randomish_seed); // TODO: Copy over xorshift64
 
-                                    F32 pos_x = (F32)pt.x / (F32)api.window_width;
-                                    F32 pos_y = (F32)pt.y / (F32)api.window_height;
+                                    // TODO: Load config from settings on disk.
 
-                                    // TODO: Is it a good idea to set these to -1 or have a "window_in_screen" variable?
-                                    api.mouse_pos_x = -1;
-                                    api.mouse_pos_y = -1;
+                                    api.include_title_bar = true;
+                                    api.target_output_directory = "C:\\tmp"; // TODO: Hardcoded
+                                    api.new_target_output_directory = api.target_output_directory;
+                                    // TODO: Create directory here if it doesn't already exist?
+                                    api.amount_to_sleep = 1000;
 
-                                    // Only store this if we're inside the window
-                                    if((pos_x >= 0 && pos_x <= 1) && (pos_y >= 0 && pos_y <= 1)) {
-                                        api.mouse_pos_x = clamp01(pos_x);
-                                        api.mouse_pos_y = clamp01(pos_y);
-                                    }
-                                }
-
-                                RECT cr;
-                                sys_cb.GetClientRect(wnd, &cr);
-
-                                api.window_width = cr.right - cr.left;
-                                api.window_height = cr.bottom - cr.top;
-
-                                if(api.launch_browse_for_directory) {
-                                    String new_directory = win32_browse_for_directory(&memory, api.target_output_directory);
-                                    if(new_directory.len > 0) {
-                                        api.new_target_output_directory = new_directory;
+                                    for(Int i = 0; (i < settings.thread_count - 1); ++i) {
+                                        HANDLE h = CreateThread(0, 0, win32_thread_proc, &win32_api.queue, 0, 0);
+                                        ASSERT(h && h != INVALID_HANDLE_VALUE);
+                                        if(h && h != INVALID_HANDLE_VALUE) {
+                                            CloseHandle(h);
+                                        }
                                     }
 
-                                    api.launch_browse_for_directory = false;
-                                }
+                                    sys_cb.EnumWindows(enum_windows_proc, (LPARAM)&api); // TODO: Pass sys_cb and API in here
 
-                                loaded_code.handle_input_and_render(&api);
+                                    U64 iteration_count = 0;
+                                    F32 seconds_elapsed_for_last_frame = 0;
+                                    while(api.running) {
+                                        // TODO: Do rendering in separate thread and only have main thread process window messages? Maybe a good option
+                                        //       to have, but for Screenshotter we want the app to be as light as possible. So main
+                                        //       thread + 'screenshotting' threading should be all that's used.
 
-                                if(!api.init) { api.screen_image_size_change = false; }
-                                api.init = false;
+                                        // Unload the screenshotter DLL then reload it in.
+                                        FILETIME new_write_time = win32_get_last_write_time(src_dll_path);
+                                        if(CompareFileTime(&new_write_time, &loaded_code.dll_last_write_time) != 0) {
+                                            if(loaded_code.dll) {
+                                                FreeLibrary(loaded_code.dll);
 
-                                HDC dc = sys_cb.GetDC(wnd);
+                                                loaded_code.dll = 0;
+                                                loaded_code.handle_input_and_render = 0;
+                                                loaded_code.init_platform_settings = 0;
+                                            }
 
-                                win32_update_window(&memory, &sys_cb, dc, &cr, api.screen_bitmap.memory, &global_bmp_info,
-                                                    api.screen_bitmap.width, api.screen_bitmap.height);
+                                            loaded_code = win32_load_code(src_dll_path, tmp_dll_path);
+                                        }
+
+
+                                        for(Int i = 0; (i < ARRAY_COUNT(api.key)); ++i) {
+                                            api.previous_key[i] = api.key[i];
+                                        }
+
+                                        // Process pending messages
+                                        {
+                                            MSG msg;
+                                            while(sys_cb.PeekMessageA(&msg, wnd, 0, 0, PM_REMOVE)) {
+                                                switch(msg.message) {
+                                                    case WM_QUIT: case WM_CLOSE: { api.running = false; } break; // TODO: Does this have to be here and inside the windowproc?
+
+                                                    case WM_KEYDOWN: { api.key[win32_key_to_our_key(msg.wParam)] = 1.0f; } break;
+                                                    case WM_KEYUP:   { api.key[win32_key_to_our_key(msg.wParam)] = 0.0f; } break;
+
+                                                    case WM_LBUTTONDOWN: { api.key[key_mouse_left]   = 1.0f; } break;
+                                                    case WM_MBUTTONDOWN: { api.key[key_mouse_middle] = 1.0f; } break;
+                                                    case WM_RBUTTONDOWN: { api.key[key_mouse_right]  = 1.0f; } break;
+
+                                                    case WM_LBUTTONUP: { api.key[key_mouse_left]   = 0.0f; } break;
+                                                    case WM_MBUTTONUP: { api.key[key_mouse_middle] = 0.0f; } break;
+                                                    case WM_RBUTTONUP: { api.key[key_mouse_right]  = 0.0f; } break;
+
+                                                    default: {
+                                                        sys_cb.TranslateMessage(&msg);
+                                                        sys_cb.DispatchMessageA(&msg);
+                                                    } break;
+                                                }
+                                            }
+                                        }
+
+                                        // TODO: Zero-ing this memory to re-read it means we actually have to do more work to:
+                                        //         1. Regenerate the text in the renderer
+                                        //         2. Make sure we're not reading zero'd memory in win32_find_window_from_class_name.
+                                        //       Commenting out until I've fixed this bug.
+                                        /*Memory_Group *window_title_group = get_memory_group(api.memory, Memory_Index_window_titles);
+                                        zero(window_title_group->base, window_title_group->used);
+                                        window_title_group->used = 0;
+                                        api.window_count = 0;
+
+                                        // TODO: Dynamically handle windows being opened/closed
+                                        EnumWindows(enum_windows_proc, (LPARAM)&api);*/
+
+                                        // Actual rendering
+                                        {
+                                            // Get mouse position
+                                            {
+                                                POINT pt;
+                                                sys_cb.GetCursorPos(&pt);
+                                                sys_cb.ScreenToClient(wnd, &pt);
+
+                                                api.previous_mouse_pos_x = api.mouse_pos_x;
+                                                api.previous_mouse_pos_y = api.mouse_pos_y;
+
+                                                F32 pos_x = (F32)pt.x / (F32)api.window_width;
+                                                F32 pos_y = (F32)pt.y / (F32)api.window_height;
+
+                                                // TODO: Is it a good idea to set these to -1 or have a "window_in_screen" variable?
+                                                api.mouse_pos_x = -1;
+                                                api.mouse_pos_y = -1;
+
+                                                // Only store this if we're inside the window
+                                                if((pos_x >= 0 && pos_x <= 1) && (pos_y >= 0 && pos_y <= 1)) {
+                                                    api.mouse_pos_x = clamp01(pos_x);
+                                                    api.mouse_pos_y = clamp01(pos_y);
+                                                }
+                                            }
+
+                                            RECT cr;
+                                            sys_cb.GetClientRect(wnd, &cr);
+
+                                            api.window_width = cr.right - cr.left;
+                                            api.window_height = cr.bottom - cr.top;
+
+                                            if(api.launch_browse_for_directory) {
+                                                String new_directory = win32_browse_for_directory(&memory, api.target_output_directory);
+                                                if(new_directory.len > 0) {
+                                                    api.new_target_output_directory = new_directory;
+                                                }
+
+                                                api.launch_browse_for_directory = false;
+                                            }
+
+                                            loaded_code.handle_input_and_render(&api);
+
+                                            if(!api.init) { api.screen_image_size_change = false; }
+                                            api.init = false;
+
+                                            HDC dc = sys_cb.GetDC(wnd);
+
+                                            win32_update_window(&memory, &sys_cb, dc, &cr, api.screen_bitmap.memory, &global_bmp_info,
+                                                                api.screen_bitmap.width, api.screen_bitmap.height);
 
 #if SHOW_FPS
-                                {
-                                    Char buf[1024] = {};
-                                    Int bytes_written = stbsp_snprintf(buf, ARRAY_COUNT(buf), "%s - %f",
-                                                                       window_title, seconds_elapsed_for_last_frame);
-                                    ASSERT_IF(bytes_written < ARRAY_COUNT(buf)) {
-                                        Bool success = sys_cb.SetWindowTextA(wnd, buf);
-                                        ASSERT(success);
-                                    }
-                                }
+                                            {
+                                                Char buf[1024] = {};
+                                                Int bytes_written = stbsp_snprintf(buf, ARRAY_COUNT(buf), "%s - %f",
+                                                                                   window_title, seconds_elapsed_for_last_frame);
+                                                ASSERT_IF(bytes_written < ARRAY_COUNT(buf)) {
+                                                    Bool success = sys_cb.SetWindowTextA(wnd, buf);
+                                                    ASSERT(success);
+                                                }
+                                            }
 #endif
 
-                                sys_cb.ReleaseDC(wnd, dc);
-                            }
+                                            sys_cb.ReleaseDC(wnd, dc);
+                                        }
 
-                            // Screenshotting
-                            {
-                                if(api.new_target_output_directory.len > 0) {
-                                    String new_dir = win32_create_root_directory(&memory, api.new_target_output_directory);
-                                    ASSERT_IF(new_dir.len > 0) {
-                                        api.target_output_directory = api.new_target_output_directory;
-                                        api.target_output_directory_full = new_dir;
-                                        api.new_target_output_directory = "";
+                                        // Screenshotting
+                                        {
+                                            if(api.new_target_output_directory.len > 0) {
+                                                String new_dir = win32_create_root_directory(&memory, api.new_target_output_directory);
+                                                ASSERT_IF(new_dir.len > 0) {
+                                                    api.target_output_directory = api.new_target_output_directory;
+                                                    api.target_output_directory_full = new_dir;
+                                                    api.new_target_output_directory = "";
+                                                }
+                                            }
+
+                                            if(iteration_count++ % 60 == 0) {
+                                                run_screenshotting(&api, &memory, &sys_cb, api.target_output_directory_full);
+                                            }
+                                        }
+
+                                        // TODO: If the windows isn't in focus have an option to go to sleep here until it is in focus.
+
+                                        // Frame rate stuff.
+                                        {
+                                            F32 seconds_elapsed_for_frame = win32_get_seconds_elapsed(last_counter,
+                                                                                                      win32_get_wall_clock(),
+                                                                                                      perf_cnt_freq);
+                                            if(seconds_elapsed_for_frame < target_seconds_per_frame) {
+                                                DWORD sleepms = (DWORD)(1000.0f * (target_seconds_per_frame - seconds_elapsed_for_frame));
+                                                if(sleepms > 0) {
+                                                    Sleep(sleepms);
+                                                }
+
+                                                F32 test_seconds_elapsed_for_frame = win32_get_seconds_elapsed(last_counter,
+                                                                                                               win32_get_wall_clock(),
+                                                                                                               perf_cnt_freq);
+                                                if(test_seconds_elapsed_for_frame < target_seconds_per_frame) {
+                                                    // TODO: Missed sleep
+                                                }
+
+                                                while(seconds_elapsed_for_frame < target_seconds_per_frame) {
+                                                    seconds_elapsed_for_frame = win32_get_seconds_elapsed(last_counter,
+                                                                                                          win32_get_wall_clock(),
+                                                                                                          perf_cnt_freq);
+                                                }
+                                            } else {
+                                                // TODO: Missed Frame Rate!
+                                            }
+
+                                            LARGE_INTEGER end_counter = win32_get_wall_clock();
+                                            ms_per_frame = 1000.0f * win32_get_seconds_elapsed(last_counter, end_counter, perf_cnt_freq);
+                                            last_counter = end_counter;
+
+                                            flip_wall_clock = win32_get_wall_clock();
+                                            seconds_elapsed_for_last_frame = seconds_elapsed_for_frame;
+                                        }
+
                                     }
                                 }
-
-                                if(iteration_count++ % 60 == 0) {
-                                    run_screenshotting(&api, &memory, &sys_cb, api.target_output_directory_full);
-                                }
                             }
-
-                            // TODO: If the windows isn't in focus have an option to go to sleep here until it is in focus.
-
-                            // Frame rate stuff.
-                            {
-                                F32 seconds_elapsed_for_frame = win32_get_seconds_elapsed(last_counter,
-                                                                                          win32_get_wall_clock(),
-                                                                                          perf_cnt_freq);
-                                if(seconds_elapsed_for_frame < target_seconds_per_frame) {
-                                    DWORD sleepms = (DWORD)(1000.0f * (target_seconds_per_frame - seconds_elapsed_for_frame));
-                                    if(sleepms > 0) {
-                                        Sleep(sleepms);
-                                    }
-
-                                    F32 test_seconds_elapsed_for_frame = win32_get_seconds_elapsed(last_counter,
-                                                                                                   win32_get_wall_clock(),
-                                                                                                   perf_cnt_freq);
-                                    if(test_seconds_elapsed_for_frame < target_seconds_per_frame) {
-                                        // TODO: Missed sleep
-                                    }
-
-                                    while(seconds_elapsed_for_frame < target_seconds_per_frame) {
-                                        seconds_elapsed_for_frame = win32_get_seconds_elapsed(last_counter,
-                                                                                              win32_get_wall_clock(),
-                                                                                              perf_cnt_freq);
-                                    }
-                                } else {
-                                    // TODO: Missed Frame Rate!
-                                }
-
-                                LARGE_INTEGER end_counter = win32_get_wall_clock();
-                                ms_per_frame = 1000.0f * win32_get_seconds_elapsed(last_counter, end_counter, perf_cnt_freq);
-                                last_counter = end_counter;
-
-                                flip_wall_clock = win32_get_wall_clock();
-                                seconds_elapsed_for_last_frame = seconds_elapsed_for_frame;
-                            }
-
                         }
                     }
                 }

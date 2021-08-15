@@ -46,6 +46,12 @@
     LICENSE at end of file.
 */
 
+// TODO: Make this a UTF8 string.
+// Having a UTF8 -> UTF16 (and maybe UTF32?) codepoint would also be good. See:
+//   https://stackoverflow.com/questions/6240055/manually-converting-unicode-codepoints-into-utf-8-and-utf-16
+//   https://stackoverflow.com/questions/7153935/how-to-convert-utf-8-stdstring-to-utf-16-stdwstring
+//   https://stackoverflow.com/questions/4063146/getting-the-actual-length-of-a-utf-8-encoded-stdstring
+
 #if !defined(_STRING_H_INCLUDE)
 #define _STRING_H_INCLUDE
 
@@ -74,6 +80,9 @@
 
 struct String {
     char STRING_CONST_MODIFIER *e = 0;
+
+    // TODO: Maybe storing start/end pointers would be better? Makes it more obvious what the difference between "size" (number of bytes) and
+    //       "length" (number of codepoints) would be.
     STRING_SIZE_TYPE len = 0;
 
     inline String() {}
@@ -82,7 +91,7 @@ struct String {
 };
 
 struct String_To_Int_Result {
-    int/*bool*/ success;
+    int64_t/*bool*/ success;
     int v;
 };
 
@@ -126,12 +135,16 @@ STRING_PUBLIC_DEC char to_lower(char a);
 #if defined(STRING_IMPLEMENTATION)
 
 String::String(char *c_string) {
+    STRING_ASSERT(c_string);
+
     String s = create_string(c_string);
     this->e = s.e;
     this->len = s.len;
 }
 
 String::String(char const *c_string) {
+    STRING_ASSERT(c_string);
+
     String s = create_string((char *)c_string);
     this->e = s.e;
     this->len = s.len;
@@ -150,6 +163,8 @@ create_string(char *str, STRING_SIZE_TYPE len/*= 0*/) {
 
 STRING_PUBLIC_DEC String
 create_string(char const *str, STRING_SIZE_TYPE len/*= 0*/) {
+    STRING_ASSERT(str);
+
     String r = create_string((char *)str, len);
     return(r);
 }
@@ -164,6 +179,8 @@ create_substring(String str, STRING_SIZE_TYPE start, STRING_SIZE_TYPE end/*= 1*/
 
 STRING_PUBLIC_DEC int/*bool*/
 string_compare(String a, String b) {
+    // TODO: Can we use the SSE4.1 string compare functions (like "_mm_cmpestra") to make some of this faster?
+
     int/*bool*/ r = false;
     if(a.len == b.len) {
         r = true;
@@ -243,19 +260,28 @@ string_length(char *str) {
     STRING_ASSERT(str);
 
     STRING_SIZE_TYPE r = 0;
+#if 1
     while(*str++) { ++r; }
+#else
+    // TODO: UTF8 string_length. Gives the number of codepoints NOT the length in bytes.
+    while (*str) {
+        r += (*str++ & 0xc0) != 0x80;
+    }
+#endif
 
     return(r);
 }
 
 STRING_PUBLIC_DEC STRING_SIZE_TYPE
 string_length(char const *str) {
+    STRING_ASSERT(str);
+
     STRING_SIZE_TYPE r = string_length((char *)str);
     return(r);
 }
 
 static int
-internal_char_to_int(char c) {
+internal_character_to_int(uint32_t c) {
     int r = -1;
     switch(c) {
         case '0': { r = 0; } break;
@@ -275,12 +301,12 @@ internal_char_to_int(char c) {
 
 STRING_PUBLIC_DEC String_To_Int_Result
 string_to_int(String s) {
-    int integer = 0;
-    int/*bool*/ success = false;
+    int64_t integer = 0;
     int/*bool*/ is_negative = (s.e[0] == '-') ? true : false;
 
+    String_To_Int_Result r = {};
     for(STRING_SIZE_TYPE i = (is_negative) ? 1 : 0; (i < s.len); ++i) {
-        int t = internal_char_to_int(s.e[i]);
+        int t = internal_character_to_int(s.e[i]);
         if(t == -1) {
             break; // for - something went wrong
         } else {
@@ -288,15 +314,10 @@ string_to_int(String s) {
             integer += t;
 
             if(i == (s.len - 1)) {
-                success = true;
+                r.v = (is_negative) ? -integer : integer;
+                r.success = true;
             }
         }
-    }
-
-    String_To_Int_Result r = {};
-    if(success) {
-        r.v = (is_negative) ? -integer : integer;
-        r.success = true;
     }
 
     return(r);
@@ -317,7 +338,7 @@ string_to_float(String s) {
             before_dec_success = true;
             break;
         } else {
-            int t = internal_char_to_int(s.e[i]);
+            int t = internal_character_to_int(s.e[i]);
             if(t == -1) {
                 break; // for - something went wrong
             } else {
@@ -339,7 +360,7 @@ string_to_float(String s) {
                 after_dec_success = true;
                 break;
             } else {
-                int t = internal_char_to_int(s.e[j]);
+                int t = internal_character_to_int(s.e[j]);
                 if(t == -1) {
                     break; // for - something went wrong
                 } else {
@@ -352,7 +373,7 @@ string_to_float(String s) {
 
     String_To_Float_Result r = {};
     if(before_dec_success && after_dec_success) {
-        // We calculate b as the negative of itself, so invert it before adding the result together.
+        // We calculate after_dec as the negative of itself, so invert it before adding the result together.
         r.v = before_dec + -after_dec;
         if(is_negative) { r.v = -r.v; }
         r.success = true;
@@ -363,6 +384,8 @@ string_to_float(String s) {
 
 STRING_PUBLIC_DEC STRING_SIZE_TYPE
 string_copy(char *dst, char *src) {
+    STRING_ASSERT((dst) && (src));
+
     STRING_SIZE_TYPE r = 0;
     while(*src) {
         *dst = *src;
@@ -376,18 +399,24 @@ string_copy(char *dst, char *src) {
 
 STRING_PUBLIC_DEC STRING_SIZE_TYPE
 string_copy(char const *dst, char const *src) {
+    STRING_ASSERT((dst) && (src));
+
     STRING_SIZE_TYPE r = string_copy((char *)dst, (char *)src);
     return(r);
 }
 
 STRING_PUBLIC_DEC STRING_SIZE_TYPE
 string_copy(char *dst, char const *src) {
+    STRING_ASSERT((dst) && (src));
+
     STRING_SIZE_TYPE r = string_copy(dst, (char *)src);
     return(r);
 }
 
 STRING_PUBLIC_DEC STRING_SIZE_TYPE
 string_copy(char const *dst, char *src) {
+    STRING_ASSERT((dst) && (src));
+
     STRING_SIZE_TYPE r = string_copy((char *)dst, src);
     return(r);
 }
@@ -395,6 +424,8 @@ string_copy(char const *dst, char *src) {
 
 STRING_PUBLIC_DEC STRING_SIZE_TYPE
 string_copy(char *dst, char *src, STRING_SIZE_TYPE len) {
+    STRING_ASSERT((dst) && (src) && ((len) > 0));
+
     STRING_SIZE_TYPE i;
     for(i = 0; (i < len); ++i, ++dst, ++src) {
         *dst = *src;

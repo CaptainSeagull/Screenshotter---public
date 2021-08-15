@@ -75,8 +75,8 @@ setup(API *api, DLL_Data *data, Renderer *renderer) {
 
     data->background_id = white_background->id;
 
-    U64 arial_id = load_font(api, renderer, "c:/windows/fonts/arial.ttf");
     U64 comic_id = load_font(api, renderer, "c:/windows/fonts/comic.ttf");
+    U64 arial_id = load_font(api, renderer, "c:/windows/fonts/arial.ttf");
 
 #if 0
     Int y = 40;
@@ -99,7 +99,7 @@ setup(API *api, DLL_Data *data, Renderer *renderer) {
               10, 0, 40,
               "Screenshotter!");
 
-    push_line(renderer, white_background, 0, 50, api->window_width, 50, 3.0f);
+    push_line(renderer, white_background, 0, 50, api->window_width, 50, 3.0f); // TODO: These lines don't resize with the window
 
     Word *directory_word = 0;
     if(api->target_output_directory.len > 0) {

@@ -162,8 +162,10 @@ struct Image_Letter_Result {
     Bool success;
 };
 internal Image_Letter_Result
-make_letter_image(Memory *memory, stbtt_fontinfo *font, Char ch) {
+make_letter_image(Memory *memory, stbtt_fontinfo *font, Int ch) {
     Image_Letter_Result res = {};
+
+    //ch = 0x061F; // For testing - https://codepoints.net/U+061F
 
     Int w, h, off_x, off_y;
     U8 *mono_bmp = stbtt_GetCodepointBitmap(font, 0, stbtt_ScaleForPixelHeight(font, 64.0f), ch, &w, &h, &off_x, &off_y);
@@ -230,8 +232,10 @@ push_font(API *api, Renderer *renderer, File file) {
             Font *font = &renderer->fonts[renderer->font_count++];
             font->id = renderer->_internal.entity_id_count++;
 
-            // ASCII is 32 - 126 (inclusive).
-            for(Int letter_i = 32; (letter_i <= 126); ++letter_i) {
+            // TODO: This is dumb. Should do this (and store it in a hash) as we're actualy pushing letters.
+            //       Or just store the letters as normal images with IDs?
+
+            for(Int letter_i = 32; (letter_i <= 126); ++letter_i) { // ASCII is 32 - 126 (inclusive).
                 Image_Letter_Result ilr = make_letter_image(memory, &font_info, letter_i);
                 if(ilr.success) {
                     Image_Letter *image_letter = &ilr.image_letter;
@@ -249,7 +253,7 @@ push_font(API *api, Renderer *renderer, File file) {
             }
 
             // Update the offset using the new height.
-            for(Int letter_i = 33/* Skip space*/; (letter_i <= 126); ++letter_i) {
+            for(Int letter_i = 33/*Skip space*/; (letter_i <= 126); ++letter_i) {
                 Render_Image *image = find_font_image(renderer, font, letter_i);
                 if(image) {
                     image->off_y += font->full_height;
@@ -347,30 +351,28 @@ internal_set_words(Renderer *renderer, Word *word, String *strings, Int string_c
                 } else {
                     Char c = string->e[letter_i];
 
-                    ASSERT_IF(is_ascii(c)) {
-                        Int width_to_add = 0;
-                        if(c == ' ') {
-                            width_to_add += word->height / 2; // TODO: Arbitrary
-                        } else {
-                            Render_Image *image = find_font_image(renderer, font, c);
-                            ASSERT_IF(image) {
-                                F32 char_pct_height_of_total = (F32)image->height / font->full_height;
-                                ASSERT(char_pct_height_of_total >= 0 && char_pct_height_of_total <= 1);
+                    Int width_to_add = 0;
+                    if(c == ' ' || !is_ascii(c)) {
+                        width_to_add += word->height / 2; // TODO: Arbitrary
+                    } else {
+                        Render_Image *image = find_font_image(renderer, font, c);
+                        ASSERT_IF(image) {
+                            F32 char_pct_height_of_total = (F32)image->height / font->full_height;
+                            ASSERT(char_pct_height_of_total >= 0 && char_pct_height_of_total <= 1);
 
-                                Int height_to_use = (word->height * char_pct_height_of_total);
-                                Int width_to_use = floor((F32)image->width * ((F32)height_to_use / (F32)image->height)); // TODO: Is this correct?
+                            Int height_to_use = (word->height * char_pct_height_of_total);
+                            Int width_to_use = floor((F32)image->width * ((F32)height_to_use / (F32)image->height)); // TODO: Is this correct?
 
-                                push_image_rect(renderer, word,
-                                                running_x, running_y, width_to_use, height_to_use,
-                                                font->letter_ids[ascii_to_idx(c)]);
+                            push_image_rect(renderer, word,
+                                            running_x, running_y, width_to_use, height_to_use,
+                                            font->letter_ids[ascii_to_idx(c)]);
 
-                                width_to_add += (width_to_use + image->off_x); // TODO: This should be a scaled off_x
-                            }
+                            width_to_add += (width_to_use + image->off_x); // TODO: This should be a scaled off_x
                         }
-
-                        running_x += width_to_add;
-                        word->width += width_to_add * 2; // TODO: *2 because this doesn't seem to be correct...
                     }
+
+                    running_x += width_to_add;
+                    word->width += width_to_add * 2; // TODO: *2 because this doesn't seem to be correct...
                 }
             }
         }

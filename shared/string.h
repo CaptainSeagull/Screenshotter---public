@@ -14,7 +14,7 @@
     #define STRING_ASSERT(expression) - Override the default ASSERT used.
     #define STRING_ALLOW_ASSERT       - Whether to turn ASSERTS on/off. Has no effect if STRING_ASSERT is defined.
     #define STRING_PUBLIC_DEC         - Allows functions to have a declaration. Can use static or inline if required.
-    #define STRING_SIZE_TYPE          - Change the type of the size member for the struct. By default it's an int.
+    #define uint64_t          - Change the type of the size member for the struct. By default it's an int.
     #define STRING_CONST_STRING       - Define this to change the type in struct String from "char *" to "char const *" (if that's your thing).
 
     Usage:
@@ -23,10 +23,12 @@
     #include "string.h"
     int main(int argc, char **argv) {
         String my_string = "Hello, World!"; // operator= is overloaded
-        int length = my_string.len;
 
-        Char as_cstring[1024];
-        memcpy(as_cstring, my_string.e, my_string.len); // Assumes my_string.len < 1024
+        int number_of_codepoint = string_length(my_string); // Number of codepoints
+        int byte_length = string_byte_length(my_string);
+
+        char as_cstring[1024];
+        memcpy(as_cstring, my_string.start, byte_length); // Assumes byte_length is < 1024
 
         String my_string2 = "2.44"
         String_To_Float_Result r = string_to_float(my_string2);
@@ -50,7 +52,7 @@
 // Having a UTF8 -> UTF16 (and maybe UTF32?) codepoint would also be good. See:
 //   https://stackoverflow.com/questions/6240055/manually-converting-unicode-codepoints-into-utf-8-and-utf-16
 //   https://stackoverflow.com/questions/7153935/how-to-convert-utf-8-stdstring-to-utf-16-stdwstring
-//   https://stackoverflow.com/questions/4063146/getting-the-actual-length-of-a-utf-8-encoded-stdstring
+//   https://stackoverflow.com/questions/4063146/getting-the-actual-len-of-a-utf-8-encoded-stdstring
 
 #if !defined(_STRING_H_INCLUDE)
 #define _STRING_H_INCLUDE
@@ -63,10 +65,7 @@
     #endif
 #endif
 
-#if !defined(STRING_SIZE_TYPE)
-    #include <stdint.h>
-    #define STRING_SIZE_TYPE uint32_t
-#endif
+#include <stdint.h>
 
 #if !defined(STRING_PUBLIC_DEC)
     #define STRING_PUBLIC_DEC
@@ -79,20 +78,19 @@
 #endif
 
 struct String {
-    char STRING_CONST_MODIFIER *e = 0;
+    struct {
+        char *start = 0;
+        char *end = 0;
+    };
 
-    // TODO: Maybe storing start/end pointers would be better? Makes it more obvious what the difference between "size" (number of bytes) and
-    //       "length" (number of codepoints) would be.
-    STRING_SIZE_TYPE len = 0;
-
-    inline String() {}
-    inline String(char *c_string);
-    inline String(char const *c_string);
+    String(void);
+    String(char *c_string);
+    String(char const *c_string);
 };
 
 struct String_To_Int_Result {
-    int64_t/*bool*/ success;
-    int v;
+    int/*bool*/ success;
+    int64_t v;
 };
 
 struct String_To_Float_Result {
@@ -102,93 +100,127 @@ struct String_To_Float_Result {
 
 struct Find_Index_Result {
     int/*bool*/ success;
-    STRING_SIZE_TYPE index;
+    uint64_t index;
 };
 
-STRING_PUBLIC_DEC String create_string(char *str, STRING_SIZE_TYPE len = 0);
-STRING_PUBLIC_DEC String create_string(char const *str, STRING_SIZE_TYPE len = 0);
+STRING_PUBLIC_DEC String create_string(char *s, uint64_t len = 0);
+STRING_PUBLIC_DEC String create_string(char const *s, uint64_t len = 0);
 
-STRING_PUBLIC_DEC String create_substring(String str, STRING_SIZE_TYPE start, STRING_SIZE_TYPE end = 1);
+STRING_PUBLIC_DEC String create_substring(String s, uint64_t start, uint64_t end);
 
 STRING_PUBLIC_DEC int/*bool*/ string_compare(String a, String b);
 STRING_PUBLIC_DEC int/*bool*/ operator==(String a, String b);
 
 STRING_PUBLIC_DEC int/*bool*/ string_contains(String a, String b);
-STRING_PUBLIC_DEC int/*bool*/ string_contains(String str, char target);
+STRING_PUBLIC_DEC int/*bool*/ string_contains(String s, uint32_t target);
 
-STRING_PUBLIC_DEC Find_Index_Result find_index_of_char(String str, char target, int/*bool*/ find_last = false);
+STRING_PUBLIC_DEC Find_Index_Result find_index_of_char(String s, uint32_t target, int/*bool*/ find_last = false);
 
-STRING_PUBLIC_DEC STRING_SIZE_TYPE string_length(char *str);
-STRING_PUBLIC_DEC STRING_SIZE_TYPE string_length(char const *str);
+// TODO: Maybe rename "string_length" to "codepoint_count" or something? To make it more explicit.
+STRING_PUBLIC_DEC uint64_t string_length(char *s);
+STRING_PUBLIC_DEC uint64_t string_length(char const *s);
+STRING_PUBLIC_DEC uint64_t string_length(String s);
+STRING_PUBLIC_DEC uint64_t string_byte_length(String s);
 
 STRING_PUBLIC_DEC String_To_Int_Result string_to_int(String s);
 STRING_PUBLIC_DEC String_To_Float_Result string_to_float(String s);
 
-STRING_PUBLIC_DEC STRING_SIZE_TYPE string_copy(char *dst, char *src);
-STRING_PUBLIC_DEC STRING_SIZE_TYPE string_copy(char const *dst, char const *src);
-STRING_PUBLIC_DEC STRING_SIZE_TYPE string_copy(char *dst, char const *src);
-STRING_PUBLIC_DEC STRING_SIZE_TYPE string_copy(char *dst, char *src, STRING_SIZE_TYPE len);
+STRING_PUBLIC_DEC uint64_t string_copy(char *dst, char *src);
+STRING_PUBLIC_DEC uint64_t string_copy(char const *dst, char const *src);
+STRING_PUBLIC_DEC uint64_t string_copy(char *dst, char const *src);
+STRING_PUBLIC_DEC uint64_t string_copy(char *dst, char *src, uint64_t len);
 
 STRING_PUBLIC_DEC char to_upper(char a);
 STRING_PUBLIC_DEC char to_lower(char a);
 
+STRING_PUBLIC_DEC char *get_codepoint_at(String s, uint64_t idx);
+
 #if defined(STRING_IMPLEMENTATION)
+
+String::String(void) {
+    // Do nothing
+}
 
 String::String(char *c_string) {
     STRING_ASSERT(c_string);
 
     String s = create_string(c_string);
-    this->e = s.e;
-    this->len = s.len;
+    this->start = s.start;
+    this->end = s.end;
 }
 
 String::String(char const *c_string) {
     STRING_ASSERT(c_string);
 
     String s = create_string((char *)c_string);
-    this->e = s.e;
-    this->len = s.len;
+    this->start = s.start;
+    this->end = s.end;
 }
 
 STRING_PUBLIC_DEC String
-create_string(char *str, STRING_SIZE_TYPE len/*= 0*/) {
-    STRING_ASSERT(str);
+create_string(char *s, uint64_t len/*= 0*/) {
+    STRING_ASSERT(s);
+
+    if(!len) {
+        len = string_length(s);
+    }
 
     String r;
-    r.e = str;
-    r.len = (len) ? len : string_length(str);
+    r.start = s;
+    r.end = r.start + len;
 
     return(r);
 }
 
 STRING_PUBLIC_DEC String
-create_string(char const *str, STRING_SIZE_TYPE len/*= 0*/) {
-    STRING_ASSERT(str);
+create_string(char const *s, uint64_t len/*= 0*/) {
+    STRING_ASSERT(s);
 
-    String r = create_string((char *)str, len);
+    String r = create_string((char *)s, len);
     return(r);
 }
 
-STRING_PUBLIC_DEC String
-create_substring(String str, STRING_SIZE_TYPE start, STRING_SIZE_TYPE end/*= 1*/) {
-    if(end == -1) { end = str.len; }
+STRING_PUBLIC_DEC char *get_codepoint_at(String s, uint64_t idx) {
+    char *at = s.start;
 
-    String r = create_string(str.e + start, end - start);
+    // This for loop is kinda tricky...
+    for(uint64_t i = 0; (at != s.end); ++i) {
+        if(i == idx) {
+            break;
+        }
+
+        at += (*at & 0xc0) != 0x80;
+    }
+
+    return(at);
+}
+
+STRING_PUBLIC_DEC String
+create_substring(String s, uint64_t start_idx, uint64_t end_idx) {
+    char *start = get_codepoint_at(s, start_idx);
+    char *end = get_codepoint_at(s, end_idx);
+    uint64_t len = (end - start);
+
+    String r = create_string(start, len);
     return(r);
 }
 
 STRING_PUBLIC_DEC int/*bool*/
 string_compare(String a, String b) {
     // TODO: Can we use the SSE4.1 string compare functions (like "_mm_cmpestra") to make some of this faster?
+    //       If not a faster memcmp would also be good.
 
     int/*bool*/ r = false;
-    if(a.len == b.len) {
-        r = true;
 
-        for(STRING_SIZE_TYPE i = 0; (i < a.len); ++i) {
-            if(a.e[i] != b.e[i]) {
+    uint64_t a_len = string_byte_length(a);
+    uint64_t b_len = string_byte_length(b);
+
+    if(a_len != b_len) {
+        r = true;
+        for(char *a_iter = a.start, *b_iter = b.start; (a_iter != a.end && b_iter != b.end); ++a_iter, ++b_iter) {
+            if(*a_iter != *b_iter) {
                 r = false;
-                break; // while
+                break; // for
             }
         }
     }
@@ -205,8 +237,12 @@ operator==(String a, String b) {
 STRING_PUBLIC_DEC int/*bool*/
 string_contains(String a, String b) {
     int/*bool*/ r = false;
-    for(STRING_SIZE_TYPE i = 0; (i < a.len); ++i) {
-        String a_tmp = create_string(&a.e[i], b.len);
+
+    uint64_t b_length = string_byte_length(b);
+
+    for(char *at = a.start; (at != a.end); ++at) {
+        // TODO: need to check (a.end - at)
+        String a_tmp = create_string(at, b_length);
         if(string_compare(a_tmp, b)) {
             r = true;
             break; // for
@@ -217,11 +253,12 @@ string_contains(String a, String b) {
 }
 
 STRING_PUBLIC_DEC int/*bool*/
-string_contains(String str, char target) {
+string_contains(String s, uint32_t target) {
     int/*bool*/ r = false;
 
-    for(STRING_SIZE_TYPE i = 0; (i < str.len); ++i) {
-        if(str.e[i] == target) {
+    for(uint64_t i = 0, len = string_length(s); (i < len); ++i) {
+        char current_codepoint = s.start[i]; // TODO: Way to read current codepoint properly
+        if(current_codepoint == target) {
             r = true;
             break;
         }
@@ -231,20 +268,23 @@ string_contains(String str, char target) {
 }
 
 STRING_PUBLIC_DEC Find_Index_Result
-find_index_of_char(String str, char target, int/*bool*/ find_last/*= false*/) {
+find_index_of_char(String s, uint32_t target, int/*bool*/ find_last/*= false*/) {
     Find_Index_Result r = {};
 
+    uint64_t len = string_length(s);
+
+    // TODO: Make UTF8 aware and read codepoints properly.
     if(find_last) {
-        for(STRING_SIZE_TYPE i = 0, j = str.len - 1; (i < str.len); ++i, --j) {
-            if(str.e[j] == target) {
+        for(uint64_t i = 0, j = len - 1; (i < len); ++i, --j) {
+            if(s.start[j] == target) {
                 r.index = j;
                 r.success = true;
                 break; // for
             }
         }
     } else {
-        for(STRING_SIZE_TYPE i = 0; (i < str.len); ++i) {
-            if(str.e[i] == target) {
+        for(uint64_t i = 0; (i < len); ++i) {
+            if(s.start[i] == target) {
                 r.index = i;
                 r.success = true;
                 break; // for
@@ -255,33 +295,56 @@ find_index_of_char(String str, char target, int/*bool*/ find_last/*= false*/) {
     return(r);
 }
 
-STRING_PUBLIC_DEC STRING_SIZE_TYPE
-string_length(char *str) {
-    STRING_ASSERT(str);
+STRING_PUBLIC_DEC uint64_t
+string_length(char *s) {
+    STRING_ASSERT(s);
 
-    STRING_SIZE_TYPE r = 0;
-#if 1
-    while(*str++) { ++r; }
+    uint64_t r = 0;
+#if 0
+    while(*s++) { ++r; }
 #else
-    // TODO: UTF8 string_length. Gives the number of codepoints NOT the length in bytes.
-    while (*str) {
-        r += (*str++ & 0xc0) != 0x80;
+    // TODO: UTF8 string_length. Gives the number of codepoints NOT the len in bytes.
+    while(*s) {
+        r += (*s++ & 0xc0) != 0x80;
     }
 #endif
 
     return(r);
 }
 
-STRING_PUBLIC_DEC STRING_SIZE_TYPE
-string_length(char const *str) {
-    STRING_ASSERT(str);
+STRING_PUBLIC_DEC uint64_t
+string_length(char const *s) {
+    STRING_ASSERT(s);
 
-    STRING_SIZE_TYPE r = string_length((char *)str);
+    uint64_t r = string_length((char *)s);
+    return(r);
+}
+
+STRING_PUBLIC_DEC uint64_t
+string_length(String s) {
+    uint64_t r = 0;
+
+#if 0
+    r = (s.end - s.start);
+#else
+    // TODO: UTF8 string_length. Gives the number of codepoints NOT the len in bytes.
+    for(char *at = s.start; (at != s.end); ++at) {
+        r += (*at & 0xc0) != 0x80;
+    }
+#endif
+
+    return(r);
+}
+
+STRING_PUBLIC_DEC uint64_t
+string_byte_length(String s) {
+    uint64_t r = (s.end - s.start);
     return(r);
 }
 
 static int
-internal_character_to_int(uint32_t c) {
+internal_codepoint_to_int(uint32_t c) {
+    // TODO: return String_To_Int_Result instead?
     int r = -1;
     switch(c) {
         case '0': { r = 0; } break;
@@ -302,18 +365,20 @@ internal_character_to_int(uint32_t c) {
 STRING_PUBLIC_DEC String_To_Int_Result
 string_to_int(String s) {
     int64_t integer = 0;
-    int/*bool*/ is_negative = (s.e[0] == '-') ? true : false;
+    int/*bool*/ is_negative = (s.start[0] == '-') ? true : false;
+
+    uint64_t len = string_length(s);
 
     String_To_Int_Result r = {};
-    for(STRING_SIZE_TYPE i = (is_negative) ? 1 : 0; (i < s.len); ++i) {
-        int t = internal_character_to_int(s.e[i]);
+    for(uint64_t i = (is_negative) ? 1 : 0; (i < len); ++i) {
+        int t = internal_codepoint_to_int(s.start[i]);
         if(t == -1) {
             break; // for - something went wrong
         } else {
             integer *= 10;
             integer += t;
 
-            if(i == (s.len - 1)) {
+            if(i == (len - 1)) {
                 r.v = (is_negative) ? -integer : integer;
                 r.success = true;
             }
@@ -328,24 +393,26 @@ string_to_float(String s) {
     // a is before decimal point, b is after.
     float before_dec = 0.0f, after_dec = 0.0f;
     int/*Bool*/ before_dec_success = false, after_dec_success = false;
-    int/*Bool*/ is_negative = (s.e[0] == '-') ? true : false;
+    int/*Bool*/ is_negative = (s.start[0] == '-') ? true : false;
 
     // TODO: Maybe we can do this by only having one for loop. We keep track of where the decimal point is
     //       relative to the end of the string, and just divide the result by that?
 
-    for(STRING_SIZE_TYPE i = (is_negative) ? 1 : 0; (i < s.len); ++i) {
-        if(s.e[i] == '.') {
+    uint64_t len = string_length(s);
+
+    for(uint64_t i = (is_negative) ? 1 : 0; (i < len); ++i) {
+        if(s.start[i] == '.') {
             before_dec_success = true;
             break;
         } else {
-            int t = internal_character_to_int(s.e[i]);
+            int t = internal_codepoint_to_int(s.start[i]);
             if(t == -1) {
                 break; // for - something went wrong
             } else {
                 before_dec *= 10.0f;
                 before_dec += (float)t;
 
-                if(i == (s.len - 1)) {
+                if(i == (len - 1)) {
                     // String had no decimal point
                     before_dec_success = true;
                     after_dec_success = true;
@@ -355,12 +422,12 @@ string_to_float(String s) {
     }
 
     if(!after_dec_success) { // Only called if string has a decimal point
-        for(STRING_SIZE_TYPE i = 0, j = s.len - 1; (i < s.len); ++i, --j) {
-            if(s.e[j] == '.') {
+        for(uint64_t i = 0, j = len - 1; (i < len); ++i, --j) {
+            if(s.start[j] == '.') {
                 after_dec_success = true;
                 break;
             } else {
-                int t = internal_character_to_int(s.e[j]);
+                int t = internal_codepoint_to_int(s.start[j]);
                 if(t == -1) {
                     break; // for - something went wrong
                 } else {
@@ -382,11 +449,11 @@ string_to_float(String s) {
     return(r);
 }
 
-STRING_PUBLIC_DEC STRING_SIZE_TYPE
+STRING_PUBLIC_DEC uint64_t
 string_copy(char *dst, char *src) {
     STRING_ASSERT((dst) && (src));
 
-    STRING_SIZE_TYPE r = 0;
+    uint64_t r = 0;
     while(*src) {
         *dst = *src;
         ++dst;
@@ -397,36 +464,36 @@ string_copy(char *dst, char *src) {
     return(r);
 }
 
-STRING_PUBLIC_DEC STRING_SIZE_TYPE
+STRING_PUBLIC_DEC uint64_t
 string_copy(char const *dst, char const *src) {
     STRING_ASSERT((dst) && (src));
 
-    STRING_SIZE_TYPE r = string_copy((char *)dst, (char *)src);
+    uint64_t r = string_copy((char *)dst, (char *)src);
     return(r);
 }
 
-STRING_PUBLIC_DEC STRING_SIZE_TYPE
+STRING_PUBLIC_DEC uint64_t
 string_copy(char *dst, char const *src) {
     STRING_ASSERT((dst) && (src));
 
-    STRING_SIZE_TYPE r = string_copy(dst, (char *)src);
+    uint64_t r = string_copy(dst, (char *)src);
     return(r);
 }
 
-STRING_PUBLIC_DEC STRING_SIZE_TYPE
+STRING_PUBLIC_DEC uint64_t
 string_copy(char const *dst, char *src) {
     STRING_ASSERT((dst) && (src));
 
-    STRING_SIZE_TYPE r = string_copy((char *)dst, src);
+    uint64_t r = string_copy((char *)dst, src);
     return(r);
 }
 
 
-STRING_PUBLIC_DEC STRING_SIZE_TYPE
-string_copy(char *dst, char *src, STRING_SIZE_TYPE len) {
+STRING_PUBLIC_DEC uint64_t
+string_copy(char *dst, char *src, uint64_t len) {
     STRING_ASSERT((dst) && (src) && ((len) > 0));
 
-    STRING_SIZE_TYPE i;
+    uint64_t i;
     for(i = 0; (i < len); ++i, ++dst, ++src) {
         *dst = *src;
     }

@@ -92,8 +92,7 @@ win32_write_file(Memory *memory, String fname, U8 *data, U64 size) {
     Bool res = false;
 
     Char *fname_copy = (Char *)memory_push_string(memory, Memory_Index_internal_temp, fname);
-    ASSERT(fname_copy);
-    if(fname_copy) {
+    ASSERT_IF(fname_copy) {
         HANDLE fhandle = CreateFileA(fname_copy, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, 0, CREATE_ALWAYS, 0, 0);
         if(fhandle != INVALID_HANDLE_VALUE) {
 
@@ -500,10 +499,9 @@ internal HWND
 win32_find_window_from_class_name(Memory *memory, String window_title, Win32_System_Callbacks *sys_cb) {
     HWND window = 0;
 
-    Char *window_title_raw = memory_push_type(memory, Memory_Index_temp, Char, window_title.len + 1); // Nul-terminate
-    ASSERT(window_title_raw);
-    if(window_title_raw) {
-        string_copy(window_title_raw, window_title.e, window_title.len);
+    U64 window_title_length = string_length(window_title);
+    Char *window_title_raw = memory_push_string(memory, Memory_Index_temp, window_title);
+    ASSERT_IF(window_title_raw) {
         window = sys_cb->FindWindowExA(0, 0, TEXT(window_title_raw), 0);
         ASSERT(window);
 
@@ -522,14 +520,15 @@ win32_create_directory(Memory *memory, String root, String dir, Bool save_direct
     Win32_Create_Directory_Result res = {};
 
     // Create the per-app directories
-    Int max_size = root.len + 256; // 256 is padding
+    U64 root_length = string_byte_length(root);
+    U64 dir_length = string_length(dir);
+    Int max_size = (root_length + dir_length) * 2; // 2x is padding
     Char *output_file_directory = memory_push_type(memory, (save_directory_string) ? Memory_Index_permanent : Memory_Index_temp,
                                                    Char, max_size);
-    ASSERT(output_file_directory);
-    if(output_file_directory) {
+    ASSERT_IF(output_file_directory) {
         Int bytes_written = stbsp_snprintf(output_file_directory, max_size, "%.*s\\%.*s",
-                                           root.len, root.e,
-                                           dir.len, dir.e);
+                                           root_length, root.start,
+                                           dir_length, dir.start);
         ASSERT(bytes_written < max_size);
 
         Bool success = CreateDirectory(output_file_directory, NULL) != 0;
@@ -559,16 +558,17 @@ win32_directory_index_to_use(Memory *mem, String session_prefix, String input_ta
     Char *target_directory = memory_push_string(mem, Memory_Index_temp, input_target_directory, 3); // Padding for "\\*"
     ASSERT(target_directory);
     if(target_directory) {
-        target_directory[input_target_directory.len + 0] = '\\';
-        target_directory[input_target_directory.len + 1] = '*';
-        target_directory[input_target_directory.len + 2] = 0;
+        U64 input_target_directory_length = string_length(input_target_directory);
+        target_directory[input_target_directory_length + 0] = '\\';
+        target_directory[input_target_directory_length + 1] = '*';
+        target_directory[input_target_directory_length + 2] = 0;
 
         WIN32_FIND_DATA find_data = {};
         HANDLE handle = FindFirstFile(target_directory, &find_data);
 
         if(handle != INVALID_HANDLE_VALUE) {
             do {
-                String fname = find_data.cFileName + session_prefix.len;
+                String fname = find_data.cFileName + string_length(session_prefix);
                 String_To_Int_Result r = string_to_int(fname);
                 if(r.success) {
                     res = maxu32(res, r.v + 1);
@@ -591,16 +591,17 @@ win32_file_index_to_use(Memory *memory, String root_directory, String program_ti
     ASSERT_IF(output_path_with_wildcard) {
         Int bytes_written = stbsp_snprintf(output_path_with_wildcard, output_path_with_wildcard_max_size,
                                            "%.*s/%.*s/*.bmp",
-                                           root_directory.len, root_directory.e,
-                                           program_title.len, program_title.e);
+                                           string_length(root_directory), root_directory.start,
+                                           string_length(program_title), program_title.start);
         WIN32_FIND_DATA find_data = {};
         HANDLE handle = FindFirstFile(output_path_with_wildcard, &find_data);
 
         if(handle != INVALID_HANDLE_VALUE) {
             do {
                 String fname_with_extension = find_data.cFileName;
-                if(fname_with_extension.len >= 4) {
-                    String fname = create_substring(fname_with_extension, 0, fname_with_extension.len - 4); // -4 to remove .bmp extension
+                U64 fname_with_extension_length = string_length(fname_with_extension);
+                if(fname_with_extension_length >= 4) {
+                    String fname = create_substring(fname_with_extension, 0, fname_with_extension_length - 4); // -4 to remove .bmp extension
                     String_To_Int_Result r = string_to_int(fname);
                     if(r.success) {
                         res = maxu32(res, r.v + 1);
@@ -620,7 +621,7 @@ internal Void
 run_screenshotting(API *api, Memory *memory, Win32_System_Callbacks *sys_cb, String root_directory) {
     for(Int window_i = 0; (window_i < api->window_count); ++window_i) {
         Window_Info *wnd = &api->windows[window_i];
-        ASSERT((wnd->class_name.len > 0) && (wnd->title.len > 0));
+        ASSERT((string_length(wnd->class_name) > 0) && (string_length(wnd->title) > 0));
         if(wnd->should_screenshot) {
             HWND hwnd = win32_find_window_from_class_name(memory, wnd->class_name, sys_cb);
 
@@ -677,12 +678,14 @@ run_screenshotting(API *api, Memory *memory, Win32_System_Callbacks *sys_cb, Str
                     if(created_directory) {
                         U64 iteration_count = win32_file_index_to_use(memory, root_directory, program_title);
 
-                        Int output_filename_size = root_directory.len + 256; // 256 is just arbitrary padding
+                        U64 program_title_length = string_length(program_title);
+                        U64 root_directory_length = string_length(root_directory);
+                        Int output_filename_size = root_directory_length + program_title_length * 2; // 2x is just arbitrary padding
                         Char *output_filename = memory_push_type(memory, Memory_Index_temp, Char, output_filename_size);
                         ASSERT_IF(output_filename) {
-                            Int bytes_written = stbsp_snprintf(output_filename, output_filename_size, "%.*s/%.*s/%I64d.bmp",
-                                                               root_directory.len, root_directory.e,
-                                                               program_title.len, program_title.e,
+                            Int bytes_written = stbsp_snprintf(output_filename, output_filename_size, "%.*s\\%.*s\\%I64d.bmp",
+                                                               root_directory_length, root_directory.start,
+                                                               program_title_length, program_title.start,
                                                                iteration_count);
                             ASSERT((bytes_written > 0) && (bytes_written < output_filename_size));
 
@@ -712,11 +715,12 @@ win32_create_root_directory(Memory *memory, String target_directory) {
     String prefix = "Screenshotter_";
 
     Int idx = win32_directory_index_to_use(memory, prefix, target_directory);
-    Int size = target_directory.len + prefix.len + 32; // TODO: 32 is padding for number
+    U64 prefix_length = string_length(prefix);
+    Int size = (string_length(target_directory) + prefix_length) * 2 ; // TODO: 2x is padding for number
     Char *directory = memory_push_type(memory, Memory_Index_permanent, Char, size);
     ASSERT_IF(directory) {
         Int written = stbsp_snprintf(directory, size, "%.*s%d",
-                                     prefix.len, prefix.e,
+                                     prefix_length, prefix.start,
                                      idx);
         ASSERT(written < size);
 
@@ -792,7 +796,7 @@ win32_browse_for_directory(Memory *memory, String initial_path_input) {
 
     Char *initial_path = (Char *)memory_push_string(memory, Memory_Index_internal_temp, initial_path_input);
     ASSERT_IF(initial_path) {
-        string_replace(initial_path, initial_path_input.len, '/', '\\');
+        string_replace(initial_path, string_length(initial_path_input), '/', '\\');
 
         BROWSEINFO bi = {};
         bi.lpszTitle = "Browser for folder";
@@ -998,6 +1002,8 @@ parse_command_line(Memory *memory) {
 
     return(res);
 }
+
+// TODO: Issue when trying to Screenshot Remedy with new string code. Investigate!
 
 int CALLBACK
 WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd) {
@@ -1253,7 +1259,7 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
 
                                             if(api.launch_browse_for_directory) {
                                                 String new_directory = win32_browse_for_directory(&memory, api.target_output_directory);
-                                                if(new_directory.len > 0) {
+                                                if(string_length(new_directory) > 0) {
                                                     api.new_target_output_directory = new_directory;
                                                 }
 
@@ -1287,9 +1293,9 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
 
                                         // Screenshotting
                                         {
-                                            if(api.new_target_output_directory.len > 0) {
+                                            if(string_length(api.new_target_output_directory) > 0) {
                                                 String new_dir = win32_create_root_directory(&memory, api.new_target_output_directory);
-                                                ASSERT_IF(new_dir.len > 0) {
+                                                ASSERT_IF(string_length(new_dir) > 0) {
                                                     api.target_output_directory = api.new_target_output_directory;
                                                     api.target_output_directory_full = new_dir;
                                                     api.new_target_output_directory = "";

@@ -45,7 +45,8 @@ write_image_to_disk(API *api, Memory *memory, Image *image, String file_name) {
     header.planes = 1;
     header.bits_per_pixel = 32;
     //header.compression = 0; // BI_RGB
-    header.size_of_bitmap = output_pixel_size;
+    ASSERT(safe_truncate_size_64(output_pixel_size) == output_pixel_size);
+    header.size_of_bitmap = (U32)output_pixel_size;
 
     U64 to_write_size = sizeof(Bitmap_Header) + output_pixel_size;
     U8 *to_write = memory_push_type(memory, Memory_Index_temp, U8, to_write_size);

@@ -52,10 +52,11 @@ flip_image(Void *dst_pixels, Void *src_pixels, Int width, Int height) {
 }
 
 internal Char *
-memory_push_string(Memory *mem, Memory_Index idx, String s, Int padding = 0) {
-    Char *res = memory_push_type(mem, idx, Char, s.len + 1 + padding);
+memory_push_string(Memory *mem, Memory_Index idx, String str, Int padding = 0) {
+    uint64_t str_length = string_length(str);
+    Char *res = memory_push_type(mem, idx, Char, str_length + 1 + padding);
     ASSERT_IF(res) {
-        copy(res, s.e, s.len);
+        copy(res, str.start, str_length);
     }
 
     return(res);

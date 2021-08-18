@@ -290,7 +290,7 @@ push_words(Renderer *renderer, Render_Entity *parent, U64 font_id, Int x, Int y,
 }
 
 internal Render_Image *
-find_font_image(Renderer *renderer, Font *font, Char c) {
+find_font_image(Renderer *renderer, Font *font, Int c) {
     Render_Image *image = 0;
     ASSERT_IF(is_ascii(c)) {
         image = find_image_from_id(renderer, font->letter_ids[ascii_to_idx(c)]);
@@ -341,16 +341,19 @@ internal_set_words(Renderer *renderer, Word *word, String *strings, Int string_c
         Int running_y = 0;
 
         for(Int string_i = 0; (string_i < string_count); ++string_i) {
-            String *string = &strings[string_i];
+            String *str = &strings[string_i];
 
-            for(Int letter_i = 0; (letter_i < string->len); ++letter_i) {
-                if(string->e[letter_i] == '\n') {
+            uint64_t str_length = string_length(*str);
+
+            for(Int letter_i = 0; (letter_i < str_length); ++letter_i) {
+                Char c = *get_codepoint_at(*str, letter_i);
+
+                // TODO: Ha
+                if(c == '\n') {
                     running_x = 0;
                     running_y += word->height;
                     // TODO: Also increase the height of word?
                 } else {
-                    Char c = string->e[letter_i];
-
                     Int width_to_add = 0;
                     if(c == ' ' || !is_ascii(c)) {
                         width_to_add += word->height / 2; // TODO: Arbitrary
@@ -360,7 +363,7 @@ internal_set_words(Renderer *renderer, Word *word, String *strings, Int string_c
                             F32 char_pct_height_of_total = (F32)image->height / font->full_height;
                             ASSERT(char_pct_height_of_total >= 0 && char_pct_height_of_total <= 1);
 
-                            Int height_to_use = (word->height * char_pct_height_of_total);
+                            Int height_to_use = (Int)(word->height * char_pct_height_of_total);
                             Int width_to_use = floor((F32)image->width * ((F32)height_to_use / (F32)image->height)); // TODO: Is this correct?
 
                             push_image_rect(renderer, word,

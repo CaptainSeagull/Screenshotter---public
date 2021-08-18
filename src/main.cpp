@@ -102,7 +102,9 @@ setup(API *api, DLL_Data *data, Renderer *renderer) {
     push_line(renderer, white_background, 0, 50, api->window_width, 50, 3.0f); // TODO: These lines don't resize with the window
 
     Word *directory_word = 0;
-    if(api->target_output_directory.len > 0) {
+    U64 target_output_directory_length = string_length(api->target_output_directory);
+
+    if(target_output_directory_length > 0) {
         String strings[] = { "Output Directory: ", api->target_output_directory };
 
         directory_word = push_words(renderer, white_background,
@@ -130,12 +132,15 @@ setup(API *api, DLL_Data *data, Renderer *renderer) {
     {
         // TODO: Something goes wrong if you open Brave and have this tab open (making it the window title).
         //   https://devblogs.microsoft.com/cppblog/data-breakpoints-15-8-update/
-        // Investigate!
+        // Investigate! It looks like there's some non-ascii characters in here. Deal with at some point!
 
         Int height = 25;
         Int running_y = 110;
         for(Int wnd_i = 0; (wnd_i < api->window_count); ++wnd_i) {
-            if(api->windows[wnd_i].title.len > 0 && api->windows[wnd_i].class_name.len > 0) {
+            U64 title_length = string_length(api->windows[wnd_i].title);
+            U64 class_name_length = string_length(api->windows[wnd_i].class_name);
+
+            if(title_length > 0 && class_name_length > 0) {
                 Rect *yellow_window = push_solid_rectangle(renderer, white_background,
                                                            0, running_y, 640, height + 10,
                                                            RGBA(255, 255, 0, 0));
@@ -182,7 +187,7 @@ update(API *api, Renderer *renderer) {
     white_window->width = api->window_width;
     white_window->height = api->window_height;
 
-    if(api->new_target_output_directory.len > 0) {
+    if(string_length(api->new_target_output_directory) > 0) {
         Word *directory_word = find_render_entity(renderer, data->directory_word_id, Word);
         ASSERT(directory_word);
 

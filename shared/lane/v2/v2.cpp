@@ -110,8 +110,8 @@ LANE_PUBLIC_DEC V2 operator-=(V2 &a, V2 b) {
 // And
 LANE_PUBLIC_DEC V2 operator&(uint32_t a, V2 b) {
     V2 r;
-    r.x = a & (uint32_t)b.x;
-    r.y = a & (uint32_t)b.y;
+    r.x = (F32)(a & (uint32_t)b.x);
+    r.y = (F32)(a & (uint32_t)b.y);
 
     return(r);
 }

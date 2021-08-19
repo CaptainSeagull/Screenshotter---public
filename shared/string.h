@@ -180,28 +180,34 @@ create_string(char const *s, uint64_t len/*= 0*/) {
     return(r);
 }
 
-STRING_PUBLIC_DEC char *get_codepoint_at(String s, uint64_t idx) {
-    char *at = s.start;
+STRING_PUBLIC_DEC char *
+get_codepoint_at(String s, uint64_t idx) {
+    char *r = 0;
 
-    // This for loop is kinda tricky...
-    for(uint64_t i = 0; (at != s.end); ++i) {
+    char *at = s.start;
+    for(uint64_t i = 0; (at != s.end); ++i) { // Is there a faster way to do this?
         if(i == idx) {
+            r = at;
             break;
         }
 
         at += (*at & 0xc0) != 0x80;
     }
 
-    return(at);
+    return(r);
 }
 
 STRING_PUBLIC_DEC String
 create_substring(String s, uint64_t start_idx, uint64_t end_idx) {
+    String r = {};
+
     char *start = get_codepoint_at(s, start_idx);
     char *end = get_codepoint_at(s, end_idx);
-    uint64_t len = (end - start);
+    if(start && end) {
+        uint64_t len = (end - start);
+        r = create_string(start, len);
+    }
 
-    String r = create_string(start, len);
     return(r);
 }
 
@@ -215,10 +221,10 @@ string_compare(String a, String b) {
     uint64_t a_len = string_byte_length(a);
     uint64_t b_len = string_byte_length(b);
 
-    if(a_len != b_len) {
+    if(a_len == b_len) {
         r = true;
-        for(char *a_iter = a.start, *b_iter = b.start; (a_iter != a.end && b_iter != b.end); ++a_iter, ++b_iter) {
-            if(*a_iter != *b_iter) {
+        for(char *a_it = a.start, *b_it = b.start; (a_it != a.end && b_it != b.end); ++a_it, ++b_it) {
+            if(*a_it != *b_it) {
                 r = false;
                 break; // for
             }

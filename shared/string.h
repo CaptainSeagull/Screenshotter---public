@@ -130,10 +130,14 @@ STRING_PUBLIC_DEC uint64_t string_copy(char const *dst, char const *src);
 STRING_PUBLIC_DEC uint64_t string_copy(char *dst, char const *src);
 STRING_PUBLIC_DEC uint64_t string_copy(char *dst, char *src, uint64_t len);
 
-STRING_PUBLIC_DEC char to_upper(char a);
-STRING_PUBLIC_DEC char to_lower(char a);
+STRING_PUBLIC_DEC char to_upper(char c);
+STRING_PUBLIC_DEC void to_upper(String s);
+STRING_PUBLIC_DEC char to_lower(char c);
+STRING_PUBLIC_DEC void to_lower(String s);
 
 STRING_PUBLIC_DEC char *get_codepoint_at(String s, uint64_t idx);
+
+STRING_PUBLIC_DEC void string_replace(String s, char target, char to_replace);
 
 #if defined(STRING_IMPLEMENTATION)
 
@@ -218,15 +222,19 @@ string_compare(String a, String b) {
 
     int/*bool*/ r = false;
 
-    uint64_t a_len = string_byte_length(a);
-    uint64_t b_len = string_byte_length(b);
+    if(a.start == b.start && a.end == b.end) {
+        r = true; // Initial test - just see if the pointers are the same.
+    } else {
+        uint64_t a_len = string_byte_length(a);
+        uint64_t b_len = string_byte_length(b);
 
-    if(a_len == b_len) {
-        r = true;
-        for(char *a_it = a.start, *b_it = b.start; (a_it != a.end && b_it != b.end); ++a_it, ++b_it) {
-            if(*a_it != *b_it) {
-                r = false;
-                break; // for
+        if(a_len == b_len) {
+            r = true;
+            for(char *a_it = a.start, *b_it = b.start; (a_it != a.end && b_it != b.end); ++a_it, ++b_it) {
+                if(*a_it != *b_it) {
+                    r = false;
+                    break; // for
+                }
             }
         }
     }
@@ -280,18 +288,19 @@ find_index_of_char(String s, uint32_t target, int/*bool*/ find_last/*= false*/) 
     uint64_t len = string_length(s);
 
     // TODO: Make UTF8 aware and read codepoints properly.
-    if(find_last) {
-        for(uint64_t i = 0, j = len - 1; (i < len); ++i, --j) {
-            if(s.start[j] == target) {
-                r.index = j;
+    if(!find_last) {
+        for(uint64_t i = 0; (i < len); ++i) {
+            if(s.start[i] == target) {
+                r.index = i;
                 r.success = true;
                 break; // for
             }
         }
+
     } else {
-        for(uint64_t i = 0; (i < len); ++i) {
-            if(s.start[i] == target) {
-                r.index = i;
+        for(uint64_t i = 0, j = len - 1; (i < len); ++i, --j) {
+            if(s.start[j] == target) {
+                r.index = j;
                 r.success = true;
                 break; // for
             }
@@ -508,25 +517,51 @@ string_copy(char *dst, char *src, uint64_t len) {
 }
 
 STRING_PUBLIC_DEC char
-to_lower(char a) {
-    char r = a;
-    if(a >= 'A' && a <= 'Z') {
+to_lower(char c) {
+    char r = c;
+    if((c >= 'A') && (c <= 'Z')) {
         r += 32; // 'a' - 'A'
     }
 
     return(r);
 }
 
+STRING_PUBLIC_DEC void
+to_lower(String s) {
+    for(char *at = s.start; (at != s.end); ++at) {
+        if((*at >= 'A') && (*at <= 'Z')) {
+            *at += 32; // 'a' - 'A'
+        }
+    }
+}
+
 STRING_PUBLIC_DEC char
-to_upper(char a) {
-    char r = a;
-    if(a >= 'a' && a <= 'z') {
+to_upper(char c) {
+    char r = c;
+    if((c >= 'a') && (c <= 'z')) {
         r -= 32; // 'a' - 'A'
     }
 
     return(r);
 }
 
+STRING_PUBLIC_DEC void
+to_upper(String s) {
+    for(char *at = s.start; (at != s.end); ++at) {
+        if((*at >= 'a') && (*at <= 'z')) {
+            *at -= 32; // 'a' - 'A'
+        }
+    }
+}
+
+STRING_PUBLIC_DEC void
+string_replace(String s, char target, char to_replace) {
+    for(char *at = s.start; (at != s.end); ++at) {
+        if(*at == target) {
+            *at = to_replace;
+        }
+    }
+}
 
 #endif // STRING_IMPLEMENTATION
 
@@ -572,4 +607,95 @@ AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
 ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ------------------------------------------------------------------------------
+*/
+
+
+/*
+
+// TODO: Untested UTF8 -> UTF16 code
+#include <stddef.h>
+
+namespace utf_converter {
+namespace detail {
+constexpr bool utf8_trail_byte(char8_t const in, char32_t& out) noexcept {
+  if (in < 0x80 || 0xBF < in)
+    return false;
+
+  out = (out << 6) | (in & 0x3F);
+  return true;
+}
+
+// Returns number of trailing bytes.
+// -1 on illegal header bytes.
+constexpr int utf8_header_byte(char8_t const in, char32_t& out) noexcept {
+  if (in < 0x80) {  // ASCII
+    out = in;
+    return 0;
+  }
+  if (in < 0xC0) {  // not a header
+    return -1;
+  }
+  if (in < 0xE0) {
+    out = in & 0x1F;
+    return 1;
+  }
+  if (in < 0xF0) {
+    out = in & 0x0F;
+    return 2;
+  }
+  if (in < 0xF8) {
+    out = in & 0x7;
+    return 3;
+  }
+  return -1;
+}
+}  // namespace detail
+
+constexpr ptrdiff_t utf8_to_utf16(char8_t const* u8_begin,
+                                  char8_t const* const u8_end,
+                                  char16_t* u16out) noexcept {
+  ptrdiff_t outstr_size = 0;
+  while (u8_begin < u8_end) {
+    char32_t code_point = 0;
+    auto const byte_cnt = detail::utf8_header_byte(*u8_begin++, code_point);
+
+    if (byte_cnt < 0 || byte_cnt > u8_end - u8_begin)
+      return false;
+
+    for (int i = 0; i < byte_cnt; ++i)
+      if (!detail::utf8_trail_byte(*u8_begin++, code_point))
+        return -1;
+
+    if (code_point < 0xFFFF) {
+      if (u16out)
+        *u16out++ = static_cast<char16_t>(code_point);
+      ++outstr_size;
+    } else {
+      if (u16out) {
+        code_point -= 0x10000;
+        *u16out++ = static_cast<char16_t>((code_point >> 10) + 0xD800);
+        *u16out++ = static_cast<char16_t>((code_point & 0x3FF) + 0xDC00);
+      }
+      outstr_size += 2;
+    }
+  }
+  return outstr_size;
+}
+}  // namespace utf_converter
+
+
+// Example test on Windows where wchar_t is utf16
+
+#include <Windows.h>
+
+int main() {
+  using utf_converter::utf8_to_utf16;
+
+  char8_t constexpr u8[] = u8"\u7EDD\u4E0D\u4F1A\u653E\u5F03\u4F60";
+  auto constexpr u16sz = utf8_to_utf16(u8, u8 + sizeof u8, nullptr);
+  char16_t u16[u16sz];
+  utf8_to_utf16(u8, u8 + sizeof u8, u16);
+
+  MessageBoxW(nullptr, (wchar_t*)u16, L"UTF-16 text", MB_OK);
+}
 */

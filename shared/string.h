@@ -122,6 +122,8 @@ STRING_PUBLIC_DEC uint64_t string_length(char const *s);
 STRING_PUBLIC_DEC uint64_t string_length(String s);
 STRING_PUBLIC_DEC uint64_t string_byte_length(String s);
 
+STRING_PUBLIC_DEC int/*bool*/ is_empty(String s);
+
 STRING_PUBLIC_DEC String_To_Int_Result string_to_int(String s);
 STRING_PUBLIC_DEC String_To_Float_Result string_to_float(String s);
 
@@ -354,6 +356,11 @@ string_length(String s) {
 STRING_PUBLIC_DEC uint64_t
 string_byte_length(String s) {
     uint64_t r = (s.end - s.start);
+    return(r);
+}
+
+STRING_PUBLIC_DEC int/*bool*/ is_empty(String s) {
+    int/*bool*/ r = (s.start == s.end);
     return(r);
 }
 

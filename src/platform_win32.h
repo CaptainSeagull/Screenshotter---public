@@ -68,6 +68,7 @@ typedef BOOL GetCursorPos_t(LPPOINT lpPoint);
 typedef BOOL ScreenToClient_t(HWND hWnd, LPPOINT lpPoint);
 typedef HWND FindWindowExA_t(HWND   hWndParent, HWND   hWndChildAfter, LPCSTR lpszClass, LPCSTR lpszWindow);
 typedef BOOL EnumWindows_t(WNDENUMPROC lpEnumFunc, LPARAM lParam );
+typedef BOOL EnumDesktopWindows_t(HDESK hDesktop, WNDENUMPROC lpfn, LPARAM lParam );
 typedef int GetClassNameA_t(HWND  hWnd, LPSTR lpClassName, int   nMaxCount );
 
 // GDI32
@@ -131,6 +132,7 @@ struct Win32_System_Callbacks {
     ADD(ScreenToClient);
     ADD(FindWindowExA);
     ADD(EnumWindows);
+    ADD(EnumDesktopWindows);
     ADD(GetClassNameA);
 
     // GDI32

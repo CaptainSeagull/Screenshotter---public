@@ -80,6 +80,7 @@ enum Type {
     Type_Font,
     Type_Renderer,
     Type_Win32_Create_Directory_Result,
+    Type_Win32_Enum_Window_Proc_Data,
     Type_Command_Line_Result,
 };
 
@@ -132,6 +133,7 @@ typedef BOOL GetCursorPos_t ( LPPOINT lpPoint ) ;
 typedef BOOL ScreenToClient_t ( HWND hWnd , LPPOINT lpPoint ) ;
 typedef HWND FindWindowExA_t ( HWND hWndParent , HWND hWndChildAfter , LPCSTR lpszClass , LPCSTR lpszWindow ) ;
 typedef BOOL EnumWindows_t ( WNDENUMPROC lpEnumFunc , LPARAM lParam ) ;
+typedef BOOL EnumDesktopWindows_t ( HDESK hDesktop , WNDENUMPROC lpfn , LPARAM lParam ) ;
 typedef int GetClassNameA_t ( HWND hWnd , LPSTR lpClassName , int nMaxCount ) ;
 typedef HBITMAP CreateCompatibleBitmap_t ( HDC hdc , int cx , int cy ) ;
 typedef HDC CreateCompatibleDC_t ( HDC hdc ) ;
@@ -215,6 +217,7 @@ struct Internal;
 struct Font;
 struct Renderer;
 struct Win32_Create_Directory_Result;
+struct Win32_Enum_Window_Proc_Data;
 struct Command_Line_Result;
 
 // Forward declaration of functions
@@ -247,6 +250,7 @@ uint64_t string_length(char * s );
 uint64_t string_length(char const * s );
 uint64_t string_length(String s );
 uint64_t string_byte_length(String s );
+int is_empty(String s );
 String_To_Int_Result string_to_int(String s );
 String_To_Float_Result string_to_float(String s );
 uint64_t string_copy(char * dst , char * src );
@@ -272,6 +276,7 @@ uint64_t string_length(char * s );
 uint64_t string_length(char const * s );
 uint64_t string_length(String s );
 uint64_t string_byte_length(String s );
+int is_empty(String s );
  static int internal_codepoint_to_int(uint32_t c );
 String_To_Int_Result string_to_int(String s );
 String_To_Float_Result string_to_float(String s );
@@ -897,6 +902,7 @@ void* memcpy(void * dst , const void * src , size_t cnt );
  static U64 win32_file_index_to_use(Memory * memory , String root_directory , String program_title );
  static Void run_screenshotting(API * api , Memory * memory , Win32_System_Callbacks * sys_cb , String root_directory );
  static String win32_create_root_directory(Memory * memory , String target_directory );
+ static Void enum_windows(API * api , Win32_System_Callbacks * sys_cb );
  static int  CALLBACK win32_directory_browse_callback(HWND hwnd , UINT uMsg , LPARAM lParam , LPARAM lpData );
  static Void string_replace(Char * input , Int length , Char t , Char s );
  static String win32_browse_for_directory(Memory * memory , String initial_path_input );
@@ -1120,6 +1126,9 @@ static int print_type(char *buf, int max_size, Renderer *param);
 
 static void print_type_Win32_Create_Directory_Result(char *buf, int *written, int max_size, Win32_Create_Directory_Result *param, char *name);
 static int print_type(char *buf, int max_size, Win32_Create_Directory_Result *param);
+
+static void print_type_Win32_Enum_Window_Proc_Data(char *buf, int *written, int max_size, Win32_Enum_Window_Proc_Data *param, char *name);
+static int print_type(char *buf, int max_size, Win32_Enum_Window_Proc_Data *param);
 
 static void print_type_Command_Line_Result(char *buf, int *written, int max_size, Command_Line_Result *param, char *name);
 static int print_type(char *buf, int max_size, Command_Line_Result *param);

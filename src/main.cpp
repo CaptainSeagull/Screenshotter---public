@@ -24,11 +24,15 @@
 #include "renderer.cpp"
 
 struct Entry {
+    Bool show;
     U64 green_window_id;
     U64 yellow_window_id;
+    U64 word_id;
     Bool highlighted;
 
-    Window_Info *info; // TODO: Storing this here may cause issues later on if we remove/add items.
+    String title;
+    String class_name;
+    Bool should_screenshot;
 };
 
 struct DLL_Data {
@@ -38,8 +42,11 @@ struct DLL_Data {
     U64 button_id;
     U64 directory_word_id;
 
-    Entry windows[256];
+    Entry list[256];
     U32 list_count;
+
+    U64 comic_id;
+    U64 arial_id;
 };
 
 extern "C" Void
@@ -63,119 +70,210 @@ load_font(API *api, Renderer *renderer, String fname) {
     return(id);
 }
 
-internal Void
-setup(API *api, DLL_Data *data, Renderer *renderer) {
-    Memory *memory = api->memory;
+internal Entry *
+find_entry(Entry *entries, U64 entry_count, String title, String class_name) {
+    Entry *r = 0;
+    for(U64 entry_i = 0; (entry_i < entry_count); ++entry_i) {
+        Entry *entry = &entries[entry_i];
 
-    create_renderer(renderer, memory);
-
-    Rect *white_background = push_solid_rectangle(renderer, renderer->root,
-                                                  0, 0, api->window_width, api->window_height,
-                                                  RGBA(255, 255, 255, 255));
-
-    data->background_id = white_background->id;
-
-    U64 comic_id = load_font(api, renderer, "c:/windows/fonts/comic.ttf");
-    U64 arial_id = load_font(api, renderer, "c:/windows/fonts/arial.ttf");
-
-#if 0
-    Int y = 40;
-    push_word(renderer, white_background, comic_id,
-              10, y, 40,
-              "Screenshotter!");
-
-    Image arrow = load_image(api, "arrow.bmp");
-    U64 arrow_id = push_image(renderer, arrow);
-
-    Rect *r = push_solid_rectangle(renderer, white_background,
-                                   10, y, 100, 100,
-                                   RGBA(255, 0, 0, 255));
-
-    push_image_rect(renderer, r,
-                    0, 0, 30, 40,
-                    arrow_id);
-#else
-    push_word(renderer, white_background, comic_id,
-              10, 0, 40,
-              "Screenshotter!");
-
-    push_line(renderer, white_background, 0, 50, api->window_width, 50, 3.0f); // TODO: These lines don't resize with the window
-
-    Word *directory_word = 0;
-    U64 target_output_directory_length = string_length(api->target_output_directory);
-
-    if(target_output_directory_length > 0) {
-        String strings[] = { "Output Directory: ", api->target_output_directory };
-
-        directory_word = push_words(renderer, white_background,
-                                    arial_id, 40, 60, 25,
-                                    strings, ARRAY_COUNT(strings));
-    } else {
-        directory_word = push_word(renderer, white_background,
-                                   arial_id, 40, 60, 25,
-                                   "Please select an output directory");
-    }
-
-    ASSERT(directory_word);
-    data->directory_word_id = directory_word->id;
-
-    Rect *button = push_solid_rectangle(renderer, white_background,
-                                        5, 58, 30, 30,
-                                        RGBA(255, 255, 255, 255));
-    button->outline_thickness = 3.0f;
-    button->outer_colour = 0xFF000000;
-    data->button_id = button->id;
-
-    push_line(renderer, white_background, 0, 95, api->window_width, 95, 3.0f);
-
-    // Running programs text
-    {
-        // TODO: Something goes wrong if you open Brave and have this tab open (making it the window title).
-        //   https://devblogs.microsoft.com/cppblog/data-breakpoints-15-8-update/
-        // Investigate! It looks like there's some non-ascii characters in here. Deal with at some point!
-
-        Int height = 25;
-        Int running_y = 110;
-        for(Int wnd_i = 0; (wnd_i < api->window_count); ++wnd_i) {
-            U64 title_length = string_length(api->windows[wnd_i].title);
-            U64 class_name_length = string_length(api->windows[wnd_i].class_name);
-
-            if(title_length > 0 && class_name_length > 0) {
-                Rect *yellow_window = push_solid_rectangle(renderer, white_background,
-                                                           0, running_y, 640, height + 10,
-                                                           RGBA(255, 255, 0, 0));
-                Rect *green_window = push_solid_rectangle(renderer, white_background,
-                                                          0, running_y, 640, height + 10,
-                                                          RGBA(0, 255, 0, 0));
-                yellow_window->visible = false;
-                green_window->visible = false;
-
-                data->windows[data->list_count].yellow_window_id = yellow_window->id;
-                data->windows[data->list_count].green_window_id = green_window->id;
-                data->windows[data->list_count].info = &api->windows[wnd_i];
-
-                ++data->list_count;
-
-                // Useful for debugging
-#if 1
-                push_word(renderer, yellow_window,
-                          arial_id, 10, 5, height,
-                          api->windows[wnd_i].title);
-#else
-                push_word(renderer, yellow_window,
-                          arial_id, 10, 5, height,
-                          api->windows[wnd_i].class_name);
-#endif
-
-                running_y += (height + 10);
-            }
+        if((entry->title == title) && (entry->class_name == class_name)) {
+            r = entry;
+            break; // for entry_i
         }
     }
-#endif
+
+    return(r);
 }
 
 internal Void
-update(API *api, Renderer *renderer) {
+setup_to_render(API *api, DLL_Data *data, Renderer *renderer) {
+    // TODO: This method needs to be updated now we update the list of windows every frame.
+    //      - If a window is added, add it to the list
+    //      - If a window is remvoed, remvoe it from the list.
+    //      - If a window is stillt here, maintain it's state (selected or not).
+
+    Memory *memory = api->memory;
+
+    Rect *white_background = 0;
+    if(api->init) {
+        create_renderer(renderer, memory);
+
+        white_background = push_solid_rectangle(renderer, renderer->root,
+                                                0, 0, api->window_width, api->window_height,
+                                                RGBA(255, 255, 255, 255));
+
+        data->background_id = white_background->id;
+
+        data->comic_id = load_font(api, renderer, "C:/Windows/fonts/comic.ttf");
+        data->arial_id = load_font(api, renderer, "C:/Windows/fonts/arial.ttf");
+
+
+        push_word(renderer, white_background, data->comic_id,
+                  10, 0, 40,
+                  "Screenshotter!");
+
+        push_line(renderer, white_background, 0, 50, api->window_width, 50, 3.0f); // TODO: These lines don't resize with the window
+
+        Word *directory_word = 0;
+        U64 target_output_directory_length = string_length(api->target_output_directory);
+
+        if(target_output_directory_length > 0) {
+            String strings[] = { "Output Directory: ", api->target_output_directory };
+
+            directory_word = push_words(renderer, white_background,
+                                        data->arial_id, 40, 60, 25,
+                                        strings, ARRAY_COUNT(strings));
+        } else {
+            directory_word = push_word(renderer, white_background,
+                                       data->arial_id, 40, 60, 25,
+                                       "Please select an output directory");
+        }
+
+        ASSERT(directory_word);
+        data->directory_word_id = directory_word->id;
+
+        Rect *button = push_solid_rectangle(renderer, white_background,
+                                            5, 58, 30, 30,
+                                            RGBA(255, 255, 255, 255));
+        button->outline_thickness = 3.0f;
+        button->outer_colour = 0xFF000000;
+        data->button_id = button->id;
+
+        push_line(renderer, white_background, 0, 95, api->window_width, 95, 3.0f);
+    } else {
+        white_background = find_render_entity(renderer, data->background_id, Rect);
+    }
+
+    ASSERT(white_background);
+
+    // Running programs text
+    // TODO: Something goes wrong if you open Brave and have this tab open (making it the window title).
+    //   https://devblogs.microsoft.com/cppblog/data-breakpoints-15-8-update/
+    // Investigate! It looks like there's some non-ascii characters in here. Deal with at some point!
+
+    // Hide all windows initially
+    for(Int list_i = 0; (list_i < data->list_count); ++list_i) {
+        Entry *entry = &data->list[list_i];
+        entry->show = false;
+
+        Rect *yellow_window = find_render_entity(renderer, entry->yellow_window_id, Rect); ASSERT(yellow_window);
+        Rect *green_window  = find_render_entity(renderer, entry->green_window_id,  Rect); ASSERT(green_window);
+        Word *word = find_render_entity(renderer, entry->word_id, Word); ASSERT(word);
+        yellow_window->visible = false;
+        green_window->visible = false;
+        word->visible = false;
+    }
+
+
+    U64 temp_entry_buffer_it = 0;
+    Entry *temp_entry_buffer = memory_push_type(memory, Memory_Index_temp, Entry, api->input_window_count);
+    ASSERT(temp_entry_buffer);
+
+    // If any windows in input_windows match the list, then add them where they currently are. Just tp preserve their position in the list.
+    // We add the items here to a temporary buffer.
+    for(Int list_i = 0; (list_i < data->list_count); ++list_i) {
+        Entry *entry = &data->list[list_i];
+        for(Int wnd_i = 0; (wnd_i < api->input_window_count); ++wnd_i) {
+            Window_Info *wi = &api->input_windows[wnd_i];
+            if((!is_empty(wi->title)) && (!is_empty(wi->class_name))) {
+
+                if((wi->title == entry->title) && (wi->class_name == entry->class_name)) {
+                    temp_entry_buffer[temp_entry_buffer_it++] = *entry;
+                    break; // for wnd_i
+                }
+
+            }
+        }
+    }
+
+    Int height = 25;
+    Int running_y = 110;
+    Int y_to_increment = height + 10;
+
+    // Now go through the temporary buffer and add the items in there to the actual list.
+    for(Int entry_i = 0; (entry_i < temp_entry_buffer_it); ++entry_i) {
+        data->list[entry_i] = temp_entry_buffer[entry_i];
+        Entry *entry = &data->list[entry_i];
+
+        entry->show = true;
+
+        Rect *yellow_window = find_render_entity(renderer, entry->yellow_window_id, Rect); ASSERT(yellow_window);
+        Rect *green_window  = find_render_entity(renderer, entry->green_window_id,  Rect); ASSERT(green_window);
+        Word *word = find_render_entity(renderer, entry->word_id, Word); ASSERT(word);
+
+        yellow_window->y = running_y;
+        green_window->y = running_y;
+        word->y = running_y;
+
+        if(entry->should_screenshot) {
+            green_window->visible = true;
+        }
+
+        running_y += y_to_increment;
+    }
+
+    memory_pop(memory, temp_entry_buffer);
+
+    // Now iterate through to find new items. Done alst so they'll be added to the end.
+    for(Int wnd_i = 0; (wnd_i < api->input_window_count); ++wnd_i) {
+        if((!is_empty(api->input_windows[wnd_i].title)) && (!is_empty(api->input_windows[wnd_i].class_name))) {
+
+            Entry *entry = find_entry(data->list, data->list_count, api->input_windows[wnd_i].title, api->input_windows[wnd_i].class_name);
+
+            if(!entry) {
+                // Try to fill gaps initially
+                for(Int list_i = 0; (list_i < data->list_count); ++list_i) {
+                    if(!data->list[list_i].show) {
+                        entry = &data->list[list_i];
+                        break; // list_i
+                    }
+                }
+
+                // If not add only end of array
+                if((!entry) && (data->list_count + 1 < ARRAY_COUNT(data->list))) {
+                    entry = &data->list[data->list_count++];
+                }
+
+                if(entry) {
+                    Rect *yellow_window = push_solid_rectangle(renderer, white_background,
+                                                               0, running_y, 640, height + 10,
+                                                               RGBA(255, 255, 0, 0));
+                    Rect *green_window = push_solid_rectangle(renderer, white_background,
+                                                              0, running_y, 640, height + 10,
+                                                              RGBA(0, 255, 0, 0));
+                    yellow_window->visible = false;
+                    green_window->visible = false;
+
+                    entry->show = true;
+                    entry->green_window_id = green_window->id;
+                    entry->yellow_window_id = yellow_window->id;
+                    entry->title = api->input_windows[wnd_i].title;
+                    entry->class_name = api->input_windows[wnd_i].class_name;
+                    entry->highlighted = false;
+                    entry->should_screenshot = false;
+
+                    // Useful for debugging
+                    Word *word = push_word(renderer, white_background,
+                                           data->arial_id, 10, running_y, height,
+#if 1
+                                           api->input_windows[wnd_i].title
+#else
+                                           api->input_windows[wnd_i].class_name
+#endif
+
+                                          );
+
+                    entry->word_id = word->id;
+
+                    running_y += y_to_increment;
+                }
+            }
+        }
+    }
+}
+
+internal Void
+update_and_render(API *api, Renderer *renderer) {
     DLL_Data *data = (DLL_Data *)api->dll_data;
     Memory *memory = api->memory;
 
@@ -213,31 +311,50 @@ update(API *api, Renderer *renderer) {
 
     // Yellow highlighting
     for(U32 list_i = 0; (list_i < data->list_count); ++list_i) {
-        data->windows[list_i].info->should_screenshot = false;
+        Entry *window = &data->list[list_i];
+        window->should_screenshot = false;
 
-        Rect *yellow_window = find_render_entity(renderer, data->windows[list_i].yellow_window_id, Rect);
-        Rect *green_window = find_render_entity(renderer, data->windows[list_i].green_window_id, Rect);
+        Rect *yellow_window = find_render_entity(renderer, window->yellow_window_id, Rect); ASSERT(yellow_window);
+        Rect *green_window  = find_render_entity(renderer, window->green_window_id,  Rect); ASSERT(green_window);
+        Word *word = find_render_entity(renderer, window->word_id, Word); ASSERT(word);
+        if(!window->show) {
+            yellow_window->visible = false;
+            green_window->visible = false;
+            word->visible = false;
+        } else {
+            word->visible = true;
 
-        yellow_window->width = api->window_width;
-        green_window->width = api->window_width;
+            yellow_window->width = api->window_width;
+            green_window->width = api->window_width;
 
-        data->windows[list_i].highlighted = false;
-        yellow_window->visible = false;
-        if(mouse_x > yellow_window->x && mouse_x < yellow_window->x + yellow_window->width) {
-            if(mouse_y > yellow_window->y && mouse_y < yellow_window->y + yellow_window->height) {
-                data->windows[list_i].highlighted = true;
-                if(api->key[key_mouse_left] && !api->previous_key[key_mouse_left]) {
-                    green_window->visible = !green_window->visible;
-                }
+            window->highlighted = false;
+            yellow_window->visible = false;
+            if(mouse_x > yellow_window->x && mouse_x < yellow_window->x + yellow_window->width) {
+                if(mouse_y > yellow_window->y && mouse_y < yellow_window->y + yellow_window->height) {
+                    window->highlighted = true;
+                    if(api->key[key_mouse_left] && !api->previous_key[key_mouse_left]) {
+                        green_window->visible = !green_window->visible;
+                    }
 
-                if(!green_window->visible) {
-                    yellow_window->visible = true;
+                    if(!green_window->visible) {
+                        yellow_window->visible = true;
+                    }
                 }
             }
-        }
 
-        if(green_window->visible) {
-            data->windows[list_i].info->should_screenshot = true;
+            if(green_window->visible) {
+                window->should_screenshot = true;
+            }
+        }
+    }
+
+    // Save the list of windows to screenshot and pass back to OS layer.
+    api->output_window_count = 0;
+    for(Int wnd_i = 0; (wnd_i < data->list_count); ++wnd_i) {
+        if(data->list[wnd_i].should_screenshot) {
+            api->output_windows[api->output_window_count].title = data->list[wnd_i].title;
+            api->output_windows[api->output_window_count].class_name = data->list[wnd_i].class_name;
+            ++api->output_window_count;
         }
     }
 
@@ -257,17 +374,14 @@ handle_input_and_render(API *api) {
     }
 #endif
 
-    if(api->init) {
-        setup(api, data, renderer);
-    } else {
-        update(api, renderer);
-    }
+    setup_to_render(api, data, renderer);
+    update_and_render(api, renderer);
 }
 
 extern "C" { int _fltused = 0; }
 void __stdcall
 _DllMainCRTStartup(void) {
-    // TODO: Windows only... I don't think this needs to do anything
+    // TODO: list only... I don't think this needs to do anything
 }
 
 #include "main_generated.cpp"

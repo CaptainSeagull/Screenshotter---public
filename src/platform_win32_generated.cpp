@@ -234,6 +234,7 @@ static uint64_t type_to_size(Type type) {
         case Type_Font: { return(sizeof(Font)); } break;
         case Type_Renderer: { return(sizeof(Renderer)); } break;
         case Type_Win32_Create_Directory_Result: { return(sizeof(Win32_Create_Directory_Result)); } break;
+        case Type_Win32_Enum_Window_Proc_Data: { return(sizeof(Win32_Enum_Window_Proc_Data)); } break;
         case Type_Command_Line_Result: { return(sizeof(Command_Line_Result)); } break;
     }
     return(0);
@@ -287,6 +288,7 @@ static Type string_to_type(char const *s, uint64_t l) {
     else if(generated_string_compare("Font", 4, s, l)) { return(Type_Font); }
     else if(generated_string_compare("Renderer", 8, s, l)) { return(Type_Renderer); }
     else if(generated_string_compare("Win32_Create_Directory_Result", 29, s, l)) { return(Type_Win32_Create_Directory_Result); }
+    else if(generated_string_compare("Win32_Enum_Window_Proc_Data", 27, s, l)) { return(Type_Win32_Enum_Window_Proc_Data); }
     else if(generated_string_compare("Command_Line_Result", 19, s, l)) { return(Type_Command_Line_Result); }
     return(Type_unknown);
 }
@@ -702,7 +704,6 @@ static void print_type_Window_Info(char *buf, int *written, int max_size, Window
 
     print_type_String(buf, written, max_size, (String *)&param->title, "title");
     print_type_String(buf, written, max_size, (String *)&param->class_name, "class_name");
-    print_type_Int(buf, written, max_size, (Int *)&param->should_screenshot, "should_screenshot");
 }
 #endif
 static int print_type(char *buf, int max_size, Window_Info *param) {
@@ -738,10 +739,15 @@ static void print_type_API(char *buf, int *written, int max_size, API *param, ch
     print_type_uint64_t(buf, written, max_size, (uint64_t *)&param->randomish_seed, "randomish_seed");
     print_type_int(buf, written, max_size, (int *)&param->max_work_queue_count, "max_work_queue_count");
     print_type_Platform_Callbacks(buf, written, max_size, (Platform_Callbacks *)&param->cb, "cb");
-    print_type_int(buf, written, max_size, (int *)&param->window_count, "window_count");
-    { int r2 = SNPRINTF(buf + *written, max_size - *written, "Window_Info windows[%d]\n", (int)(sizeof(param->windows) / (sizeof(*(param->windows))))); if(r2 != -1) { *written += r2; } }
-    for(int i = 0; (i < (sizeof(param->windows) / (sizeof(*(param->windows))))); ++i) {
-        print_type_Window_Info(buf, written, max_size, (Window_Info *)&param->windows[i], "");
+    print_type_int(buf, written, max_size, (int *)&param->input_window_count, "input_window_count");
+    { int r2 = SNPRINTF(buf + *written, max_size - *written, "Window_Info input_windows[%d]\n", (int)(sizeof(param->input_windows) / (sizeof(*(param->input_windows))))); if(r2 != -1) { *written += r2; } }
+    for(int i = 0; (i < (sizeof(param->input_windows) / (sizeof(*(param->input_windows))))); ++i) {
+        print_type_Window_Info(buf, written, max_size, (Window_Info *)&param->input_windows[i], "");
+    }
+    print_type_int(buf, written, max_size, (int *)&param->output_window_count, "output_window_count");
+    { int r2 = SNPRINTF(buf + *written, max_size - *written, "Window_Info output_windows[%d]\n", (int)(sizeof(param->output_windows) / (sizeof(*(param->output_windows))))); if(r2 != -1) { *written += r2; } }
+    for(int i = 0; (i < (sizeof(param->output_windows) / (sizeof(*(param->output_windows))))); ++i) {
+        print_type_Window_Info(buf, written, max_size, (Window_Info *)&param->output_windows[i], "");
     }
     print_type_Int(buf, written, max_size, (Int *)&param->launch_browse_for_directory, "launch_browse_for_directory");
     print_type_Int(buf, written, max_size, (Int *)&param->include_title_bar, "include_title_bar");
@@ -1235,6 +1241,23 @@ static void print_type_Win32_Create_Directory_Result(char *buf, int *written, in
 static int print_type(char *buf, int max_size, Win32_Create_Directory_Result *param) {
     int written = 0;
     print_type_Win32_Create_Directory_Result(buf, &written, max_size, param, "");
+    return(written);
+}
+
+#if !defined(override_print_type_Win32_Enum_Window_Proc_Data)
+static void print_type_Win32_Enum_Window_Proc_Data(char *buf, int *written, int max_size, Win32_Enum_Window_Proc_Data *param, char *name) {
+    int r = SNPRINTF(buf + *written, max_size - *written, "Win32_Enum_Window_Proc_Data %s:\n", name);
+    if(r != -1) { *written += r; }
+
+    if(param->api) { print_type_API(buf, written, max_size, (API *)param->api, "api"); }
+    else { int r2 = SNPRINTF(buf + *written, max_size - *written, "API api: (NULL)\n"); if(r2 != -1) { *written += r2; } }
+    if(param->sys_cb) { print_type_Win32_System_Callbacks(buf, written, max_size, (Win32_System_Callbacks *)param->sys_cb, "sys_cb"); }
+    else { int r2 = SNPRINTF(buf + *written, max_size - *written, "Win32_System_Callbacks sys_cb: (NULL)\n"); if(r2 != -1) { *written += r2; } }
+}
+#endif
+static int print_type(char *buf, int max_size, Win32_Enum_Window_Proc_Data *param) {
+    int written = 0;
+    print_type_Win32_Enum_Window_Proc_Data(buf, &written, max_size, param, "");
     return(written);
 }
 

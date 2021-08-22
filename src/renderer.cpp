@@ -53,6 +53,7 @@ create_renderer(Renderer *renderer, Memory *memory) {
     renderer->_internal.entity_id_count = 1; // Use 0 for invalid
     renderer->memory = memory;
     renderer->root = (Render_Entity *)memory_push_size(memory, Memory_Index_permanent, sizeof(Render_Entity_For_Size));
+    renderer->root->visible = true;
     ASSERT(renderer->root);
 
     renderer->image_count_max = 512;
@@ -743,16 +744,13 @@ render_node_and_siblings(Render_Entity *render_entity, Renderer *renderer, Bitma
     // Now render children
     next = render_entity;
     while(next) {
-        if(next->child) {
+        // TODO: Hack to work around the fact we end up with empty nodes... should really just fix that tbh...
+        if((next->type == Type_unknown || next->visible) && next->child) {
 
             BB cur = { next->x, next->y,
                        (next->width) ? next->width : 0xFFFF,
                        (next->height) ? next->height : 0xFFFF
                      };
-
-            if(next->type == Type_Word) {
-                int k = 0;
-            }
 
             BB r = get_overlap(parent_bb, cur);
 
@@ -768,6 +766,7 @@ render(Renderer *renderer, Bitmap *screen_bitmap) {
         0, 0,
         0xFFFF, 0xFFFF,
     };
+
     render_node_and_siblings(renderer->root, renderer, screen_bitmap, rectangle);
 
     // TODO: Needs to handle clipping for drawing bitmaps off the end of screen.

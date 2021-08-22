@@ -105,7 +105,6 @@ struct Settings {
 struct Window_Info {
     String title;
     String class_name;
-    Bool should_screenshot;
 };
 
 // TODO: Tidy API struct
@@ -136,8 +135,13 @@ struct API {
 
     Void *dll_data;
 
-    Int window_count;
-    Window_Info windows[256];
+    // input_windows are all the potential windows passed into main.cpp.
+    Int input_window_count;
+    Window_Info input_windows[256];
+
+    // output_windows are all the windows we should run the screenshotting on. Filled out inside main.cpp.
+    Int output_window_count;
+    Window_Info output_windows[256];
 
     Bool launch_browse_for_directory;
 

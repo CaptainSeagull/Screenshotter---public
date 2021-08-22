@@ -692,7 +692,6 @@ static void print_type_Window_Info(char *buf, int *written, int max_size, Window
 
     print_type_String(buf, written, max_size, (String *)&param->title, "title");
     print_type_String(buf, written, max_size, (String *)&param->class_name, "class_name");
-    print_type_Int(buf, written, max_size, (Int *)&param->should_screenshot, "should_screenshot");
 }
 #endif
 static int print_type(char *buf, int max_size, Window_Info *param) {
@@ -728,10 +727,15 @@ static void print_type_API(char *buf, int *written, int max_size, API *param, ch
     print_type_uint64_t(buf, written, max_size, (uint64_t *)&param->randomish_seed, "randomish_seed");
     print_type_int(buf, written, max_size, (int *)&param->max_work_queue_count, "max_work_queue_count");
     print_type_Platform_Callbacks(buf, written, max_size, (Platform_Callbacks *)&param->cb, "cb");
-    print_type_int(buf, written, max_size, (int *)&param->window_count, "window_count");
-    { int r2 = SNPRINTF(buf + *written, max_size - *written, "Window_Info windows[%d]\n", (int)(sizeof(param->windows) / (sizeof(*(param->windows))))); if(r2 != -1) { *written += r2; } }
-    for(int i = 0; (i < (sizeof(param->windows) / (sizeof(*(param->windows))))); ++i) {
-        print_type_Window_Info(buf, written, max_size, (Window_Info *)&param->windows[i], "");
+    print_type_int(buf, written, max_size, (int *)&param->input_window_count, "input_window_count");
+    { int r2 = SNPRINTF(buf + *written, max_size - *written, "Window_Info input_windows[%d]\n", (int)(sizeof(param->input_windows) / (sizeof(*(param->input_windows))))); if(r2 != -1) { *written += r2; } }
+    for(int i = 0; (i < (sizeof(param->input_windows) / (sizeof(*(param->input_windows))))); ++i) {
+        print_type_Window_Info(buf, written, max_size, (Window_Info *)&param->input_windows[i], "");
+    }
+    print_type_int(buf, written, max_size, (int *)&param->output_window_count, "output_window_count");
+    { int r2 = SNPRINTF(buf + *written, max_size - *written, "Window_Info output_windows[%d]\n", (int)(sizeof(param->output_windows) / (sizeof(*(param->output_windows))))); if(r2 != -1) { *written += r2; } }
+    for(int i = 0; (i < (sizeof(param->output_windows) / (sizeof(*(param->output_windows))))); ++i) {
+        print_type_Window_Info(buf, written, max_size, (Window_Info *)&param->output_windows[i], "");
     }
     print_type_Int(buf, written, max_size, (Int *)&param->launch_browse_for_directory, "launch_browse_for_directory");
     print_type_Int(buf, written, max_size, (Int *)&param->include_title_bar, "include_title_bar");
@@ -1217,11 +1221,14 @@ static void print_type_Entry(char *buf, int *written, int max_size, Entry *param
     int r = SNPRINTF(buf + *written, max_size - *written, "Entry %s:\n", name);
     if(r != -1) { *written += r; }
 
+    print_type_Int(buf, written, max_size, (Int *)&param->show, "show");
     print_type_uint64_t(buf, written, max_size, (uint64_t *)&param->green_window_id, "green_window_id");
     print_type_uint64_t(buf, written, max_size, (uint64_t *)&param->yellow_window_id, "yellow_window_id");
+    print_type_uint64_t(buf, written, max_size, (uint64_t *)&param->word_id, "word_id");
     print_type_Int(buf, written, max_size, (Int *)&param->highlighted, "highlighted");
-    if(param->info) { print_type_Window_Info(buf, written, max_size, (Window_Info *)param->info, "info"); }
-    else { int r2 = SNPRINTF(buf + *written, max_size - *written, "Window_Info info: (NULL)\n"); if(r2 != -1) { *written += r2; } }
+    print_type_String(buf, written, max_size, (String *)&param->title, "title");
+    print_type_String(buf, written, max_size, (String *)&param->class_name, "class_name");
+    print_type_Int(buf, written, max_size, (Int *)&param->should_screenshot, "should_screenshot");
 }
 #endif
 static int print_type(char *buf, int max_size, Entry *param) {
@@ -1239,11 +1246,13 @@ static void print_type_DLL_Data(char *buf, int *written, int max_size, DLL_Data 
     print_type_uint64_t(buf, written, max_size, (uint64_t *)&param->background_id, "background_id");
     print_type_uint64_t(buf, written, max_size, (uint64_t *)&param->button_id, "button_id");
     print_type_uint64_t(buf, written, max_size, (uint64_t *)&param->directory_word_id, "directory_word_id");
-    { int r2 = SNPRINTF(buf + *written, max_size - *written, "Entry windows[%d]\n", (int)(sizeof(param->windows) / (sizeof(*(param->windows))))); if(r2 != -1) { *written += r2; } }
-    for(int i = 0; (i < (sizeof(param->windows) / (sizeof(*(param->windows))))); ++i) {
-        print_type_Entry(buf, written, max_size, (Entry *)&param->windows[i], "");
+    { int r2 = SNPRINTF(buf + *written, max_size - *written, "Entry list[%d]\n", (int)(sizeof(param->list) / (sizeof(*(param->list))))); if(r2 != -1) { *written += r2; } }
+    for(int i = 0; (i < (sizeof(param->list) / (sizeof(*(param->list))))); ++i) {
+        print_type_Entry(buf, written, max_size, (Entry *)&param->list[i], "");
     }
     print_type_uint32_t(buf, written, max_size, (uint32_t *)&param->list_count, "list_count");
+    print_type_uint64_t(buf, written, max_size, (uint64_t *)&param->comic_id, "comic_id");
+    print_type_uint64_t(buf, written, max_size, (uint64_t *)&param->arial_id, "arial_id");
 }
 #endif
 static int print_type(char *buf, int max_size, DLL_Data *param) {

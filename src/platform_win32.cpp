@@ -247,27 +247,29 @@ win32_window_proc(HWND wnd, UINT msg, WPARAM w_param, LPARAM l_param) {
             Int w = cr.right - cr.left;
             Int h = cr.bottom - cr.top;
 
-            // May be faster to allocate new memory / free old memory. But works for now.
-            if(global_api->screen_bitmap.memory) {
-                zero(global_api->screen_bitmap.memory, MAX_SCREEN_BITMAP_SIZE);
+            if((w > 0) && (h > 0)) {
+                // May be faster to allocate new memory / free old memory. But works for now.
+                if(global_api->screen_bitmap.memory) {
+                    zero(global_api->screen_bitmap.memory, MAX_SCREEN_BITMAP_SIZE);
+                }
+
+                global_bmp_info.bmiHeader.biSize = sizeof(global_bmp_info.bmiHeader);
+                global_bmp_info.bmiHeader.biWidth = w;
+                global_bmp_info.bmiHeader.biHeight = h;
+                global_bmp_info.bmiHeader.biPlanes = 1;
+                global_bmp_info.bmiHeader.biBitCount = 32;
+                global_bmp_info.bmiHeader.biCompression = BI_RGB;
+                global_bmp_info.bmiHeader.biSizeImage = 0;
+                global_bmp_info.bmiHeader.biXPelsPerMeter = 0;
+                global_bmp_info.bmiHeader.biYPelsPerMeter = 0;
+                global_bmp_info.bmiHeader.biClrUsed = 0;
+                global_bmp_info.bmiHeader.biClrImportant = 0;
+
+                global_api->screen_bitmap.width = w;
+                global_api->screen_bitmap.height = h;
+
+                global_api->screen_image_size_change = true;
             }
-
-            global_bmp_info.bmiHeader.biSize = sizeof(global_bmp_info.bmiHeader);
-            global_bmp_info.bmiHeader.biWidth = w;
-            global_bmp_info.bmiHeader.biHeight = h;
-            global_bmp_info.bmiHeader.biPlanes = 1;
-            global_bmp_info.bmiHeader.biBitCount = 32;
-            global_bmp_info.bmiHeader.biCompression = BI_RGB;
-            global_bmp_info.bmiHeader.biSizeImage = 0;
-            global_bmp_info.bmiHeader.biXPelsPerMeter = 0;
-            global_bmp_info.bmiHeader.biYPelsPerMeter = 0;
-            global_bmp_info.bmiHeader.biClrUsed = 0;
-            global_bmp_info.bmiHeader.biClrImportant = 0;
-
-            global_api->screen_bitmap.width = w;
-            global_api->screen_bitmap.height = h;
-
-            global_api->screen_image_size_change = true;
         } break;
 
         // TODO: This never seems to be called. Is it nessessary?
@@ -619,91 +621,89 @@ win32_file_index_to_use(Memory *memory, String root_directory, String program_ti
 
 internal Void
 run_screenshotting(API *api, Memory *memory, Win32_System_Callbacks *sys_cb, String root_directory) {
-    for(Int window_i = 0; (window_i < api->window_count); ++window_i) {
-        Window_Info *wnd = &api->windows[window_i];
-        ASSERT((string_length(wnd->class_name) > 0) && (string_length(wnd->title) > 0));
-        if(wnd->should_screenshot) {
-            HWND hwnd = win32_find_window_from_class_name(memory, wnd->class_name, sys_cb);
+    for(Int window_i = 0; (window_i < api->output_window_count); ++window_i) {
+        Window_Info *wnd = &api->output_windows[window_i];
+        ASSERT((!is_empty(wnd->class_name)) && (!is_empty(wnd->title)));
+        HWND hwnd = win32_find_window_from_class_name(memory, wnd->class_name, sys_cb);
 
-            RECT rect = {};
-            sys_cb->GetClientRect(hwnd, &rect);
-            Int width = rect.right - rect.left;
-            Int height = rect.bottom - rect.top;
+        RECT rect = {};
+        sys_cb->GetClientRect(hwnd, &rect);
+        Int width = rect.right - rect.left;
+        Int height = rect.bottom - rect.top;
 
-            // TODO: If the window is minified then the width/height will be 0
-            //       See https://www.codeproject.com/Articles/20651/Capturing-Minimized-Window-A-Kid-s-Trick for how to handle.
-            if(width > 0 && height > 0) {
-                HDC dc = sys_cb->GetDC(0);
-                HDC capture_dc = sys_cb->CreateCompatibleDC(dc);
-                HBITMAP bitmap =  sys_cb->CreateCompatibleBitmap(dc, rect.right - rect.left, rect.bottom - rect.top);
+        // TODO: If the window is minified then the width/height will be 0
+        //       See https://www.codeproject.com/Articles/20651/Capturing-Minimized-Window-A-Kid-s-Trick for how to handle.
+        if((width > 0) && (height > 0)) {
+            HDC dc = sys_cb->GetDC(0);
+            HDC capture_dc = sys_cb->CreateCompatibleDC(dc);
+            HBITMAP bitmap =  sys_cb->CreateCompatibleBitmap(dc, rect.right - rect.left, rect.bottom - rect.top);
 
-                HGDIOBJ gdiObj = sys_cb->SelectObject(capture_dc, bitmap);
+            HGDIOBJ gdiObj = sys_cb->SelectObject(capture_dc, bitmap);
 
-                sys_cb->PrintWindow(hwnd, capture_dc, (api->include_title_bar) ? 0 : PW_CLIENTONLY);
+            sys_cb->PrintWindow(hwnd, capture_dc, (api->include_title_bar) ? 0 : PW_CLIENTONLY);
 
-                // TODO: This sometimes captures the current window, not the target for some reason...
-                //BitBlt(capture_dc, 0, 0, width, height, dc, 0, 0, SRCCOPY | CAPTUREBLT);
-                //SelectObject(capture_dc, gdiObj);
+            // TODO: This sometimes captures the current window, not the target for some reason...
+            //BitBlt(capture_dc, 0, 0, width, height, dc, 0, 0, SRCCOPY | CAPTUREBLT);
+            //SelectObject(capture_dc, gdiObj);
 #if 0
-                // Test code to copy to clipboard.
-                OpenClipboard(0);
-                EmptyClipboard();
-                SetClipboardData(CF_BITMAP, bitmap);
-                CloseClipboard();
+            // Test code to copy to clipboard.
+            OpenClipboard(0);
+            EmptyClipboard();
+            SetClipboardData(CF_BITMAP, bitmap);
+            CloseClipboard();
 #endif
-                BITMAPINFOHEADER bmp_header = {};
-                bmp_header.biSize = sizeof(BITMAPINFOHEADER);
-                bmp_header.biWidth = width;
-                bmp_header.biHeight = height;
-                bmp_header.biPlanes = 1;
-                bmp_header.biBitCount = 32;
+            BITMAPINFOHEADER bmp_header = {};
+            bmp_header.biSize = sizeof(BITMAPINFOHEADER);
+            bmp_header.biWidth = width;
+            bmp_header.biHeight = height;
+            bmp_header.biPlanes = 1;
+            bmp_header.biBitCount = 32;
 
-                // TODO: The hell is this doing?? Why not just width * height * 4??
-                U32 image_size = ((width * bmp_header.biBitCount + 31) / 32) * 4 * height;
-                U8 *image_data = (U8 *)memory_push_type(memory, Memory_Index_temp, U8, image_size);
-                ASSERT_IF(image_data) {
-                    sys_cb->GetDIBits(dc, bitmap, 0, height, image_data, (BITMAPINFO *)&bmp_header, DIB_RGB_COLORS);
+            // TODO: The hell is this doing?? Why not just width * height * 4??
+            U32 image_size = ((width * bmp_header.biBitCount + 31) / 32) * 4 * height;
+            U8 *image_data = (U8 *)memory_push_type(memory, Memory_Index_temp, U8, image_size);
+            ASSERT_IF(image_data) {
+                sys_cb->GetDIBits(dc, bitmap, 0, height, image_data, (BITMAPINFO *)&bmp_header, DIB_RGB_COLORS);
 
-                    // Try and create using the Window title. And if that fails use the classname.
-                    Bool created_directory = false;
-                    String program_title = wnd->title;
-                    Win32_Create_Directory_Result create_dir_r = win32_create_directory(memory, root_directory, program_title);
+                // Try and create using the Window title. And if that fails use the classname.
+                Bool created_directory = false;
+                String program_title = wnd->title;
+                Win32_Create_Directory_Result create_dir_r = win32_create_directory(memory, root_directory, program_title);
+                created_directory = create_dir_r.success;
+                if(!created_directory) {
+                    program_title = wnd->class_name;
+                    create_dir_r = win32_create_directory(memory, root_directory, program_title);
                     created_directory = create_dir_r.success;
-                    if(!created_directory) {
-                        program_title = wnd->class_name;
-                        create_dir_r = win32_create_directory(memory, root_directory, program_title);
-                        created_directory = create_dir_r.success;
-                    }
-
-                    if(created_directory) {
-                        U64 iteration_count = win32_file_index_to_use(memory, root_directory, program_title);
-
-                        U64 program_title_length = string_length(program_title);
-                        U64 root_directory_length = string_length(root_directory);
-                        Int output_filename_size = root_directory_length + program_title_length * 2; // 2x is just arbitrary padding
-                        Char *output_filename = memory_push_type(memory, Memory_Index_temp, Char, output_filename_size);
-                        ASSERT_IF(output_filename) {
-                            Int bytes_written = stbsp_snprintf(output_filename, output_filename_size, "%.*s\\%.*s\\%I64d.bmp",
-                                                               root_directory_length, root_directory.start,
-                                                               program_title_length, program_title.start,
-                                                               iteration_count);
-                            ASSERT((bytes_written > 0) && (bytes_written < output_filename_size));
-
-                            Image image = {};
-                            image.width = width;
-                            image.height = height;
-                            image.pixels = (U32 * )image_data;
-                            write_image_to_disk(api, memory, &image, output_filename);
-
-                            memory_pop(memory, output_filename);
-                        }
-                    }
-
-                    memory_pop(memory, image_data);
                 }
 
-                sys_cb->ReleaseDC(0, dc);
+                if(created_directory) {
+                    U64 iteration_count = win32_file_index_to_use(memory, root_directory, program_title);
+
+                    U64 program_title_length = string_length(program_title);
+                    U64 root_directory_length = string_length(root_directory);
+                    Int output_filename_size = (root_directory_length + program_title_length) * 2; // 2x is just arbitrary padding
+                    Char *output_filename = memory_push_type(memory, Memory_Index_temp, Char, output_filename_size);
+                    ASSERT_IF(output_filename) {
+                        Int bytes_written = stbsp_snprintf(output_filename, output_filename_size, "%.*s\\%.*s\\%I64d.bmp",
+                                                           root_directory_length, root_directory.start,
+                                                           program_title_length, program_title.start,
+                                                           iteration_count);
+                        ASSERT((bytes_written > 0) && (bytes_written < output_filename_size));
+
+                        Image image = {};
+                        image.width = width;
+                        image.height = height;
+                        image.pixels = (U32 * )image_data;
+                        write_image_to_disk(api, memory, &image, output_filename);
+
+                        memory_pop(memory, output_filename);
+                    }
+                }
+
+                memory_pop(memory, image_data);
             }
+
+            sys_cb->ReleaseDC(0, dc);
         }
     }
 }
@@ -734,9 +734,16 @@ win32_create_root_directory(Memory *memory, String target_directory) {
     return(res);
 }
 
+struct Win32_Enum_Window_Proc_Data {
+    API *api;
+    Win32_System_Callbacks *sys_cb;
+};
+
 internal BOOL CALLBACK
 enum_windows_proc(HWND hwnd, LPARAM param) {
-    API *api = (API *)param;
+    Win32_Enum_Window_Proc_Data *data = (Win32_Enum_Window_Proc_Data *)param;
+    Win32_System_Callbacks *sys_cb = data->sys_cb;
+    API *api = data->api;
     Memory *memory = api->memory;
 
     Bool success = false;
@@ -746,16 +753,16 @@ enum_windows_proc(HWND hwnd, LPARAM param) {
     Char *title = memory_push_type(memory, Memory_Index_permanent, Char, max_string_length);
     Char *class_name = memory_push_type(memory, Memory_Index_permanent, Char, max_string_length);
     ASSERT_IF(title && class_name) {
-        if(global_sys_cb->IsWindowVisible(hwnd)) {
-            global_sys_cb->GetWindowText(hwnd, (LPSTR)title, max_string_length);
-            global_sys_cb->GetClassName(hwnd, (LPSTR)class_name, max_string_length);
+        if(sys_cb->IsWindowVisible(hwnd)) {
+            sys_cb->GetWindowText(hwnd, (LPSTR)title, max_string_length);
+            sys_cb->GetClassName(hwnd, (LPSTR)class_name, max_string_length);
 
             Int title_len = string_length(title);
             Int class_name_len = string_length(class_name);
 
             if(title_len > 0 && class_name_len > 0) {
-                ASSERT_IF(api->window_count < ARRAY_COUNT(api->windows)) {
-                    Window_Info *wi = &api->windows[api->window_count++];
+                ASSERT_IF(api->input_window_count < ARRAY_COUNT(api->input_windows)) {
+                    Window_Info *wi = &api->input_windows[api->input_window_count++];
                     wi->title = create_string(title, title_len);
                     wi->class_name = create_string(class_name, class_name_len);
                     success = true;
@@ -770,6 +777,15 @@ enum_windows_proc(HWND hwnd, LPARAM param) {
     }
 
     return(TRUE);
+}
+
+internal Void
+enum_windows(API *api, Win32_System_Callbacks *sys_cb) {
+    // TODO: Maintain window handles or something so we know if a window title has changed but it's the same window?
+    api->input_window_count = 0;
+    Win32_Enum_Window_Proc_Data data = { api, sys_cb };
+    //sys_cb->EnumWindows(enum_windows_proc, (LPARAM)&data);
+    sys_cb->EnumDesktopWindows(0, enum_windows_proc, (LPARAM)&data);
 }
 
 internal int CALLBACK
@@ -861,6 +877,7 @@ load_system_callbacks(Void) {
             LOAD(user32, ScreenToClient);
             LOAD(user32, FindWindowExA);
             LOAD(user32, EnumWindows);
+            LOAD(user32, EnumDesktopWindows);
             LOAD(user32, GetClassNameA);
         }
     }
@@ -1160,8 +1177,6 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
                                         }
                                     }
 
-                                    sys_cb.EnumWindows(enum_windows_proc, (LPARAM)&api); // TODO: Pass sys_cb and API in here
-
                                     U64 iteration_count = 0;
                                     F32 seconds_elapsed_for_last_frame = 0;
                                     while(api.running) {
@@ -1225,6 +1240,7 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
 
                                         // TODO: Dynamically handle windows being opened/closed
                                         EnumWindows(enum_windows_proc, (LPARAM)&api);*/
+                                        enum_windows(&api, &sys_cb);
 
                                         // Actual rendering
                                         {

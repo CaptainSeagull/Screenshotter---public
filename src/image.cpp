@@ -37,7 +37,7 @@ write_image_to_disk(API *api, Memory *memory, Image *image, String file_name) {
 
     Bitmap_Header header = {};
     header.file_type = 0x4D42;
-    header.file_size = sizeof(header) + output_pixel_size;
+    header.file_size = (U32)(sizeof(header) + output_pixel_size); // TODO: Do safe_truncate to make sure the size if correct when casted down
     header.bitmap_offset = sizeof(Bitmap_Header);
     header.size = sizeof(header) - 14;
     header.width = image->width;

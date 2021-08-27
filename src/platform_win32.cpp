@@ -501,7 +501,6 @@ internal HWND
 win32_find_window_from_class_name(Memory *memory, String window_title, Win32_System_Callbacks *sys_cb) {
     HWND window = 0;
 
-    U64 window_title_length = string_length(window_title);
     Char *window_title_raw = memory_push_string(memory, Memory_Index_temp, window_title);
     ASSERT_IF(window_title_raw) {
         window = sys_cb->FindWindowExA(0, 0, TEXT(window_title_raw), 0);
@@ -524,14 +523,14 @@ win32_create_directory(Memory *memory, String root, String dir, Bool save_direct
     // Create the per-app directories
     U64 root_length = string_byte_length(root);
     U64 dir_length = string_length(dir);
-    Int max_size = (root_length + dir_length) * 2; // 2x is padding
+    Int max_size = safe_truncate_size_64((root_length + dir_length) * 2); // 2x is padding
     Char *output_file_directory = memory_push_type(memory, (save_directory_string) ? Memory_Index_permanent : Memory_Index_temp,
                                                    Char, max_size);
     ASSERT_IF(output_file_directory) {
         Int bytes_written = stbsp_snprintf(output_file_directory, max_size, "%.*s\\%.*s",
                                            root_length, root.start,
                                            dir_length, dir.start);
-        ASSERT(bytes_written < max_size);
+        ASSERT((bytes_written > 0) && (bytes_written < max_size));
 
         Bool success = CreateDirectory(output_file_directory, NULL) != 0;
         if(!success) {
@@ -553,9 +552,9 @@ win32_create_directory(Memory *memory, String root, String dir, Bool save_direct
     return(res);
 }
 
-internal Int
+internal U64
 win32_directory_index_to_use(Memory *mem, String session_prefix, String input_target_directory) {
-    Int res = 0;
+    U64 res = 0;
 
     Char *target_directory = memory_push_string(mem, Memory_Index_temp, input_target_directory, 3); // Padding for "\\*"
     ASSERT(target_directory);
@@ -573,7 +572,7 @@ win32_directory_index_to_use(Memory *mem, String session_prefix, String input_ta
                 String fname = find_data.cFileName + string_length(session_prefix);
                 String_To_Int_Result r = string_to_int(fname);
                 if(r.success) {
-                    res = maxu32(res, r.v + 1);
+                    res = MAX(res, r.v + 1);
                 }
             } while(FindNextFile(handle, &find_data));
         }
@@ -595,6 +594,8 @@ win32_file_index_to_use(Memory *memory, String root_directory, String program_ti
                                            "%.*s/%.*s/*.bmp",
                                            string_length(root_directory), root_directory.start,
                                            string_length(program_title), program_title.start);
+        ASSERT((bytes_written > 0) && (bytes_written < output_path_with_wildcard_max_size));
+
         WIN32_FIND_DATA find_data = {};
         HANDLE handle = FindFirstFile(output_path_with_wildcard, &find_data);
 
@@ -606,7 +607,7 @@ win32_file_index_to_use(Memory *memory, String root_directory, String program_ti
                     String fname = create_substring(fname_with_extension, 0, fname_with_extension_length - 4); // -4 to remove .bmp extension
                     String_To_Int_Result r = string_to_int(fname);
                     if(r.success) {
-                        res = maxu32(res, r.v + 1);
+                        res = MAX(res, r.v + 1);
                     }
                 }
             } while(FindNextFile(handle, &find_data));
@@ -640,11 +641,11 @@ run_screenshotting(API *api, Memory *memory, Win32_System_Callbacks *sys_cb, Str
             HDC capture_dc = sys_cb->CreateCompatibleDC(dc);
             HBITMAP bitmap =  sys_cb->CreateCompatibleBitmap(dc, rect.right - rect.left, rect.bottom - rect.top);
 
-            HGDIOBJ gdiObj = sys_cb->SelectObject(capture_dc, bitmap);
 
             sys_cb->PrintWindow(hwnd, capture_dc, (api->include_title_bar) ? 0 : PW_CLIENTONLY);
 
             // TODO: This sometimes captures the current window, not the target for some reason...
+            //HGDIOBJ gdiObj = sys_cb->SelectObject(capture_dc, bitmap);
             //BitBlt(capture_dc, 0, 0, width, height, dc, 0, 0, SRCCOPY | CAPTUREBLT);
             //SelectObject(capture_dc, gdiObj);
 #if 0
@@ -683,7 +684,7 @@ run_screenshotting(API *api, Memory *memory, Win32_System_Callbacks *sys_cb, Str
 
                     U64 program_title_length = string_length(program_title);
                     U64 root_directory_length = string_length(root_directory);
-                    Int output_filename_size = (root_directory_length + program_title_length) * 2; // 2x is just arbitrary padding
+                    Int output_filename_size = safe_truncate_size_64((root_directory_length + program_title_length) * 2); // 2x is just arbitrary padding
                     Char *output_filename = memory_push_type(memory, Memory_Index_temp, Char, output_filename_size);
                     ASSERT_IF(output_filename) {
                         Int bytes_written = stbsp_snprintf(output_filename, output_filename_size, "%.*s\\%.*s\\%I64d.bmp",
@@ -716,9 +717,9 @@ win32_create_root_directory(Memory *memory, String target_directory) {
 
     String prefix = "Screenshotter_";
 
-    Int idx = win32_directory_index_to_use(memory, prefix, target_directory);
+    U64 idx = win32_directory_index_to_use(memory, prefix, target_directory);
     U64 prefix_length = string_length(prefix);
-    Int size = (string_length(target_directory) + prefix_length) * 2 ; // TODO: 2x is padding for number
+    Int size = safe_truncate_size_64(string_length(target_directory) + prefix_length) * 2 ; // TODO: 2x is padding for number
     Char *directory = memory_push_type(memory, Memory_Index_permanent, Char, size);
     ASSERT_IF(directory) {
         Int written = stbsp_snprintf(directory, size, "%.*s%d",
@@ -759,8 +760,8 @@ enum_windows_proc(HWND hwnd, LPARAM param) {
             sys_cb->GetWindowText(hwnd, (LPSTR)title, max_string_length);
             sys_cb->GetClassName(hwnd, (LPSTR)class_name, max_string_length);
 
-            Int title_len = string_length(title);
-            Int class_name_len = string_length(class_name);
+            U64 title_len = string_length(title);
+            U64 class_name_len = string_length(class_name);
 
             if(title_len > 0 && class_name_len > 0) {
                 ASSERT_IF(api->input_window_count < ARRAY_COUNT(api->input_windows)) {
@@ -801,8 +802,8 @@ win32_directory_browse_callback(HWND hwnd, UINT uMsg, LPARAM lParam, LPARAM lpDa
 }
 
 internal Void
-string_replace(Char *input, Int length, Char t, Char s) {
-    for(Int i = 0; (i < length); ++i) {
+string_replace(Char *input, U64 length, Char t, Char s) {
+    for(U64 i = 0; (i < length); ++i) {
         if(input[i] == t) {
             input[i] = s;
         }
@@ -952,7 +953,7 @@ parse_command_line(Memory *memory) {
 
     // Get the command line arguments.
     Char *cmdline = GetCommandLineA();
-    Int args_len = string_length(cmdline);
+    U64 args_len = string_length(cmdline);
 
     // Count number of arguments.
     Int original_cnt = 1;
@@ -972,7 +973,7 @@ parse_command_line(Memory *memory) {
     ASSERT_IF(arg_cpy) {
         string_copy(arg_cpy, cmdline);
 
-        for(Int i = 0; (i < args_len); ++i) {
+        for(U64 i = 0; (i < args_len); ++i) {
             if(arg_cpy[i] == '"') {
                 in_quotes = !in_quotes;
             } else if(arg_cpy[i] == ' ') {
@@ -990,7 +991,7 @@ parse_command_line(Memory *memory) {
         ASSERT_IF(argv) {
             Char **cur = argv;
             *cur++ = arg_cpy;
-            for(Int i = 0; (i < args_len); ++i) {
+            for(U64 i = 0; (i < args_len); ++i) {
                 if(!arg_cpy[i]) {
                     Char *str = arg_cpy + i + 1;
                     if(!string_contains(str, '*')) {
@@ -1050,11 +1051,11 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
 
             Char *path_to_exe = memory_push_type(&memory, Memory_Index_temp, Char, 1024);
             ASSERT_IF(path_to_exe) {
-                GetModuleFileNameA(0, path_to_exe, get_size(path_to_exe));
+                GetModuleFileNameA(0, path_to_exe, safe_truncate_size_64(get_size(path_to_exe)));
                 Find_Index_Result fir = find_index_of_char(path_to_exe, '\\', true);
                 ASSERT_IF(fir.success) {
 
-                    Int last_slash = fir.index + 1;
+                    U64 last_slash = fir.index + 1;
 
                     // TODO: Instead of assuming we're running from the data directory and going relative from there could I find the path
                     // to the current EXE and load the DLLs from there?
@@ -1102,7 +1103,7 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
                             Int frame_rate = 60; // TODO: Make configurable.
                             Int game_update_hz = frame_rate;
                             F32 target_seconds_per_frame = 1.0f / (F32)game_update_hz;
-                            F32 target_ms_per_frame = (1.0f / (F32)frame_rate) * 1000.0f;
+                            //F32 target_ms_per_frame = (1.0f / (F32)frame_rate) * 1000.0f;
 
                             // Make the frame rate more granular.
                             {

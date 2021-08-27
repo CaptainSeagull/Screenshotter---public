@@ -158,8 +158,8 @@ push_line(Renderer *renderer, Render_Entity *parent,
         line->x2 = x2;
         line->y2 = y2;
 
-        line->width = maxf32(ABS(line->y2 - line->y), ABS(line->y - line->y2));
-        line->height = maxf32(ABS(line->x2 - line->x), ABS(line->x - line->x2));
+        line->width = MAX(ABS(line->y2 - line->y), ABS(line->y - line->y2));
+        line->height = MAX(ABS(line->x2 - line->x), ABS(line->x - line->x2));
 
         line->thickness = thickness;
     }
@@ -353,9 +353,9 @@ internal_set_words(Renderer *renderer, Word *word, String *strings, Int string_c
         for(Int string_i = 0; (string_i < string_count); ++string_i) {
             String *str = &strings[string_i];
 
-            uint64_t str_length = string_length(*str);
+            U64 str_length = string_length(*str);
 
-            for(Int letter_i = 0; (letter_i < str_length); ++letter_i) {
+            for(U64 letter_i = 0; (letter_i < str_length); ++letter_i) {
                 Char c = *get_codepoint_at(*str, letter_i);
 
                 // TODO: Ha
@@ -374,7 +374,7 @@ internal_set_words(Renderer *renderer, Word *word, String *strings, Int string_c
                             ASSERT(char_pct_height_of_total >= 0 && char_pct_height_of_total <= 1);
 
                             Int height_to_use = (Int)(word->height * char_pct_height_of_total);
-                            Int width_to_use = FLOOR((F32)image->width * ((F32)height_to_use / (F32)image->height)); // TODO: Is this correct?
+                            Int width_to_use = (Int)FLOOR((F32)image->width * ((F32)height_to_use / (F32)image->height)); // TODO: Is this correct?
 
                             push_image_rect(renderer, word,
                                             running_x, running_y, width_to_use, height_to_use,
@@ -502,7 +502,6 @@ render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bit
                 U32 height = rect->height;
 
                 F32 line_thickness = rect->outline_thickness;
-                F32 half_line_thickness = (line_thickness * 0.5f);
 
                 for(Int iter_y = 0; (iter_y < height); ++iter_y) {
                     for(Int iter_x = 0; (iter_x < width); ++iter_x) {
@@ -563,20 +562,20 @@ render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bit
             case Type_Line: {
                 Line *line = (Line *)render_entity;
 
-                F32 rise = maxf32(ABS(line->y2 - line->y), ABS(line->y - line->y2));
-                F32 run = maxf32(ABS(line->x2 - line->x), ABS(line->x - line->x2));
+                F32 rise = (F32)MAX(ABS(line->y2 - line->y), ABS(line->y - line->y2));
+                F32 run = (F32)MAX(ABS(line->x2 - line->x), ABS(line->x - line->x2));
 
-                line->width = rise;
-                line->height = run;
+                line->width = (Int)rise;
+                line->height = (Int)run;
 
                 F32 m = (run != 0) ? rise / run : 0;
                 F32 y_intercept = line->y - (m * line->x);
                 F32 x_intercept = line->x - (m * line->y);
 
                 F32 thickness = line->thickness;
-                F32 thickness_x2 = (line->thickness * 2.0f);
-                F32 rise_test = (rise + thickness_x2);
-                F32 run_test = (run + thickness_x2);
+                Int thickness_x2 = (Int)(line->thickness * 2.0f);
+                Int rise_test = (Int)(rise + thickness_x2);
+                Int run_test = (Int)(run + thickness_x2);
 
                 for(Int iter_y = -thickness_x2; (iter_y < rise_test); ++iter_y) {
                     for(Int iter_x = -thickness_x2; (iter_x < run_test); ++iter_x) {
@@ -589,8 +588,8 @@ render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bit
                                                          iter_y + offset.y);
 
                             if(screen_pixel) {
-                                F32 x = iter_x + offset.x;
-                                F32 y = iter_y + offset.y;
+                                F32 x = (F32)(iter_x + offset.x);
+                                F32 y = (F32)(iter_y + offset.y);
                                 if(run != 0) {
                                     F32 t = ((m * x) + y_intercept);
                                     if(ABS(y - t) < thickness) {
@@ -613,11 +612,11 @@ render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bit
                 Render_Image *img = find_image_from_id(renderer, img_rect->image_id);
                 ASSERT(img);
 
-                F32 sprite_width_to_use  = img_rect->sprite_width;
-                F32 sprite_height_to_use = img_rect->sprite_height;
+                F32 sprite_width_to_use  = (F32)img_rect->sprite_width;
+                F32 sprite_height_to_use = (F32)img_rect->sprite_height;
 
-                if(sprite_width_to_use  == 0) { sprite_width_to_use  = img->width;  }
-                if(sprite_height_to_use == 0) { sprite_height_to_use = img->height; }
+                if(sprite_width_to_use  == 0) { sprite_width_to_use  = (F32)img->width;  }
+                if(sprite_height_to_use == 0) { sprite_height_to_use = (F32)img->height; }
 
                 // TODO: This doesn't work if the width / height aren't uniform... apparently?
 
@@ -633,14 +632,14 @@ render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bit
                             // TODO: There's an issue with how I'm calculating the Word type's height, so it ends up filtering this
                             //       out completely. Look into this!
                             /*if(iter_y + offset.y < parent.height)*/ {
-                                U32 img_x = FLOOR((F32)iter_x * pct_w);
-                                U32 img_y = FLOOR((F32)iter_y * pct_h);
+                                U32 img_x = (U32)FLOOR((F32)iter_x * pct_w);
+                                U32 img_y = (U32)FLOOR((F32)iter_y * pct_h);
 
                                 U32 *screen_pixel = image_at(screen_bitmap->memory,
                                                              screen_bitmap->width,
                                                              screen_bitmap->height,
                                                              iter_x + offset.x,
-                                                             iter_y + offset.y + (off_y_scaled));
+                                                             iter_y + offset.y + (U32)(off_y_scaled));
                                 U32 *bitmap_pixel = image_at(img->pixels,
                                                              img->width,
                                                              img->height,

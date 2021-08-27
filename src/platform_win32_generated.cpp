@@ -2,7 +2,7 @@
     #include<stdio.h>
     #define SNPRINTF snprintf
 #endif
-static int generated_string_compare(char const *a, uint32_t a_len, char const *b, uint32_t b_len) {
+static int generated_string_compare(char const *a, uint64_t a_len, char const *b, uint64_t b_len) {
     int res = 0;
     if(a_len == b_len) {
         res = 1;
@@ -1245,10 +1245,10 @@ static void print_type_Renderer(char *buf, int *written, int max_size, Renderer 
     else { int r2 = SNPRINTF(buf + *written, max_size - *written, "Memory memory: (NULL)\n"); if(r2 != -1) { *written += r2; } }
     if(param->images) { print_type_Render_Image(buf, written, max_size, (Render_Image *)param->images, "images"); }
     else { int r2 = SNPRINTF(buf + *written, max_size - *written, "Render_Image images: (NULL)\n"); if(r2 != -1) { *written += r2; } }
-    print_type_int(buf, written, max_size, (int *)&param->image_count_max, "image_count_max");
+    print_type_uint32_t(buf, written, max_size, (uint32_t *)&param->image_count_max, "image_count_max");
     if(param->fonts) { print_type_Font(buf, written, max_size, (Font *)param->fonts, "fonts"); }
     else { int r2 = SNPRINTF(buf + *written, max_size - *written, "Font fonts: (NULL)\n"); if(r2 != -1) { *written += r2; } }
-    print_type_int(buf, written, max_size, (int *)&param->font_count_max, "font_count_max");
+    print_type_uint32_t(buf, written, max_size, (uint32_t *)&param->font_count_max, "font_count_max");
     print_type_Render_Error(buf, written, max_size, (Render_Error *)&param->error, "error");
     print_type_Internal(buf, written, max_size, (Internal *)&param->_internal, "_internal");
 }

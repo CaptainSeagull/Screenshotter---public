@@ -16,6 +16,12 @@ zero(Void *m, U64 s) {
     }
 }
 
+template<typename T>
+internal Void
+zero(T *v) {
+    zero((void *)v, sizeof(T));
+}
+
 internal Void
 copy(Void *dst, Void *src, U64 size) {
     U8 *dst8 = (U8 *)dst;

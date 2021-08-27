@@ -90,7 +90,7 @@ enum Type {
 #define ENTITY_PATTERN(Type) PREPROC_CONCAT(UNION_OF_SUBCLASSES_INTERNAL_, Type)
 #define PREPROC_CONCAT(a, b) a##b
 #define ENUM_COUNT(name) PREPROC_CONCAT(internal_enum_, name)
-static int generated_string_compare(char const *a, uint32_t a_len, char const *b, uint32_t b_len);
+static int generated_string_compare(char const *a, uint64_t a_len, char const *b, uint64_t b_len);
 static uint64_t get_enum_count(Type type);
 static uint64_t type_to_size(Type type);
 static Type string_to_type(char const *s, uint64_t l);
@@ -774,7 +774,6 @@ int stbsp_vsprintf(char * buf , char const * fmt , va_list va );
  static void conditional_assign(Lane_U32 mask , Lane_V4 * dst , Lane_V4 src );
  static V4 horizontal_add(Lane_V4 a );
  static Lane_V4 gather_v4_internal(void * ptr , uint64_t stride , Lane_U32 indices );
- static Lane_V4 conditional_gather_v4_internal(Lane_U32 mask , void * ptr , uint64_t stride , Lane_U32 indices );
  static Lane_V4 lerp(Lane_F32 t , Lane_V4 a , Lane_V4 b );
  static Lane_V4 lerp(float t , Lane_V4 a , Lane_V4 b );
  static V2 v2(V2 a );
@@ -905,20 +904,18 @@ void* memcpy(void * dst , const void * src , size_t cnt );
  static Void win32_complete_all_work(API * api );
  static Win32_Loaded_Code win32_load_code(Char * source_fname , Char * temp_fname );
  static Win32_Create_Directory_Result win32_create_directory(Memory * memory , String root , String dir , Bool save_directory_string  );
- static Int win32_directory_index_to_use(Memory * mem , String session_prefix , String input_target_directory );
+ static U64 win32_directory_index_to_use(Memory * mem , String session_prefix , String input_target_directory );
  static U64 win32_file_index_to_use(Memory * memory , String root_directory , String program_title );
  static Void run_screenshotting(API * api , Memory * memory , Win32_System_Callbacks * sys_cb , String root_directory );
  static String win32_create_root_directory(Memory * memory , String target_directory );
  static Void enum_windows(API * api , Win32_System_Callbacks * sys_cb );
  static int  CALLBACK win32_directory_browse_callback(HWND hwnd , UINT uMsg , LPARAM lParam , LPARAM lpData );
- static Void string_replace(Char * input , Int length , Char t , Char s );
+ static Void string_replace(Char * input , U64 length , Char t , Char s );
  static String win32_browse_for_directory(Memory * memory , String initial_path_input );
  static Win32_System_Callbacks load_system_callbacks(Void );
  static Command_Line_Result parse_command_line(Memory * memory );
 int  CALLBACK WinMain(HINSTANCE hInstance , HINSTANCE hPrevInstance , LPSTR lpCmdLine , int nShowCmd );
 void  __stdcall WinMainCRTStartup(Void );
-static char const *Memory_Arena_Error_to_string(Memory_Arena_Error e);
-static int Memory_Arena_Error_count(Memory_Arena_Error e);
 static char const *Key_to_string(Key e);
 static Int Key_count(Key e);
 static char const *Memory_Index_to_string(Memory_Index e);

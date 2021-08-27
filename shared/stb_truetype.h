@@ -2657,10 +2657,10 @@ STBTT_DEF void stbtt_GetGlyphBitmapBoxSubpixel(const stbtt_fontinfo *font, int g
         if (iy1) *iy1 = 0;
     } else {
         // move to integral bboxes (treating pixels as little squares, what pixels get touched)?
-        if (ix0) *ix0 = STBTT_ifloor( x0 * scale_x + shift_x);
-        if (iy0) *iy0 = STBTT_ifloor(-y1 * scale_y + shift_y);
-        if (ix1) *ix1 = STBTT_iceil ( x1 * scale_x + shift_x);
-        if (iy1) *iy1 = STBTT_iceil (-y0 * scale_y + shift_y);
+        if (ix0) *ix0 = (int)STBTT_ifloor( x0 * scale_x + shift_x);
+        if (iy0) *iy0 = (int)STBTT_ifloor(-y1 * scale_y + shift_y);
+        if (ix1) *ix1 = (int)STBTT_iceil ( x1 * scale_x + shift_x);
+        if (iy1) *iy1 = (int)STBTT_iceil (-y0 * scale_y + shift_y);
     }
 }
 
@@ -3682,8 +3682,8 @@ STBTT_DEF void stbtt_GetBakedQuad(const stbtt_bakedchar *chardata, int pw, int p
     float d3d_bias = opengl_fillrule ? 0 : -0.5f;
     float ipw = 1.0f / pw, iph = 1.0f / ph;
     const stbtt_bakedchar *b = chardata + char_index;
-    int round_x = STBTT_ifloor((*xpos + b->xoff) + 0.5f);
-    int round_y = STBTT_ifloor((*ypos + b->yoff) + 0.5f);
+    int round_x = (int)STBTT_ifloor((*xpos + b->xoff) + 0.5f);
+    int round_y = (int)STBTT_ifloor((*ypos + b->yoff) + 0.5f);
 
     q->x0 = round_x + d3d_bias;
     q->y0 = round_y + d3d_bias;

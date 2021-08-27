@@ -206,7 +206,7 @@ setup_to_render(API *api, DLL_Data *data, Renderer *renderer) {
     Int y_to_increment = height + 10;
 
     // Now go through the temporary buffer and add the items in there to the actual list.
-    for(Int entry_i = 0; (entry_i < temp_entry_buffer_it); ++entry_i) {
+    for(U64 entry_i = 0; (entry_i < temp_entry_buffer_it); ++entry_i) {
         data->entry[entry_i] = temp_entry_buffer[entry_i];
         Entry *entry = &data->entry[entry_i];
 
@@ -247,6 +247,7 @@ setup_to_render(API *api, DLL_Data *data, Renderer *renderer) {
                 for(Int list_i = 0; (list_i < data->entry_count); ++list_i) {
                     if(!data->entry[list_i].show) {
                         entry = &data->entry[list_i];
+                        zero(entry);
                         break; // list_i
                     }
                 }
@@ -291,7 +292,6 @@ setup_to_render(API *api, DLL_Data *data, Renderer *renderer) {
 internal Void
 update_and_render(API *api, Renderer *renderer) {
     DLL_Data *data = (DLL_Data *)api->dll_data;
-    Memory *memory = api->memory;
 
     Int mouse_x = (Int)(api->mouse_pos_x * (F32)api->window_width);
     Int mouse_y = (Int)(api->mouse_pos_y * (F32)api->window_height);

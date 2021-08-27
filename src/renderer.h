@@ -89,10 +89,10 @@ struct Renderer {
     Memory *memory;
 
     Render_Image *images;
-    Int image_count_max, image_count;
+    U32 image_count_max, image_count;
 
     Font *fonts;
-    Int font_count_max, font_count;
+    U32 font_count_max, font_count;
 
     Render_Error error;
     Internal _internal;

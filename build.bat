@@ -46,6 +46,9 @@ popd
 IF NOT EXIST "build" mkdir "build"
 pushd "build"
 
+set BUILD_SCREENSHOTTER=-FeScreenshotter "../../src/main.cpp" -FmScreenshotter.map -link kernel32.lib -stack:0x100000,0x100000 -EXPORT:init_platform_settings -EXPORT:handle_input_and_render -PDB:%random%_screenshotter.pdb -stack:0x100000,0x100000 -subsystem:windows,5.2
+set BUILD_WIN32=-FeWin32 "../../src/platform_win32.cpp" -FmWin32.map -link -nodefaultlib kernel32.lib -stack:0x100000,0x100000 -subsystem:windows,5.2
+
 echo ----
 echo Building debug
 
@@ -54,10 +57,10 @@ pushd "debug"
 
 del *_screenshotter.pdb > NUL > NUL
 
-cl -LD -FeScreenshotter %DEBUG_COMPILER_FLAGS% "../../src/main.cpp" -FmScreenshotter.map -link kernel32.lib -stack:0x100000,0x100000 -EXPORT:init_platform_settings -EXPORT:handle_input_and_render -PDB:%random%_screenshotter.pdb -stack:0x100000,0x100000 -subsystem:windows,5.2
-cl -FeWin32 %DEBUG_COMPILER_FLAGS% "../../src/platform_win32.cpp" -FmWin32.map -link -nodefaultlib kernel32.lib -stack:0x100000,0x100000 -subsystem:windows,5.2
+cl -LD %DEBUG_COMPILER_FLAGS% %BUILD_SCREENSHOTTER%
+cl %DEBUG_COMPILER_FLAGS% %BUILD_WIN32%
 
-popd rem "debug"
+popd rem debug
 
 if "%BUILD_RELEASE%"=="true" (
     echo ----
@@ -68,9 +71,8 @@ if "%BUILD_RELEASE%"=="true" (
 
     del *_screenshotter.pdb > NUL > NUL
 
-    cl -LD -FeScreenshotter %RELEASE_COMPILER_FLAGS% "../../src/main.cpp" -FmScreenshotter.map -link kernel32.lib -stack:0x100000,0x100000 -EXPORT:init_platform_settings -EXPORT:handle_input_and_render -PDB:%random%_screenshotter.pdb -stack:0x100000,0x100000 -subsystem:windows,5.2
-    cl -FeWin32 %RELEASE_COMPILER_FLAGS% "../../src/platform_win32.cpp" -FmWin32.map -link -nodefaultlib kernel32.lib -stack:0x100000,0x100000 -subsystem:windows,5.2
-
+    cl -LD %RELEASE_COMPILER_FLAGS% %BUILD_SCREENSHOTTER%
+    cl %RELEASE_COMPILER_FLAGS% %BUILD_WIN32%
 
     popd rem release
 )

@@ -78,6 +78,7 @@ enum Type {
     Type_Render_Image,
     Type_Internal,
     Type_Font,
+    Type_Render_Error,
     Type_Renderer,
     Type_Win32_Create_Directory_Result,
     Type_Win32_Enum_Window_Proc_Data,
@@ -215,6 +216,8 @@ struct Render_Entity_For_Size;
 struct Render_Image;
 struct Internal;
 struct Font;
+enum Render_Error : Int;
+
 struct Renderer;
 struct Win32_Create_Directory_Result;
 struct Win32_Enum_Window_Proc_Data;
@@ -243,6 +246,7 @@ String create_string(char const * s , uint64_t len  );
 String create_substring(String s , uint64_t start , uint64_t end );
 int string_compare(String a , String b );
 int operator==(String a , String b );
+int operator!=(String a , String b );
 int string_contains(String a , String b );
 int string_contains(String s , uint32_t target );
 Find_Index_Result find_index_of_char(String s , uint32_t target , int find_last  );
@@ -269,6 +273,7 @@ char* get_codepoint_at(String s , uint64_t idx );
 String create_substring(String s , uint64_t start_idx , uint64_t end_idx );
 int string_compare(String a , String b );
 int operator==(String a , String b );
+int operator!=(String a , String b );
 int string_contains(String a , String b );
 int string_contains(String s , uint32_t target );
 Find_Index_Result find_index_of_char(String s , uint32_t target , int find_last );
@@ -308,6 +313,8 @@ int stbsp_vsprintf(char * buf , char const * fmt , va_list va );
  static Void set(Void * dst , U8 v , U64 size );
  static Void flip_image(Void * dst_pixels , Void * src_pixels , Int width , Int height );
  static Char* memory_push_string(Memory * mem , Memory_Index idx , String str , Int padding  );
+ static F32 power(F32 x , Int y );
+ static F32 fast_power(F32 a , F32 b );
  static Void write_image_to_disk(API * api , Memory * memory , Image * image , String file_name );
  static Image load_image(API * api , String file_name );
  static float lane_max(float a , float b );
@@ -916,11 +923,14 @@ static char const *Key_to_string(Key e);
 static Int Key_count(Key e);
 static char const *Memory_Index_to_string(Memory_Index e);
 static Int Memory_Index_count(Memory_Index e);
+static char const *Render_Error_to_string(Render_Error e);
+static Int Render_Error_count(Render_Error e);
 
 // Helpers
 #define internal_enum_Memory_Arena_Error (6)
 #define internal_enum_Key (58)
 #define internal_enum_Memory_Index (3)
+#define internal_enum_Render_Error (2)
 #define UNION_OF_SUBCLASSES_INTERNAL_Render_Entity union { Rect _Rect; Image_Rect _Image_Rect; Word _Word; Line _Line; }; 
 
 // Forward declare print struct
@@ -1120,6 +1130,9 @@ static int print_type(char *buf, int max_size, Internal *param);
 
 static void print_type_Font(char *buf, int *written, int max_size, Font *param, char *name);
 static int print_type(char *buf, int max_size, Font *param);
+
+static void print_type_Render_Error(char *buf, int *written, int max_size, Render_Error *param, char *name);
+static int print_type(char *buf, int max_size, Render_Error *param);
 
 static void print_type_Renderer(char *buf, int *written, int max_size, Renderer *param, char *name);
 static int print_type(char *buf, int max_size, Renderer *param);

@@ -97,6 +97,13 @@ static char const *Memory_Index_to_string(Memory_Index e) {
     }
     return(0);
 }
+static char const *Render_Error_to_string(Render_Error e) {
+    switch(e) {
+        case Render_Error_no_error: { return("Render_Error_no_error"); } break;
+        case Render_Error_allocation_failure: { return("Render_Error_allocation_failure"); } break;
+    }
+    return(0);
+}
 static Memory_Arena_Error Memory_Arena_Error_from_string(char const *s, uint32_t l) {
     if(0) {}
     else if(generated_string_compare("Memory_Arena_Error_success", 26, s, l)) { return(Memory_Arena_Error_success); }
@@ -176,12 +183,19 @@ static Memory_Index Memory_Index_from_string(char const *s, uint32_t l) {
     else if(generated_string_compare("Memory_Index_internal_temp", 26, s, l)) { return(Memory_Index_internal_temp); }
     return((Memory_Index)0);
 }
+static Render_Error Render_Error_from_string(char const *s, uint32_t l) {
+    if(0) {}
+    else if(generated_string_compare("Render_Error_no_error", 21, s, l)) { return(Render_Error_no_error); }
+    else if(generated_string_compare("Render_Error_allocation_failure", 31, s, l)) { return(Render_Error_allocation_failure); }
+    return((Render_Error)0);
+}
 // Type
 static uint64_t get_enum_count(Type type) {
     switch(type) {
         case Type_Memory_Arena_Error: { return(6); } break;
         case Type_Key: { return(58); } break;
         case Type_Memory_Index: { return(3); } break;
+        case Type_Render_Error: { return(2); } break;
     }
     return(0);
 }
@@ -231,6 +245,7 @@ static uint64_t type_to_size(Type type) {
         case Type_Render_Image: { return(sizeof(Render_Image)); } break;
         case Type_Internal: { return(sizeof(Internal)); } break;
         case Type_Font: { return(sizeof(Font)); } break;
+        case Type_Render_Error: { return(sizeof(Render_Error)); } break;
         case Type_Renderer: { return(sizeof(Renderer)); } break;
         case Type_Image_Letter_Result: { return(sizeof(Image_Letter_Result)); } break;
         case Type_Entry: { return(sizeof(Entry)); } break;
@@ -286,6 +301,7 @@ static Type string_to_type(char const *s, uint64_t l) {
     else if(generated_string_compare("Render_Image", 12, s, l)) { return(Type_Render_Image); }
     else if(generated_string_compare("Internal", 8, s, l)) { return(Type_Internal); }
     else if(generated_string_compare("Font", 4, s, l)) { return(Type_Font); }
+    else if(generated_string_compare("Render_Error", 12, s, l)) { return(Type_Render_Error); }
     else if(generated_string_compare("Renderer", 8, s, l)) { return(Type_Renderer); }
     else if(generated_string_compare("Image_Letter_Result", 19, s, l)) { return(Type_Image_Letter_Result); }
     else if(generated_string_compare("Entry", 5, s, l)) { return(Type_Entry); }
@@ -1177,6 +1193,19 @@ static int print_type(char *buf, int max_size, Font *param) {
     return(written);
 }
 
+#if !defined(override_print_type_Render_Error)
+static void print_type_Render_Error(char *buf, int *written, int max_size, Render_Error *param, char *name) {
+    int r = SNPRINTF(buf + *written, max_size - *written, "Render_Error %s:\n", name);
+    if(r != -1) { *written += r; }
+
+}
+#endif
+static int print_type(char *buf, int max_size, Render_Error *param) {
+    int written = 0;
+    print_type_Render_Error(buf, &written, max_size, param, "");
+    return(written);
+}
+
 #if !defined(override_print_type_Renderer)
 static void print_type_Renderer(char *buf, int *written, int max_size, Renderer *param, char *name) {
     int r = SNPRINTF(buf + *written, max_size - *written, "Renderer %s:\n", name);
@@ -1192,6 +1221,7 @@ static void print_type_Renderer(char *buf, int *written, int max_size, Renderer 
     if(param->fonts) { print_type_Font(buf, written, max_size, (Font *)param->fonts, "fonts"); }
     else { int r2 = SNPRINTF(buf + *written, max_size - *written, "Font fonts: (NULL)\n"); if(r2 != -1) { *written += r2; } }
     print_type_int(buf, written, max_size, (int *)&param->font_count_max, "font_count_max");
+    print_type_Render_Error(buf, written, max_size, (Render_Error *)&param->error, "error");
     print_type_Internal(buf, written, max_size, (Internal *)&param->_internal, "_internal");
 }
 #endif
@@ -1226,7 +1256,9 @@ static void print_type_Entry(char *buf, int *written, int max_size, Entry *param
     print_type_uint64_t(buf, written, max_size, (uint64_t *)&param->yellow_window_id, "yellow_window_id");
     print_type_uint64_t(buf, written, max_size, (uint64_t *)&param->word_id, "word_id");
     print_type_Int(buf, written, max_size, (Int *)&param->highlighted, "highlighted");
+    print_type_String(buf, written, max_size, (String *)&param->original_title, "original_title");
     print_type_String(buf, written, max_size, (String *)&param->title, "title");
+    print_type_Int(buf, written, max_size, (Int *)&param->title_changed, "title_changed");
     print_type_String(buf, written, max_size, (String *)&param->class_name, "class_name");
     print_type_Int(buf, written, max_size, (Int *)&param->should_screenshot, "should_screenshot");
 }
@@ -1246,13 +1278,15 @@ static void print_type_DLL_Data(char *buf, int *written, int max_size, DLL_Data 
     print_type_uint64_t(buf, written, max_size, (uint64_t *)&param->background_id, "background_id");
     print_type_uint64_t(buf, written, max_size, (uint64_t *)&param->button_id, "button_id");
     print_type_uint64_t(buf, written, max_size, (uint64_t *)&param->directory_word_id, "directory_word_id");
-    { int r2 = SNPRINTF(buf + *written, max_size - *written, "Entry list[%d]\n", (int)(sizeof(param->list) / (sizeof(*(param->list))))); if(r2 != -1) { *written += r2; } }
-    for(int i = 0; (i < (sizeof(param->list) / (sizeof(*(param->list))))); ++i) {
-        print_type_Entry(buf, written, max_size, (Entry *)&param->list[i], "");
+    { int r2 = SNPRINTF(buf + *written, max_size - *written, "Entry entry[%d]\n", (int)(sizeof(param->entry) / (sizeof(*(param->entry))))); if(r2 != -1) { *written += r2; } }
+    for(int i = 0; (i < (sizeof(param->entry) / (sizeof(*(param->entry))))); ++i) {
+        print_type_Entry(buf, written, max_size, (Entry *)&param->entry[i], "");
     }
-    print_type_uint32_t(buf, written, max_size, (uint32_t *)&param->list_count, "list_count");
+    print_type_uint32_t(buf, written, max_size, (uint32_t *)&param->entry_count, "entry_count");
     print_type_uint64_t(buf, written, max_size, (uint64_t *)&param->comic_id, "comic_id");
     print_type_uint64_t(buf, written, max_size, (uint64_t *)&param->arial_id, "arial_id");
+    print_type_uint64_t(buf, written, max_size, (uint64_t *)&param->separator1_id, "separator1_id");
+    print_type_uint64_t(buf, written, max_size, (uint64_t *)&param->separator2_id, "separator2_id");
 }
 #endif
 static int print_type(char *buf, int max_size, DLL_Data *param) {

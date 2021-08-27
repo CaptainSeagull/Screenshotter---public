@@ -62,5 +62,38 @@ memory_push_string(Memory *mem, Memory_Index idx, String str, Int padding = 0) {
     return(res);
 }
 
-#include "image.cpp"
+// TODO: "power" and "fast_power" aren't used and were just experimenting...
+internal F32
+power(F32 x, Int y) {
+    F32 res = 1;
+    if(y == 0) {
+        res = 1;
+    } else {
+        F32 t = power(x, y / 2);
+        if(y % 2 == 0) {
+            res = t * t;
+        } else {
+            if(y > 0) {
+                res = x * t * t;
+            } else {
+                res = (t * t) / x;
+            }
+        }
+    }
 
+    return(res);
+}
+
+internal F32
+fast_power(F32 a, F32 b) {
+    union {
+        F32 d;
+        int x[2];
+    } u = { a };
+
+    u.x[1] = (int)(b * (u.x[1] - 1072632447) + 1072632447);
+    u.x[0] = 0;
+    return u.d;
+}
+
+#include "image.cpp"

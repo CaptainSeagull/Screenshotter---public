@@ -1,6 +1,6 @@
 @echo off
 
-set BUILD_RELEASE=false
+set BUILD_RELEASE=true
 set SHOW_FPS_FLAG=true
 set USE_OPENGL_WINDOW_FLAG=false
 

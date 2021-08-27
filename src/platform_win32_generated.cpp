@@ -97,6 +97,13 @@ static char const *Memory_Index_to_string(Memory_Index e) {
     }
     return(0);
 }
+static char const *Render_Error_to_string(Render_Error e) {
+    switch(e) {
+        case Render_Error_no_error: { return("Render_Error_no_error"); } break;
+        case Render_Error_allocation_failure: { return("Render_Error_allocation_failure"); } break;
+    }
+    return(0);
+}
 static Memory_Arena_Error Memory_Arena_Error_from_string(char const *s, uint32_t l) {
     if(0) {}
     else if(generated_string_compare("Memory_Arena_Error_success", 26, s, l)) { return(Memory_Arena_Error_success); }
@@ -176,12 +183,19 @@ static Memory_Index Memory_Index_from_string(char const *s, uint32_t l) {
     else if(generated_string_compare("Memory_Index_internal_temp", 26, s, l)) { return(Memory_Index_internal_temp); }
     return((Memory_Index)0);
 }
+static Render_Error Render_Error_from_string(char const *s, uint32_t l) {
+    if(0) {}
+    else if(generated_string_compare("Render_Error_no_error", 21, s, l)) { return(Render_Error_no_error); }
+    else if(generated_string_compare("Render_Error_allocation_failure", 31, s, l)) { return(Render_Error_allocation_failure); }
+    return((Render_Error)0);
+}
 // Type
 static uint64_t get_enum_count(Type type) {
     switch(type) {
         case Type_Memory_Arena_Error: { return(6); } break;
         case Type_Key: { return(58); } break;
         case Type_Memory_Index: { return(3); } break;
+        case Type_Render_Error: { return(2); } break;
     }
     return(0);
 }
@@ -232,6 +246,7 @@ static uint64_t type_to_size(Type type) {
         case Type_Render_Image: { return(sizeof(Render_Image)); } break;
         case Type_Internal: { return(sizeof(Internal)); } break;
         case Type_Font: { return(sizeof(Font)); } break;
+        case Type_Render_Error: { return(sizeof(Render_Error)); } break;
         case Type_Renderer: { return(sizeof(Renderer)); } break;
         case Type_Win32_Create_Directory_Result: { return(sizeof(Win32_Create_Directory_Result)); } break;
         case Type_Win32_Enum_Window_Proc_Data: { return(sizeof(Win32_Enum_Window_Proc_Data)); } break;
@@ -286,6 +301,7 @@ static Type string_to_type(char const *s, uint64_t l) {
     else if(generated_string_compare("Render_Image", 12, s, l)) { return(Type_Render_Image); }
     else if(generated_string_compare("Internal", 8, s, l)) { return(Type_Internal); }
     else if(generated_string_compare("Font", 4, s, l)) { return(Type_Font); }
+    else if(generated_string_compare("Render_Error", 12, s, l)) { return(Type_Render_Error); }
     else if(generated_string_compare("Renderer", 8, s, l)) { return(Type_Renderer); }
     else if(generated_string_compare("Win32_Create_Directory_Result", 29, s, l)) { return(Type_Win32_Create_Directory_Result); }
     else if(generated_string_compare("Win32_Enum_Window_Proc_Data", 27, s, l)) { return(Type_Win32_Enum_Window_Proc_Data); }
@@ -1205,6 +1221,19 @@ static int print_type(char *buf, int max_size, Font *param) {
     return(written);
 }
 
+#if !defined(override_print_type_Render_Error)
+static void print_type_Render_Error(char *buf, int *written, int max_size, Render_Error *param, char *name) {
+    int r = SNPRINTF(buf + *written, max_size - *written, "Render_Error %s:\n", name);
+    if(r != -1) { *written += r; }
+
+}
+#endif
+static int print_type(char *buf, int max_size, Render_Error *param) {
+    int written = 0;
+    print_type_Render_Error(buf, &written, max_size, param, "");
+    return(written);
+}
+
 #if !defined(override_print_type_Renderer)
 static void print_type_Renderer(char *buf, int *written, int max_size, Renderer *param, char *name) {
     int r = SNPRINTF(buf + *written, max_size - *written, "Renderer %s:\n", name);
@@ -1220,6 +1249,7 @@ static void print_type_Renderer(char *buf, int *written, int max_size, Renderer 
     if(param->fonts) { print_type_Font(buf, written, max_size, (Font *)param->fonts, "fonts"); }
     else { int r2 = SNPRINTF(buf + *written, max_size - *written, "Font fonts: (NULL)\n"); if(r2 != -1) { *written += r2; } }
     print_type_int(buf, written, max_size, (int *)&param->font_count_max, "font_count_max");
+    print_type_Render_Error(buf, written, max_size, (Render_Error *)&param->error, "error");
     print_type_Internal(buf, written, max_size, (Internal *)&param->_internal, "_internal");
 }
 #endif

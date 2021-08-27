@@ -10,10 +10,14 @@
 #define LANE_WIDTH 4 // TODO: Mirror isn't handling this being different correctly.
 #include "../shared/lane/lane.cpp"
 
-#define STBTT_STATIC
 #define STB_TRUETYPE_IMPLEMENTATION
+#define STBTT_STATIC
 #define STBTT_malloc(x,u) memory_push_size((Memory *)u, Memory_Index_permanent, x)
-#define STBTT_free(x,u)    {}
+#define STBTT_free(x,u)   {}
+#define STBTT_ifloor FLOOR
+#define STBTT_iceil CEIL
+//#define STBTT_sqrt square_root
+// #define STBTT_pow // No pow implementation :-(
 
 #define STBTT_assert ASSERT
 #include "../shared/stb_truetype.h"
@@ -30,8 +34,12 @@ struct Entry {
     U64 word_id;
     Bool highlighted;
 
+    String original_title;
     String title;
+    Bool title_changed;
+
     String class_name;
+    Void *unique_id;
     Bool should_screenshot;
 };
 
@@ -42,11 +50,14 @@ struct DLL_Data {
     U64 button_id;
     U64 directory_word_id;
 
-    Entry list[256];
-    U32 list_count;
+    Entry entry[256];
+    U32 entry_count;
 
     U64 comic_id;
     U64 arial_id;
+
+    U64 separator1_id;
+    U64 separator2_id;
 };
 
 extern "C" Void
@@ -71,12 +82,12 @@ load_font(API *api, Renderer *renderer, String fname) {
 }
 
 internal Entry *
-find_entry(Entry *entries, U64 entry_count, String title, String class_name) {
+find_entry(Entry *entries, U64 entry_count, Void *id) {
     Entry *r = 0;
     for(U64 entry_i = 0; (entry_i < entry_count); ++entry_i) {
         Entry *entry = &entries[entry_i];
 
-        if((entry->title == title) && (entry->class_name == class_name)) {
+        if(entry->unique_id == id) {
             r = entry;
             break; // for entry_i
         }
@@ -87,11 +98,6 @@ find_entry(Entry *entries, U64 entry_count, String title, String class_name) {
 
 internal Void
 setup_to_render(API *api, DLL_Data *data, Renderer *renderer) {
-    // TODO: This method needs to be updated now we update the list of windows every frame.
-    //      - If a window is added, add it to the list
-    //      - If a window is remvoed, remvoe it from the list.
-    //      - If a window is stillt here, maintain it's state (selected or not).
-
     Memory *memory = api->memory;
 
     Rect *white_background = 0;
@@ -112,7 +118,8 @@ setup_to_render(API *api, DLL_Data *data, Renderer *renderer) {
                   10, 0, 40,
                   "Screenshotter!");
 
-        push_line(renderer, white_background, 0, 50, api->window_width, 50, 3.0f); // TODO: These lines don't resize with the window
+        Line *separator1 = push_line(renderer, white_background, 0, 50, api->window_width, 50, 3.0f); // TODO: These lines don't resize with the window
+        data->separator1_id = separator1->id;
 
         Word *directory_word = 0;
         U64 target_output_directory_length = string_length(api->target_output_directory);
@@ -139,7 +146,8 @@ setup_to_render(API *api, DLL_Data *data, Renderer *renderer) {
         button->outer_colour = 0xFF000000;
         data->button_id = button->id;
 
-        push_line(renderer, white_background, 0, 95, api->window_width, 95, 3.0f);
+        Line *separator2 = push_line(renderer, white_background, 0, 95, api->window_width, 95, 3.0f);
+        data->separator2_id = separator2->id;
     } else {
         white_background = find_render_entity(renderer, data->background_id, Rect);
     }
@@ -152,9 +160,10 @@ setup_to_render(API *api, DLL_Data *data, Renderer *renderer) {
     // Investigate! It looks like there's some non-ascii characters in here. Deal with at some point!
 
     // Hide all windows initially
-    for(Int list_i = 0; (list_i < data->list_count); ++list_i) {
-        Entry *entry = &data->list[list_i];
+    for(Int list_i = 0; (list_i < data->entry_count); ++list_i) {
+        Entry *entry = &data->entry[list_i];
         entry->show = false;
+        entry->title_changed = false;
 
         Rect *yellow_window = find_render_entity(renderer, entry->yellow_window_id, Rect); ASSERT(yellow_window);
         Rect *green_window  = find_render_entity(renderer, entry->green_window_id,  Rect); ASSERT(green_window);
@@ -171,14 +180,20 @@ setup_to_render(API *api, DLL_Data *data, Renderer *renderer) {
 
     // If any windows in input_windows match the list, then add them where they currently are. Just tp preserve their position in the list.
     // We add the items here to a temporary buffer.
-    for(Int list_i = 0; (list_i < data->list_count); ++list_i) {
-        Entry *entry = &data->list[list_i];
+    for(Int list_i = 0; (list_i < data->entry_count); ++list_i) {
+        Entry *entry = &data->entry[list_i];
         for(Int wnd_i = 0; (wnd_i < api->input_window_count); ++wnd_i) {
             Window_Info *wi = &api->input_windows[wnd_i];
             if((!is_empty(wi->title)) && (!is_empty(wi->class_name))) {
 
-                if((wi->title == entry->title) && (wi->class_name == entry->class_name)) {
+                if(wi->unique_id == entry->unique_id) {
+                    if(wi->title != entry->title) {
+                        entry->title_changed = true;
+                        entry->title = wi->title;
+                    }
+
                     temp_entry_buffer[temp_entry_buffer_it++] = *entry;
+
                     break; // for wnd_i
                 }
 
@@ -192,18 +207,24 @@ setup_to_render(API *api, DLL_Data *data, Renderer *renderer) {
 
     // Now go through the temporary buffer and add the items in there to the actual list.
     for(Int entry_i = 0; (entry_i < temp_entry_buffer_it); ++entry_i) {
-        data->list[entry_i] = temp_entry_buffer[entry_i];
-        Entry *entry = &data->list[entry_i];
+        data->entry[entry_i] = temp_entry_buffer[entry_i];
+        Entry *entry = &data->entry[entry_i];
 
         entry->show = true;
 
         Rect *yellow_window = find_render_entity(renderer, entry->yellow_window_id, Rect); ASSERT(yellow_window);
         Rect *green_window  = find_render_entity(renderer, entry->green_window_id,  Rect); ASSERT(green_window);
+
         Word *word = find_render_entity(renderer, entry->word_id, Word); ASSERT(word);
+        ASSERT(word);
+
+        word->y = running_y;
+        if(entry->title_changed) {
+            update_word(renderer, word, entry->title);
+        }
 
         yellow_window->y = running_y;
         green_window->y = running_y;
-        word->y = running_y;
 
         if(entry->should_screenshot) {
             green_window->visible = true;
@@ -216,22 +237,23 @@ setup_to_render(API *api, DLL_Data *data, Renderer *renderer) {
 
     // Now iterate through to find new items. Done alst so they'll be added to the end.
     for(Int wnd_i = 0; (wnd_i < api->input_window_count); ++wnd_i) {
-        if((!is_empty(api->input_windows[wnd_i].title)) && (!is_empty(api->input_windows[wnd_i].class_name))) {
+        Window_Info *input_window = &api->input_windows[wnd_i];
 
-            Entry *entry = find_entry(data->list, data->list_count, api->input_windows[wnd_i].title, api->input_windows[wnd_i].class_name);
+        if((!is_empty(input_window->title)) && (!is_empty(input_window->class_name))) {
+            Entry *entry = find_entry(data->entry, data->entry_count, input_window->unique_id);
 
             if(!entry) {
-                // Try to fill gaps initially
-                for(Int list_i = 0; (list_i < data->list_count); ++list_i) {
-                    if(!data->list[list_i].show) {
-                        entry = &data->list[list_i];
+                // Try to fill gaps initially before pushing on end.
+                for(Int list_i = 0; (list_i < data->entry_count); ++list_i) {
+                    if(!data->entry[list_i].show) {
+                        entry = &data->entry[list_i];
                         break; // list_i
                     }
                 }
 
-                // If not add only end of array
-                if((!entry) && (data->list_count + 1 < ARRAY_COUNT(data->list))) {
-                    entry = &data->list[data->list_count++];
+                // If we couldn't put it in a "gap", just shove on end.
+                if((!entry) && (data->entry_count + 1 < ARRAY_COUNT(data->entry))) {
+                    entry = &data->entry[data->entry_count++];
                 }
 
                 if(entry) {
@@ -241,28 +263,22 @@ setup_to_render(API *api, DLL_Data *data, Renderer *renderer) {
                     Rect *green_window = push_solid_rectangle(renderer, white_background,
                                                               0, running_y, 640, height + 10,
                                                               RGBA(0, 255, 0, 0));
+                    Word *word = push_word(renderer, white_background,
+                                           data->arial_id, 10, running_y, height,
+                                           input_window->title);
+
                     yellow_window->visible = false;
                     green_window->visible = false;
 
                     entry->show = true;
                     entry->green_window_id = green_window->id;
                     entry->yellow_window_id = yellow_window->id;
-                    entry->title = api->input_windows[wnd_i].title;
-                    entry->class_name = api->input_windows[wnd_i].class_name;
+                    entry->title = input_window->title;
+                    entry->original_title = entry->title;
+                    entry->class_name = input_window->class_name;
+                    entry->unique_id = input_window->unique_id;
                     entry->highlighted = false;
                     entry->should_screenshot = false;
-
-                    // Useful for debugging
-                    Word *word = push_word(renderer, white_background,
-                                           data->arial_id, 10, running_y, height,
-#if 1
-                                           api->input_windows[wnd_i].title
-#else
-                                           api->input_windows[wnd_i].class_name
-#endif
-
-                                          );
-
                     entry->word_id = word->id;
 
                     running_y += y_to_increment;
@@ -284,6 +300,12 @@ update_and_render(API *api, Renderer *renderer) {
     Rect *white_window = find_render_entity(renderer, data->background_id, Rect); ASSERT(white_window);
     white_window->width = api->window_width;
     white_window->height = api->window_height;
+
+    Line *separator1 = find_render_entity(renderer, data->separator1_id, Line); ASSERT(separator1);
+    Line *separator2 = find_render_entity(renderer, data->separator2_id, Line); ASSERT(separator2);
+
+    separator1->x2 = api->window_width;
+    separator2->x2 = api->window_width;
 
     if(string_length(api->new_target_output_directory) > 0) {
         Word *directory_word = find_render_entity(renderer, data->directory_word_id, Word);
@@ -310,8 +332,8 @@ update_and_render(API *api, Renderer *renderer) {
     }
 
     // Yellow highlighting
-    for(U32 list_i = 0; (list_i < data->list_count); ++list_i) {
-        Entry *window = &data->list[list_i];
+    for(U32 list_i = 0; (list_i < data->entry_count); ++list_i) {
+        Entry *window = &data->entry[list_i];
         window->should_screenshot = false;
 
         Rect *yellow_window = find_render_entity(renderer, window->yellow_window_id, Rect); ASSERT(yellow_window);
@@ -350,10 +372,12 @@ update_and_render(API *api, Renderer *renderer) {
 
     // Save the list of windows to screenshot and pass back to OS layer.
     api->output_window_count = 0;
-    for(Int wnd_i = 0; (wnd_i < data->list_count); ++wnd_i) {
-        if(data->list[wnd_i].should_screenshot) {
-            api->output_windows[api->output_window_count].title = data->list[wnd_i].title;
-            api->output_windows[api->output_window_count].class_name = data->list[wnd_i].class_name;
+    for(Int wnd_i = 0; (wnd_i < data->entry_count); ++wnd_i) {
+        Entry *entry = &data->entry[wnd_i];
+        if(entry->should_screenshot) {
+            api->output_windows[api->output_window_count].title = entry->original_title;
+            api->output_windows[api->output_window_count].class_name = entry->class_name;
+            api->output_windows[api->output_window_count].unique_id = entry->unique_id;
             ++api->output_window_count;
         }
     }
@@ -372,6 +396,8 @@ handle_input_and_render(API *api) {
         Internal_Push_Info *push_info = (Internal_Push_Info *)temp_group->base;
         ASSERT(0);
     }
+    ASSERT(renderer->error == Render_Error_no_error);
+
 #endif
 
     setup_to_render(api, data, renderer);

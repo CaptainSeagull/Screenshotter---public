@@ -48,23 +48,32 @@ add_child_to_node(Memory *memory, Render_Entity **parent) {
     return(node);
 }
 
-internal Void
+internal Bool
 create_renderer(Renderer *renderer, Memory *memory) {
-    renderer->_internal.entity_id_count = 1; // Use 0 for invalid
+    Bool r = false;
+
+    renderer->_internal.entity_id_count = 1; // Start at 1 so 0 can be invalid.
     renderer->memory = memory;
+    renderer->error = Render_Error_no_error;
+
     renderer->root = (Render_Entity *)memory_push_size(memory, Memory_Index_permanent, sizeof(Render_Entity_For_Size));
-    renderer->root->visible = true;
-    ASSERT(renderer->root);
 
     renderer->image_count_max = 512;
     renderer->images = memory_push_type(renderer->memory, Memory_Index_permanent, Render_Image, renderer->image_count_max);
-    ASSERT(renderer->images);
 
     renderer->font_count_max = 8;
     renderer->fonts = memory_push_type(renderer->memory, Memory_Index_permanent, Font, renderer->font_count_max);
-    ASSERT(renderer->fonts);
 
-    add_child_to_node(memory, &renderer->root);
+    if(renderer->root && renderer->images && renderer->fonts) {
+        renderer->root->visible = true;
+        add_child_to_node(memory, &renderer->root);
+        r = true;
+    } else {
+        renderer->error = Render_Error_allocation_failure;
+        ASSERT(0);
+    }
+
+    return(r);
 }
 
 internal Image_Rect
@@ -149,8 +158,8 @@ push_line(Renderer *renderer, Render_Entity *parent,
         line->x2 = x2;
         line->y2 = y2;
 
-        line->width = x2 - x1;
-        line->height = y2 - y1;
+        line->width = maxf32(ABS(line->y2 - line->y), ABS(line->y - line->y2));
+        line->height = maxf32(ABS(line->x2 - line->x), ABS(line->x - line->x2));
 
         line->thickness = thickness;
     }
@@ -365,7 +374,7 @@ internal_set_words(Renderer *renderer, Word *word, String *strings, Int string_c
                             ASSERT(char_pct_height_of_total >= 0 && char_pct_height_of_total <= 1);
 
                             Int height_to_use = (Int)(word->height * char_pct_height_of_total);
-                            Int width_to_use = floor((F32)image->width * ((F32)height_to_use / (F32)image->height)); // TODO: Is this correct?
+                            Int width_to_use = FLOOR((F32)image->width * ((F32)height_to_use / (F32)image->height)); // TODO: Is this correct?
 
                             push_image_rect(renderer, word,
                                             running_x, running_y, width_to_use, height_to_use,
@@ -465,39 +474,6 @@ find_render_entity_(Renderer *renderer, U64 id, Type expected_type) {
     return(r);
 }
 
-internal F32
-power(F32 x, Int y) {
-    F32 res = 1;
-    if(y == 0) {
-        res = 1;
-    } else {
-        F32 t = power(x, y / 2);
-        if(y % 2 == 0) {
-            res = t * t;
-        } else {
-            if(y > 0) {
-                res = x * t * t;
-            } else {
-                res = (t * t) / x;
-            }
-        }
-    }
-
-    return(res);
-}
-
-internal F32
-fast_power(F32 a, F32 b) {
-    union {
-        F32 d;
-        int x[2];
-    } u = { a };
-
-    u.x[1] = (int)(b * (u.x[1] - 1072632447) + 1072632447);
-    u.x[0] = 0;
-    return u.d;
-}
-
 #define image_at(base,w,h,x,y) image_at_((U32 *)base,w,h,x,y)
 internal U32 *
 image_at_(U32 *base, U32 width, U32 height, U32 x, U32 y) {
@@ -590,6 +566,9 @@ render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bit
                 F32 rise = maxf32(ABS(line->y2 - line->y), ABS(line->y - line->y2));
                 F32 run = maxf32(ABS(line->x2 - line->x), ABS(line->x - line->x2));
 
+                line->width = rise;
+                line->height = run;
+
                 F32 m = (run != 0) ? rise / run : 0;
                 F32 y_intercept = line->y - (m * line->x);
                 F32 x_intercept = line->x - (m * line->y);
@@ -654,8 +633,8 @@ render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bit
                             // TODO: There's an issue with how I'm calculating the Word type's height, so it ends up filtering this
                             //       out completely. Look into this!
                             /*if(iter_y + offset.y < parent.height)*/ {
-                                U32 img_x = floor((F32)iter_x * pct_w);
-                                U32 img_y = floor((F32)iter_y * pct_h);
+                                U32 img_x = FLOOR((F32)iter_x * pct_w);
+                                U32 img_y = FLOOR((F32)iter_y * pct_h);
 
                                 U32 *screen_pixel = image_at(screen_bitmap->memory,
                                                              screen_bitmap->width,

@@ -105,6 +105,7 @@ struct Settings {
 struct Window_Info {
     String title;
     String class_name;
+    Void *unique_id;
 };
 
 // TODO: Tidy API struct

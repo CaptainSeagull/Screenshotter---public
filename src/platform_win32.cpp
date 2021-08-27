@@ -624,7 +624,9 @@ run_screenshotting(API *api, Memory *memory, Win32_System_Callbacks *sys_cb, Str
     for(Int window_i = 0; (window_i < api->output_window_count); ++window_i) {
         Window_Info *wnd = &api->output_windows[window_i];
         ASSERT((!is_empty(wnd->class_name)) && (!is_empty(wnd->title)));
-        HWND hwnd = win32_find_window_from_class_name(memory, wnd->class_name, sys_cb);
+
+        // TODO: Check the HWND is still valid? Or something? It's reloaded every frame so _should_ be OK, but you never know...
+        HWND hwnd = (HWND)wnd->unique_id;
 
         RECT rect = {};
         sys_cb->GetClientRect(hwnd, &rect);
@@ -765,6 +767,7 @@ enum_windows_proc(HWND hwnd, LPARAM param) {
                     Window_Info *wi = &api->input_windows[api->input_window_count++];
                     wi->title = create_string(title, title_len);
                     wi->class_name = create_string(class_name, class_name_len);
+                    wi->unique_id = hwnd;
                     success = true;
                 }
             }

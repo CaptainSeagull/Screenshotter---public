@@ -68,6 +68,7 @@ enum Type {
     Type_Render_Image,
     Type_Internal,
     Type_Font,
+    Type_Render_Error,
     Type_Renderer,
     Type_Image_Letter_Result,
     Type_Entry,
@@ -156,6 +157,8 @@ struct Render_Entity_For_Size;
 struct Render_Image;
 struct Internal;
 struct Font;
+enum Render_Error : Int;
+
 struct Renderer;
 struct Image_Letter_Result;
 struct Entry;
@@ -184,6 +187,7 @@ String create_string(char const * s , uint64_t len  );
 String create_substring(String s , uint64_t start , uint64_t end );
 int string_compare(String a , String b );
 int operator==(String a , String b );
+int operator!=(String a , String b );
 int string_contains(String a , String b );
 int string_contains(String s , uint32_t target );
 Find_Index_Result find_index_of_char(String s , uint32_t target , int find_last  );
@@ -210,6 +214,7 @@ char* get_codepoint_at(String s , uint64_t idx );
 String create_substring(String s , uint64_t start_idx , uint64_t end_idx );
 int string_compare(String a , String b );
 int operator==(String a , String b );
+int operator!=(String a , String b );
 int string_contains(String a , String b );
 int string_contains(String s , uint32_t target );
 Find_Index_Result find_index_of_char(String s , uint32_t target , int find_last );
@@ -249,6 +254,8 @@ int stbsp_vsprintf(char * buf , char const * fmt , va_list va );
  static Void set(Void * dst , U8 v , U64 size );
  static Void flip_image(Void * dst_pixels , Void * src_pixels , Int width , Int height );
  static Char* memory_push_string(Memory * mem , Memory_Index idx , String str , Int padding  );
+ static F32 power(F32 x , Int y );
+ static F32 fast_power(F32 a , F32 b );
  static Void write_image_to_disk(API * api , Memory * memory , Image * image , String file_name );
  static Image load_image(API * api , String file_name );
  static float lane_max(float a , float b );
@@ -929,7 +936,7 @@ float square_root(float a );
  static Render_Entity* find_end_node(Render_Entity * node );
  static Void internal_add_new_node(Render_Entity * * parent , Render_Entity * child );
  static Render_Entity* add_child_to_node(Memory * memory , Render_Entity * * parent );
- static Void create_renderer(Renderer * renderer , Memory * memory );
+ static Bool create_renderer(Renderer * renderer , Memory * memory );
  static Image_Rect create_image_rectangle(Int x , Int y , Int width , Int height , Int sprite_x , Int sprite_y , Int sprite_width , Int sprite_height , U64 image_id );
  static U64 push_image(Renderer * renderer , Image image );
  static Render_Image* push_image_internal(Renderer * renderer , Image image );
@@ -952,8 +959,6 @@ float square_root(float a );
  static Render_Image* find_image_from_id(Renderer * renderer , U64 id );
  static Render_Entity* find_render_entity_internal(Render_Entity * render_entity , U64 id );
  static Render_Entity* find_render_entity_(Renderer * renderer , U64 id , Type expected_type );
- static F32 power(F32 x , Int y );
- static F32 fast_power(F32 a , F32 b );
  static U32* image_at_(U32 * base , U32 width , U32 height , U32 x , U32 y );
  static Void render_node(Render_Entity * render_entity , Renderer * renderer , Bitmap * screen_bitmap , BB parent );
  static BB get_overlap(BB a , BB b );
@@ -961,7 +966,7 @@ float square_root(float a );
  static Void render(Renderer * renderer , Bitmap * screen_bitmap );
 extern "C" Void init_platform_settings(Settings * settings );
  static U64 load_font(API * api , Renderer * renderer , String fname );
- static Entry* find_entry(Entry * entries , U64 entry_count , String title , String class_name );
+ static Entry* find_entry(Entry * entries , U64 entry_count , Void * id );
  static Void setup_to_render(API * api , DLL_Data * data , Renderer * renderer );
  static Void update_and_render(API * api , Renderer * renderer );
 extern "C" Void handle_input_and_render(API * api );
@@ -972,11 +977,14 @@ static char const *Key_to_string(Key e);
 static Int Key_count(Key e);
 static char const *Memory_Index_to_string(Memory_Index e);
 static Int Memory_Index_count(Memory_Index e);
+static char const *Render_Error_to_string(Render_Error e);
+static Int Render_Error_count(Render_Error e);
 
 // Helpers
 #define internal_enum_Memory_Arena_Error (6)
 #define internal_enum_Key (58)
 #define internal_enum_Memory_Index (3)
+#define internal_enum_Render_Error (2)
 #define UNION_OF_SUBCLASSES_INTERNAL_Render_Entity union { Rect _Rect; Image_Rect _Image_Rect; Word _Word; Line _Line; }; 
 
 // Forward declare print struct
@@ -1166,6 +1174,9 @@ static int print_type(char *buf, int max_size, Internal *param);
 
 static void print_type_Font(char *buf, int *written, int max_size, Font *param, char *name);
 static int print_type(char *buf, int max_size, Font *param);
+
+static void print_type_Render_Error(char *buf, int *written, int max_size, Render_Error *param, char *name);
+static int print_type(char *buf, int max_size, Render_Error *param);
 
 static void print_type_Renderer(char *buf, int *written, int max_size, Renderer *param, char *name);
 static int print_type(char *buf, int max_size, Renderer *param);

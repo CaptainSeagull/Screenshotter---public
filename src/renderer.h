@@ -79,6 +79,11 @@ struct Font {
     Int full_height;
 };
 
+enum Render_Error : Int {
+    Render_Error_no_error,
+    Render_Error_allocation_failure,
+};
+
 struct Renderer {
     Render_Entity *root;
     Memory *memory;
@@ -89,5 +94,6 @@ struct Renderer {
     Font *fonts;
     Int font_count_max, font_count;
 
+    Render_Error error;
     Internal _internal;
 };

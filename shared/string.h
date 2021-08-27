@@ -110,6 +110,7 @@ STRING_PUBLIC_DEC String create_substring(String s, uint64_t start, uint64_t end
 
 STRING_PUBLIC_DEC int/*bool*/ string_compare(String a, String b);
 STRING_PUBLIC_DEC int/*bool*/ operator==(String a, String b);
+STRING_PUBLIC_DEC int/*bool*/ operator!=(String a, String b);
 
 STRING_PUBLIC_DEC int/*bool*/ string_contains(String a, String b);
 STRING_PUBLIC_DEC int/*bool*/ string_contains(String s, uint32_t target);
@@ -247,6 +248,12 @@ string_compare(String a, String b) {
 STRING_PUBLIC_DEC int/*bool*/
 operator==(String a, String b) {
     int/*bool*/ r = string_compare(a, b);
+    return(r);
+}
+
+STRING_PUBLIC_DEC int/*bool*/
+operator!=(String a, String b) {
+    int/*bool*/ r = !string_compare(a, b);
     return(r);
 }
 

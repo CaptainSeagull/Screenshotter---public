@@ -341,6 +341,7 @@ LANE_PUBLIC_DEC Lane_U32 operator<=(Lane_F32 a, float b);
 LANE_PUBLIC_DEC Lane_U32 operator==(Lane_F32 a, float b);
 LANE_PUBLIC_DEC Lane_U32 operator!=(Lane_F32 a, float b);
 
+// TODO: square_root is a kinda rubbish name...
 LANE_PUBLIC_DEC Lane_F32 square_root(Lane_F32 a);
 LANE_PUBLIC_DEC float square_root(float a);
 LANE_PUBLIC_DEC Lane_F32 rsquare_root(Lane_F32 a);

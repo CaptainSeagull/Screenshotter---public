@@ -16,6 +16,12 @@ zero(Void *m, U64 s) {
     }
 }
 
+template<typename T>
+internal Void
+zero(T *v) {
+    zero((void *)v, sizeof(T));
+}
+
 internal Void
 copy(Void *dst, Void *src, U64 size) {
     U8 *dst8 = (U8 *)dst;
@@ -32,22 +38,6 @@ set(Void *dst, U8 v, U64 size) {
         *dst8++ = v;
     }
 }
-
-// TODO: I'm storing the window list here, in API, and in main.cpp (for rendering). I think this is causing a bug, so try to collapse these
-//       three lists down into one.
-struct Config {
-    Window_Info windows[256];
-    Int target_window_count;
-
-    Bool copy_to_clipboard; // TODO: Only really makes sense for one window
-    Bool include_title_bar;
-    Int amount_to_sleep;
-
-    // TODO: Move these to API?
-    String target_output_directory;
-    String new_target_output_directory;
-    Bool target_directory_changed;
-};
 
 internal Void
 flip_image(Void *dst_pixels, Void *src_pixels, Int width, Int height) {
@@ -68,15 +58,48 @@ flip_image(Void *dst_pixels, Void *src_pixels, Int width, Int height) {
 }
 
 internal Char *
-memory_push_string(Memory *mem, Memory_Index idx, String s, Int padding = 0) {
-    Char *res = (Char *)memory_push(mem, idx, s.len + 1 + padding);
-    ASSERT(res);
-    if(res) {
-        copy(res, s.e, s.len);
+memory_push_string(Memory *mem, Memory_Index idx, String str, Int padding = 0) {
+    uint64_t str_length = string_length(str);
+    Char *res = memory_push_type(mem, idx, Char, str_length + 1 + padding);
+    ASSERT_IF(res) {
+        copy(res, str.start, str_length);
     }
 
     return(res);
 }
 
-#include "image.cpp"
+// TODO: "power" and "fast_power" aren't used and were just experimenting...
+internal F32
+power(F32 x, Int y) {
+    F32 res = 1;
+    if(y == 0) {
+        res = 1;
+    } else {
+        F32 t = power(x, y / 2);
+        if(y % 2 == 0) {
+            res = t * t;
+        } else {
+            if(y > 0) {
+                res = x * t * t;
+            } else {
+                res = (t * t) / x;
+            }
+        }
+    }
 
+    return(res);
+}
+
+internal F32
+fast_power(F32 a, F32 b) {
+    union {
+        F32 d;
+        int x[2];
+    } u = { a };
+
+    u.x[1] = (int)(b * (u.x[1] - 1072632447) + 1072632447);
+    u.x[0] = 0;
+    return u.d;
+}
+
+#include "image.cpp"

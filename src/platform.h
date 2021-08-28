@@ -86,8 +86,6 @@ struct Platform_Callbacks {
 
     Bool (*add_work_queue_entry)(struct API *api, Void *e, Void (*cb)(Void *d));
     Void (*complete_all_work)(struct API *api);
-
-    String (*browse_for_directory)(Memory *memory, String initial_path);
 };
 
 struct Bitmap {
@@ -107,9 +105,8 @@ struct Settings {
 struct Window_Info {
     String title;
     String class_name;
+    Void *unique_id;
 };
-
-struct Config;
 
 // TODO: Tidy API struct
 struct API {
@@ -139,9 +136,26 @@ struct API {
 
     Void *dll_data;
 
-    Int window_count;
-    Window_Info windows[256];
+    // input_windows are all the potential windows passed into main.cpp.
+    Int input_window_count;
+    Window_Info input_windows[256];
 
-    Config *config;
+    // output_windows are all the windows we should run the screenshotting on. Filled out inside main.cpp.
+    Int output_window_count;
+    Window_Info output_windows[256];
+
+    Bool launch_browse_for_directory;
+
+    Bool include_title_bar;
+    Int amount_to_sleep;
+
+    // TODO: Wrap the directory stuff in some functions and make these private
+
+    // target_output_directory is what the user select. target_output_directory_full includes "Screenshotter_x" at the end.
+    String target_output_directory;
+    String target_output_directory_full;
+
+    // When changing the directory just change this.
+    String new_target_output_directory;
 };
 

@@ -37,7 +37,7 @@ write_image_to_disk(API *api, Memory *memory, Image *image, String file_name) {
 
     Bitmap_Header header = {};
     header.file_type = 0x4D42;
-    header.file_size = sizeof(header) + output_pixel_size;
+    header.file_size = (U32)(sizeof(header) + output_pixel_size); // TODO: Do safe_truncate to make sure the size if correct when casted down
     header.bitmap_offset = sizeof(Bitmap_Header);
     header.size = sizeof(header) - 14;
     header.width = image->width;
@@ -45,10 +45,11 @@ write_image_to_disk(API *api, Memory *memory, Image *image, String file_name) {
     header.planes = 1;
     header.bits_per_pixel = 32;
     //header.compression = 0; // BI_RGB
-    header.size_of_bitmap = output_pixel_size;
+    ASSERT(safe_truncate_size_64(output_pixel_size) == output_pixel_size);
+    header.size_of_bitmap = (U32)output_pixel_size;
 
     U64 to_write_size = sizeof(Bitmap_Header) + output_pixel_size;
-    U8 *to_write = (U8 *)memory_push(memory, Memory_Index_temp, to_write_size);
+    U8 *to_write = memory_push_type(memory, Memory_Index_temp, U8, to_write_size);
     copy(to_write, &header, sizeof(header));
     copy(to_write + sizeof(header), image->pixels, output_pixel_size);
 
@@ -58,7 +59,8 @@ write_image_to_disk(API *api, Memory *memory, Image *image, String file_name) {
     memory_pop(memory, to_write);
 }
 
-Image load_image(API *api, String file_name) {
+internal Image
+load_image(API *api, String file_name) {
     Memory *memory = api->memory;
 
     Image img = {};
@@ -73,12 +75,12 @@ Image load_image(API *api, String file_name) {
 
         Void *data_start = (U8 *)raw_bitmap.e + header->bitmap_offset;
 
-        Void *bitmap_memory = memory_push(memory, Memory_Index_permanent, header->width * header->height * sizeof(U32));
+        U32 *bitmap_memory = memory_push_type(memory, Memory_Index_permanent, U32, header->width * header->height);
         ASSERT(bitmap_memory);
 
         img.width = header->width;
         img.height = header->height;
-        img.pixels = (U32 *)bitmap_memory;
+        img.pixels = bitmap_memory;
 
         switch(header->bits_per_pixel) {
             case 32: { copy(img.pixels, data_start, raw_bitmap.size - header->bitmap_offset);  } break;
@@ -103,7 +105,7 @@ Image load_image(API *api, String file_name) {
         // TODO: This is super dumb... should just flip the image while we're gathering it. Lazy though...
         Bool should_flip_image = true;
         if(should_flip_image) {
-            Void *bitmap_memory_temp = memory_push(memory, Memory_Index_permanent, img.width * img.height * sizeof(U32) + 1);
+            U32 *bitmap_memory_temp = memory_push_type(memory, Memory_Index_permanent, U32, img.width * img.height * 1);
             ASSERT(bitmap_memory_temp);
 
             copy(bitmap_memory_temp, img.pixels, img.width * img.height * sizeof(U32));

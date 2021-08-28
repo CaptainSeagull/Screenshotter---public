@@ -2,6 +2,14 @@
 // TODO: sglg_Type_Bool is missing in screenshotter_generated.h. Investigate this...
 #include <stdint.h>
 
+#define ASSERT(exp) { }
+#if ALLOW_ASSERTS
+    #undef ASSERT
+    #define ASSERT(exp) do { if(!(exp)) {*(uint64_t volatile *)0 = 0; } } while(0)
+    #define MEMORY_ARENA_ALLOW_ASSERT
+    #define STRING_ALLOW_ASSERT
+#endif
+
 #include "../shared/memory_arena.h"
 #include "../shared/string.h"
 #include "../shared/stb_sprintf.h"
@@ -25,20 +33,22 @@ typedef int64_t S64;
 typedef float F32;
 typedef double F64;
 
-#define ASSERT(exp) { }
-#if ALLOW_ASSERTS
-    #undef ASSERT
-    #define ASSERT(exp) do { if(!(exp)) {*(uint64_t volatile *)0 = 0; } } while(0)
-    #define MEMORY_ARENA_ALLOW_ASSERT
-    #define STRING_ALLOW_ASSERT
-#endif
-
 #define internal_global static
 #define internal static
 
 #define ASSERT_IF(exp) ASSERT((exp)); if((exp))
 #define ARRAY_COUNT(arr) (sizeof(arr) / (sizeof(*(arr))))
-#define CONCAT(a, b) a##b
+#define CONCAT_(a, b) a##b
+#define CONCAT(a, b) CONCAT_(a, b)
+
+#define MAX(a, b) (((a) > (b)) ? (a) : (b))
+#define MIN(a, b) (((a) > (b)) ? (a) : (b))
+#define CLAMP(a, l, u) MIN(MAX((a), (l)), (u))
+#define CLAMP01(a) CLAMP((a), 0, 1)
+
+#define FLOOR(n) (F32)(((S32)(n)))
+#define CEIL(n) (F32)((S32)(((F32)(n)) + 0.5f))
+#define ABS(n) ((n) > 0) ? ((n)) : (-(n))
 
 #define BYTES(v)     ((v)            * (8LL))
 #define KILOBYTES(v) ((v)            * (1024LL))
@@ -47,14 +57,8 @@ typedef double F64;
 
 #include "platform.h"
 
-// TODO: None of these are shared between the UI and "screenshooting" threads. May be useful to have some way to pass memory back-and-forth.
 enum Memory_Index : Int {
     Memory_Index_permanent,
     Memory_Index_temp,
     Memory_Index_internal_temp,
-    Memory_Index_bitmap,
-    Memory_Index_renderer,
-    Memory_Index_malloc_nofree_size,
-    Memory_Index_font_data,
-    Memory_Index_window_titles,
 };

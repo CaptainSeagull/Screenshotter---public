@@ -38,7 +38,8 @@ typedef double F64;
 
 #define ASSERT_IF(exp) ASSERT((exp)); if((exp))
 #define ARRAY_COUNT(arr) (sizeof(arr) / (sizeof(*(arr))))
-#define CONCAT(a, b) a##b
+#define CONCAT_(a, b) a##b
+#define CONCAT(a, b) CONCAT_(a, b)
 
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 #define MIN(a, b) (((a) > (b)) ? (a) : (b))

@@ -1,7 +1,7 @@
 @echo off
 
 set BUILD_RELEASE=true
-set SHOW_FPS_FLAG=true
+set SHOW_FPS_FLAG=false
 set USE_OPENGL_WINDOW_FLAG=false
 
 cd %~dp0

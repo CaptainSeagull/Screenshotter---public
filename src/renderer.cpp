@@ -370,7 +370,7 @@ internal_set_words(Renderer *renderer, Word *word, String *strings, Int string_c
                     } else {
                         Render_Image *image = find_font_image(renderer, font, c);
                         ASSERT_IF(image) {
-                            F32 char_pct_height_of_total = (F32)image->height / font->full_height;
+                            F32 char_pct_height_of_total = (F32)image->height / (F32)font->full_height;
                             ASSERT(char_pct_height_of_total >= 0 && char_pct_height_of_total <= 1);
 
                             Int height_to_use = (Int)(word->height * char_pct_height_of_total);

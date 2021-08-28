@@ -1275,14 +1275,14 @@ static void print_type_DLL_Data(char *buf, int *written, int max_size, DLL_Data 
     if(r != -1) { *written += r; }
 
     print_type_Renderer(buf, written, max_size, (Renderer *)&param->renderer, "renderer");
-    print_type_uint64_t(buf, written, max_size, (uint64_t *)&param->background_id, "background_id");
-    print_type_uint64_t(buf, written, max_size, (uint64_t *)&param->button_id, "button_id");
-    print_type_uint64_t(buf, written, max_size, (uint64_t *)&param->directory_word_id, "directory_word_id");
     { int r2 = SNPRINTF(buf + *written, max_size - *written, "Entry entry[%d]\n", (int)(sizeof(param->entry) / (sizeof(*(param->entry))))); if(r2 != -1) { *written += r2; } }
     for(int i = 0; (i < (sizeof(param->entry) / (sizeof(*(param->entry))))); ++i) {
         print_type_Entry(buf, written, max_size, (Entry *)&param->entry[i], "");
     }
     print_type_uint32_t(buf, written, max_size, (uint32_t *)&param->entry_count, "entry_count");
+    print_type_uint64_t(buf, written, max_size, (uint64_t *)&param->background_id, "background_id");
+    print_type_uint64_t(buf, written, max_size, (uint64_t *)&param->button_id, "button_id");
+    print_type_uint64_t(buf, written, max_size, (uint64_t *)&param->directory_word_id, "directory_word_id");
     print_type_uint64_t(buf, written, max_size, (uint64_t *)&param->comic_id, "comic_id");
     print_type_uint64_t(buf, written, max_size, (uint64_t *)&param->arial_id, "arial_id");
     print_type_uint64_t(buf, written, max_size, (uint64_t *)&param->separator1_id, "separator1_id");

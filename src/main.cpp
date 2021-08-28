@@ -46,12 +46,12 @@ struct Entry {
 struct DLL_Data {
     Renderer renderer;
 
+    Entry entry[256];
+    U32 entry_count;
+
     U64 background_id;
     U64 button_id;
     U64 directory_word_id;
-
-    Entry entry[256];
-    U32 entry_count;
 
     U64 comic_id;
     U64 arial_id;
@@ -180,7 +180,6 @@ setup_to_render(API *api, DLL_Data *data, Renderer *renderer) {
         for(Int wnd_i = 0; (wnd_i < api->input_window_count); ++wnd_i) {
             Window_Info *wi = &api->input_windows[wnd_i];
             if((!is_empty(wi->title)) && (!is_empty(wi->class_name))) {
-
                 if(wi->unique_id == entry->unique_id) {
                     if(wi->title != entry->title) {
                         entry->title_changed = true;

@@ -113,7 +113,6 @@ setup_to_render(API *api, DLL_Data *data, Renderer *renderer) {
         data->comic_id = load_font(api, renderer, "C:/Windows/fonts/comic.ttf");
         data->arial_id = load_font(api, renderer, "C:/Windows/fonts/arial.ttf");
 
-
         push_word(renderer, white_background, data->comic_id,
                   10, 0, 40,
                   "Screenshotter!");
@@ -142,6 +141,7 @@ setup_to_render(API *api, DLL_Data *data, Renderer *renderer) {
         Rect *button = push_solid_rectangle(renderer, white_background,
                                             5, 58, 30, 30,
                                             RGBA(255, 255, 255, 255));
+        push_word(renderer, button, data->arial_id, 12, 0, 30, "...");
         button->outline_thickness = 3.0f;
         button->outer_colour = 0xFF000000;
         data->button_id = button->id;
@@ -154,14 +154,9 @@ setup_to_render(API *api, DLL_Data *data, Renderer *renderer) {
 
     ASSERT(white_background);
 
-    // Running programs text
-    // TODO: Something goes wrong if you open Brave and have this tab open (making it the window title).
-    //   https://devblogs.microsoft.com/cppblog/data-breakpoints-15-8-update/
-    // Investigate! It looks like there's some non-ascii characters in here. Deal with at some point!
-
     // Hide all windows initially
-    for(Int list_i = 0; (list_i < data->entry_count); ++list_i) {
-        Entry *entry = &data->entry[list_i];
+    for(Int entry_i = 0; (entry_i < data->entry_count); ++entry_i) {
+        Entry *entry = &data->entry[entry_i];
         entry->show = false;
         entry->title_changed = false;
 
@@ -178,10 +173,10 @@ setup_to_render(API *api, DLL_Data *data, Renderer *renderer) {
     Entry *temp_entry_buffer = memory_push_type(memory, Memory_Index_temp, Entry, api->input_window_count);
     ASSERT(temp_entry_buffer);
 
-    // If any windows in input_windows match the list, then add them where they currently are. Just tp preserve their position in the list.
+    // If any windows in input_windows match the list, then add them where they currently are to preserve their position in the list.
     // We add the items here to a temporary buffer.
-    for(Int list_i = 0; (list_i < data->entry_count); ++list_i) {
-        Entry *entry = &data->entry[list_i];
+    for(Int entry_i = 0; (entry_i < data->entry_count); ++entry_i) {
+        Entry *entry = &data->entry[entry_i];
         for(Int wnd_i = 0; (wnd_i < api->input_window_count); ++wnd_i) {
             Window_Info *wi = &api->input_windows[wnd_i];
             if((!is_empty(wi->title)) && (!is_empty(wi->class_name))) {
@@ -235,7 +230,7 @@ setup_to_render(API *api, DLL_Data *data, Renderer *renderer) {
 
     memory_pop(memory, temp_entry_buffer);
 
-    // Now iterate through to find new items. Done alst so they'll be added to the end.
+    // Now iterate through to find new items. Done last so they'll be added to the end.
     for(Int wnd_i = 0; (wnd_i < api->input_window_count); ++wnd_i) {
         Window_Info *input_window = &api->input_windows[wnd_i];
 

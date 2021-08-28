@@ -915,7 +915,7 @@ void* memcpy(void * dst , const void * src , size_t cnt );
  static Win32_System_Callbacks load_system_callbacks(Void );
  static Command_Line_Result parse_command_line(Memory * memory );
 int  CALLBACK WinMain(HINSTANCE hInstance , HINSTANCE hPrevInstance , LPSTR lpCmdLine , int nShowCmd );
-void  __stdcall WinMainCRTStartup(Void );
+void  __stdcall WinMainCRTStartup(void );
 static char const *Key_to_string(Key e);
 static Int Key_count(Key e);
 static char const *Memory_Index_to_string(Memory_Index e);

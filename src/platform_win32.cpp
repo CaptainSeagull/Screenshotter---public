@@ -1380,9 +1380,9 @@ WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShow
 }
 
 // TODO: Putting methods in extern "C" ruins mirror. Mirror forward declares them without the extern "C" so the linkage is different.
-extern "C" {int _fltused = 0; }
+extern "C" { int _fltused = 0; }
 void __stdcall
-WinMainCRTStartup(Void) {
+WinMainCRTStartup(void) {
     int Result = WinMain(GetModuleHandle(0), 0, 0, 0);
     ExitProcess(Result);
 }

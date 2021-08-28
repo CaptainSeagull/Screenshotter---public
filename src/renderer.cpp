@@ -565,7 +565,7 @@ render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bit
                 F32 rise = (F32)MAX(ABS(line->y2 - line->y), ABS(line->y - line->y2));
                 F32 run = (F32)MAX(ABS(line->x2 - line->x), ABS(line->x - line->x2));
 
-                line->width = (Int)rise;
+                line->width = (Int)rise; // Not used for anything - just "nice to have" I guess
                 line->height = (Int)run;
 
                 F32 m = (run != 0) ? rise / run : 0;
@@ -576,6 +576,8 @@ render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bit
                 Int thickness_x2 = (Int)(line->thickness * 2.0f);
                 Int rise_test = (Int)(rise + thickness_x2);
                 Int run_test = (Int)(run + thickness_x2);
+
+                U32 colour = RGBA(0, 0, 0, 0xFF); // TODO: Make colour configruable
 
                 for(Int iter_y = -thickness_x2; (iter_y < rise_test); ++iter_y) {
                     for(Int iter_x = -thickness_x2; (iter_x < run_test); ++iter_x) {
@@ -593,11 +595,11 @@ render_node(Render_Entity *render_entity, Renderer *renderer, Bitmap *screen_bit
                                 if(run != 0) {
                                     F32 t = ((m * x) + y_intercept);
                                     if(ABS(y - t) < thickness) {
-                                        *screen_pixel = RGBA(0, 0, 0, 0xFF); // TODO: Make colour configruable
+                                        *screen_pixel = colour;
                                     }
                                 } else {
                                     if(ABS(x - x_intercept) < thickness) {
-                                        *screen_pixel = RGBA(0, 0, 0, 0xFF); // TODO: Make colour configruable
+                                        *screen_pixel = colour;
                                     }
                                 }
                             }

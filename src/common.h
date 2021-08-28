@@ -46,7 +46,7 @@ typedef double F64;
 #define CLAMP01(a) CLAMP((a), 0, 1)
 
 #define FLOOR(n) (F32)(((S32)(n)))
-#define CEIL(n) (F32)(((S32)(n) + 0.5f))
+#define CEIL(n) (F32)((S32)(((F32)(n)) + 0.5f))
 #define ABS(n) ((n) > 0) ? ((n)) : (-(n))
 
 #define BYTES(v)     ((v)            * (8LL))
